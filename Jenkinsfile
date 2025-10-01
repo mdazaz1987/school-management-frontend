@@ -109,11 +109,31 @@ pipeline {
                         # Start application with PM2
                         echo "Starting application on port ${APP_PORT}..."
                         cd ${DEPLOY_DIR}
-                        pm2 start serve --name ${APP_NAME} -- -s build -l ${APP_PORT}
+                        
+                        # Start with serve - correct syntax
+                        pm2 start serve --name ${APP_NAME} -- -s build -l ${APP_PORT} -n
+                        sleep 3
+                        
+                        # Check PM2 status
+                        pm2 status
+                        
+                        # Check if application is running
+                        if pm2 list | grep -q "${APP_NAME}.*online"; then
+                            echo "✅ Application started successfully"
+                        else
+                            echo "❌ Application failed to start. Checking logs..."
+                            pm2 logs ${APP_NAME} --lines 50 --nostream
+                            exit 1
+                        fi
+                        
+                        # Check if port is listening
+                        echo "Checking if port ${APP_PORT} is listening..."
+                        netstat -tlnp 2>/dev/null | grep :${APP_PORT} || ss -tlnp 2>/dev/null | grep :${APP_PORT} || echo "Port check command not available"
+                        
+                        # Save PM2 config
                         pm2 save
                         
-                        echo "Deployment completed successfully!"
-                        pm2 status
+                        echo "✅ Deployment completed successfully!"
                     """
                 }
             }
@@ -123,7 +143,7 @@ pipeline {
             steps {
                 echo 'Performing application health check...'
                 script {
-                    sh 'sleep 5'  // Wait for application to start
+                    sh 'sleep 3'  // Wait for application to stabilize
                     
                     def maxRetries = 5
                     def retryCount = 0
@@ -131,26 +151,47 @@ pipeline {
                     
                     while (retryCount < maxRetries && !healthCheckPassed) {
                         try {
-                            def response = sh(
-                                script: "curl -s -o /dev/null -w '%{http_code}' http://localhost:${APP_PORT}",
+                            // Check PM2 status first
+                            def pm2Status = sh(
+                                script: "pm2 list | grep ${APP_NAME} || true",
+                                returnStdout: true
+                            ).trim()
+                            echo "PM2 Status: ${pm2Status}"
+                            
+                            // Try curl with better error handling
+                            def curlResult = sh(
+                                script: "curl -f -s -o /dev/null -w '%{http_code}' http://localhost:${APP_PORT} 2>&1 || echo 'FAILED'",
                                 returnStdout: true
                             ).trim()
                             
-                            echo "Health check attempt ${retryCount + 1}: HTTP ${response}"
+                            echo "Health check attempt ${retryCount + 1}: Response = ${curlResult}"
                             
-                            if (response == '200') {
+                            if (curlResult == '200') {
                                 healthCheckPassed = true
-                                echo '✅ Health check passed!'
+                                echo '✅ Health check passed! Application is responding.'
                             } else {
                                 retryCount++
                                 if (retryCount < maxRetries) {
-                                    echo "Retrying in 5 seconds..."
+                                    echo "Attempt ${retryCount} failed. Retrying in 5 seconds..."
                                     sh 'sleep 5'
+                                } else {
+                                    // Last attempt - show detailed info
+                                    echo "Final attempt failed. Gathering debug info..."
+                                    sh """
+                                        echo "=== PM2 Status ==="
+                                        pm2 status
+                                        echo "=== PM2 Logs (last 30 lines) ==="
+                                        pm2 logs ${APP_NAME} --lines 30 --nostream || true
+                                        echo "=== Port Check ==="
+                                        netstat -tlnp 2>/dev/null | grep :${APP_PORT} || ss -tlnp 2>/dev/null | grep :${APP_PORT} || echo "No process listening on port ${APP_PORT}"
+                                        echo "=== Process List ==="
+                                        ps aux | grep -E 'serve|node' | grep -v grep || true
+                                    """
                                 }
                             }
                         } catch (Exception e) {
                             retryCount++
-                            echo "Health check attempt ${retryCount} failed: ${e.message}"
+                            echo "Health check attempt ${retryCount} exception: ${e.message}"
                             if (retryCount < maxRetries) {
                                 sh 'sleep 5'
                             }
@@ -158,7 +199,7 @@ pipeline {
                     }
                     
                     if (!healthCheckPassed) {
-                        error("❌ Health check failed after ${maxRetries} attempts")
+                        error("❌ Health check failed after ${maxRetries} attempts. Application is not responding on port ${APP_PORT}")
                     }
                 }
             }
