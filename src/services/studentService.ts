@@ -1,5 +1,5 @@
 import apiService from './api';
-import { Student, DashboardStats } from '../types';
+import { Student } from '../types';
 
 export const studentService = {
   async getAllStudents(params?: { schoolId?: string; classId?: string }): Promise<Student[]> {

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Row, Col, Card, Button, Table, Badge } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
@@ -19,7 +19,7 @@ const sidebarItems = [
 
 export const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
-  const [stats, setStats] = useState({
+  const [stats] = useState({
     totalStudents: 450,
     totalTeachers: 45,
     totalClasses: 24,
