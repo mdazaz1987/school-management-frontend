@@ -93,16 +93,18 @@ pipeline {
                         cp -r build ${DEPLOY_DIR}/
                         
                         # Check if serve is installed
-                        if ! command -v serve &> /dev/null; then
-                            echo "WARNING: 'serve' is not installed. Please install it: npm install -g serve"
+                        if ! which serve > /dev/null 2>&1; then
+                            echo "ERROR: 'serve' is not installed. Please install it: npm install -g serve"
                             exit 1
                         fi
+                        echo "✅ serve found at: \$(which serve)"
                         
                         # Check if PM2 is installed
-                        if ! command -v pm2 &> /dev/null; then
-                            echo "WARNING: 'pm2' is not installed. Please install it: npm install -g pm2"
+                        if ! which pm2 > /dev/null 2>&1; then
+                            echo "ERROR: 'pm2' is not installed. Please install it: npm install -g pm2"
                             exit 1
                         fi
+                        echo "✅ PM2 found at: \$(which pm2)"
                         
                         # Start application with PM2
                         echo "Starting application on port ${APP_PORT}..."
