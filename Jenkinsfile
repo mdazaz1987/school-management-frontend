@@ -9,7 +9,7 @@ pipeline {
         APP_PORT = '4001'
         DEPLOY_DIR = '/var/www/school-frontend'
         APP_NAME = 'school-management-frontend'
-        REACT_APP_API_URL = 'http://localhost:8080/api'  // Update with your backend URL
+        REACT_APP_API_URL = 'http://141.148.218.230:9090/api'  // Update with your backend URL
     }
     
     triggers {
