@@ -1,15 +1,12 @@
 pipeline {
     agent any
     
-    tools {
-        nodejs 'NodeJS-18'  // Configure this in Jenkins Global Tool Configuration
-    }
-    
     environment {
         APP_PORT = '4001'
         DEPLOY_DIR = '/var/www/school-frontend'
         APP_NAME = 'school-management-frontend'
-        REACT_APP_API_URL = 'http://141.148.218.230:9090/api'  // Update with your backend URL
+        REACT_APP_API_URL = 'http://141.148.218.230:9090/api'  // Backend API URL
+        PATH = "/usr/local/bin:/usr/bin:/bin:${env.PATH}"  // Ensure node/npm are in PATH
     }
     
     triggers {
