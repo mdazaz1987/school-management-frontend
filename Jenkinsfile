@@ -79,40 +79,36 @@ pipeline {
                         pm2 stop ${APP_NAME} || true
                         pm2 delete ${APP_NAME} || true
                         
-                        # Create deployment directory if it doesn't exist
-                        sudo mkdir -p ${DEPLOY_DIR}
+                        # Create deployment directory if it doesn't exist (without sudo)
+                        mkdir -p ${DEPLOY_DIR} || echo "Directory exists or no permission, continuing..."
                         
                         # Backup existing deployment
                         if [ -d "${DEPLOY_DIR}/build" ]; then
                             echo "Backing up existing deployment..."
-                            sudo mv ${DEPLOY_DIR}/build ${DEPLOY_DIR}/build.backup.\$(date +%Y%m%d_%H%M%S) || true
+                            mv ${DEPLOY_DIR}/build ${DEPLOY_DIR}/build.backup.\$(date +%Y%m%d_%H%M%S) || true
                         fi
                         
                         # Copy new build
                         echo "Copying new build files..."
-                        sudo cp -r build ${DEPLOY_DIR}/
-                        sudo chown -R jenkins:jenkins ${DEPLOY_DIR}
+                        cp -r build ${DEPLOY_DIR}/
                         
-                        # Install serve if not already installed
+                        # Check if serve is installed
                         if ! command -v serve &> /dev/null; then
-                            echo "Installing serve..."
-                            sudo npm install -g serve
+                            echo "WARNING: 'serve' is not installed. Please install it: npm install -g serve"
+                            exit 1
                         fi
                         
-                        # Install PM2 if not already installed
+                        # Check if PM2 is installed
                         if ! command -v pm2 &> /dev/null; then
-                            echo "Installing PM2..."
-                            sudo npm install -g pm2
+                            echo "WARNING: 'pm2' is not installed. Please install it: npm install -g pm2"
+                            exit 1
                         fi
                         
                         # Start application with PM2
                         echo "Starting application on port ${APP_PORT}..."
                         cd ${DEPLOY_DIR}
-                        pm2 start "serve -s build -l ${APP_PORT}" --name ${APP_NAME}
+                        pm2 start serve --name ${APP_NAME} -- -s build -l ${APP_PORT}
                         pm2 save
-                        
-                        # Ensure PM2 starts on system reboot
-                        pm2 startup || true
                         
                         echo "Deployment completed successfully!"
                         pm2 status
@@ -172,7 +168,7 @@ pipeline {
                 sh """
                     # Keep only last 3 backups
                     cd ${DEPLOY_DIR}
-                    ls -t build.backup.* 2>/dev/null | tail -n +4 | xargs -r sudo rm -rf
+                    ls -t build.backup.* 2>/dev/null | tail -n +4 | xargs -r rm -rf || true
                     echo "Cleanup completed"
                 """
             }
@@ -222,8 +218,8 @@ pipeline {
                             echo "Rolling back to previous build..."
                             latest_backup=\$(ls -t ${DEPLOY_DIR}/build.backup.* 2>/dev/null | head -1)
                             if [ -n "\$latest_backup" ]; then
-                                sudo rm -rf ${DEPLOY_DIR}/build
-                                sudo cp -r \$latest_backup ${DEPLOY_DIR}/build
+                                rm -rf ${DEPLOY_DIR}/build
+                                cp -r \$latest_backup ${DEPLOY_DIR}/build
                                 pm2 restart ${APP_NAME}
                                 echo "Rollback completed"
                             fi
