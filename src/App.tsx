@@ -16,6 +16,7 @@ import { ClassList } from './pages/ClassList';
 import { ClassForm } from './pages/ClassForm';
 import { ClassDetail } from './pages/ClassDetail';
 import { StudentDetail } from './pages/StudentDetail';
+import { DebugAuth } from './pages/DebugAuth';
 import './App.css';
 
 // Protected Route Component
@@ -277,6 +278,16 @@ function App() {
             element={
               <ProtectedRoute>
                 <ComingSoon />
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Debug page */}
+          <Route
+            path="/debug-auth"
+            element={
+              <ProtectedRoute>
+                <DebugAuth />
               </ProtectedRoute>
             }
           />
