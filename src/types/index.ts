@@ -63,6 +63,8 @@ export interface Student {
   createdAt: string;
   updatedAt: string;
   performanceRecords?: PerformanceRecord[];
+  aadhaarNumber?: string;
+  apaarId?: string;
 }
 
 export interface StudentAddress {
@@ -149,6 +151,8 @@ export interface StudentCreateRequest {
   stream?: string;
   admissionDate?: string;
   isActive?: boolean;
+  aadhaarNumber?: string;
+  apaarId?: string;
 }
 
 export interface StudentUpdateRequest {
@@ -189,6 +193,8 @@ export interface StudentUpdateRequest {
   stream?: string;
   isActive?: boolean;
   profilePicture?: string;
+  aadhaarNumber?: string;
+  apaarId?: string;
 }
 
 // Class types
@@ -207,6 +213,11 @@ export interface SchoolClass {
   capacity?: number;
   description?: string;
   isActive: boolean;
+  fees?: number;
+  feesType?: 'ANNUAL' | 'TERM' | 'MONTHLY';
+  durationMonths?: number;
+  startDate?: string;
+  endDate?: string;
 }
 
 // Subject types
@@ -363,6 +374,31 @@ export interface DashboardStats {
   upcomingExams?: number;
   overduePayments?: number;
   unreadNotifications?: number;
+}
+
+// Custom Field Config types
+export interface CustomFieldConfig {
+  id: string;
+  fieldName: string;
+  fieldLabel: string;
+  fieldType: 'TEXT' | 'NUMBER' | 'DATE' | 'DROPDOWN' | 'CHECKBOX' | 'TEXTAREA' | 'EMAIL' | 'PHONE';
+  entityType: 'STUDENT' | 'TEACHER' | 'PARENT' | 'CLASS';
+  schoolId?: string;
+  isRequired: boolean;
+  isActive: boolean;
+  displayOrder: number;
+  options?: string[];
+  validationRegex?: string;
+  validationMessage?: string;
+  minLength?: number;
+  maxLength?: number;
+  minValue?: number;
+  maxValue?: number;
+  placeholder?: string;
+  helpText?: string;
+  defaultValue?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // API Response wrapper
