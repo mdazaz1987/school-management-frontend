@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Table, Button, Badge, Alert, Spinner, ListGroup } from 'react-bootstrap';
+import { Container, Row, Col, Card, Button, Badge, Alert, Spinner, ListGroup } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
 import { useNavigate, useParams } from 'react-router-dom';
 import { classService } from '../services/classService';
