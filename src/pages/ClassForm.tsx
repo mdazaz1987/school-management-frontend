@@ -82,11 +82,19 @@ export const ClassForm: React.FC = () => {
       console.log('Form data:', formData);
       console.log('========================');
 
+      // Clean up formData - ensure numeric fields have proper values
+      const cleanedData = {
+        ...formData,
+        fees: formData.fees ? Number(formData.fees) : undefined,
+        capacity: formData.capacity ? Number(formData.capacity) : undefined,
+        durationMonths: formData.durationMonths ? Number(formData.durationMonths) : undefined,
+      };
+
       if (isEditMode && id) {
-        await classService.updateClass(id, formData);
+        await classService.updateClass(id, cleanedData);
         setSuccess('Class updated successfully!');
       } else {
-        await classService.createClass(formData);
+        await classService.createClass(cleanedData);
         setSuccess('Class created successfully!');
       }
 
