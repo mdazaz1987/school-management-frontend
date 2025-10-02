@@ -42,14 +42,36 @@ export const Profile: React.FC = () => {
       } catch (err: any) {
         console.error('Error loading profile:', err);
         console.error('Error response:', err.response);
-        // If profile load fails, use data from context
-        if (user) {
+        
+        // Show warning message about backend connectivity
+        if (err.message?.includes('CORS') || err.message?.includes('Network Error')) {
+          setErrorMessage('Backend connection issue. Using cached data. Please ensure backend is running.');
+        }
+        
+        // If profile load fails, use data from localStorage or context
+        const cachedUser = localStorage.getItem('user');
+        if (cachedUser) {
+          try {
+            const parsedUser = JSON.parse(cachedUser);
+            setUser(parsedUser);
+            setFormData({
+              firstName: parsedUser.firstName || '',
+              lastName: parsedUser.lastName || '',
+              phoneNumber: parsedUser.phoneNumber || '',
+              address: parsedUser.address || '',
+            });
+            console.log('Using cached profile data');
+          } catch (e) {
+            console.error('Error parsing cached user:', e);
+          }
+        } else if (user) {
           setFormData({
             firstName: user.firstName || '',
             lastName: user.lastName || '',
             phoneNumber: user.phoneNumber || '',
             address: user.address || '',
           });
+          console.log('Using context user data');
         }
       }
     };
