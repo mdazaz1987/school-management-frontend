@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Row, Col, Card, Button, Table, Badge, ProgressBar, ListGroup } from 'react-bootstrap';
+import { Row, Col, Card, Button, Badge, ProgressBar, ListGroup } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';

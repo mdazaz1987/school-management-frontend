@@ -8,6 +8,7 @@ export interface User {
   schoolId: string;
   phoneNumber?: string;
   address?: string;
+  profilePhoto?: string;
   isActive: boolean;
   createdAt: string;
 }
@@ -30,9 +31,8 @@ export interface RegisterRequest {
 }
 
 export interface AuthResponse {
-  token: string;
-  type: string;
-  user: User;
+  accessToken: string;
+  tokenType: string;
 }
 
 // Student types

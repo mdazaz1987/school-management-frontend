@@ -2,13 +2,42 @@ import apiService from './api';
 import { AuthResponse, LoginRequest, RegisterRequest, User } from '../types';
 
 export const authService = {
-  async login(credentials: LoginRequest): Promise<AuthResponse> {
+  async login(credentials: LoginRequest): Promise<{ user: User; token: string }> {
+    // First, login to get token
     const response = await apiService.post<AuthResponse>('/auth/login', credentials);
-    if (response.token) {
-      localStorage.setItem('token', response.token);
-      localStorage.setItem('user', JSON.stringify(response.user));
+    
+    if (response.accessToken) {
+      // Store token
+      localStorage.setItem('token', response.accessToken);
+      
+      // Decode JWT to get user info (basic decoding, just get the payload)
+      try {
+        const payload = JSON.parse(atob(response.accessToken.split('.')[1]));
+        console.log('JWT Payload:', payload);
+        
+        // Create user object from JWT payload
+        const user: User = {
+          id: payload.sub || payload.userId || '',
+          email: payload.email || credentials.email,
+          firstName: payload.firstName || '',
+          lastName: payload.lastName || '',
+          roles: payload.roles || payload.authorities?.map((a: string) => a.replace('ROLE_', '')) || [],
+          schoolId: payload.schoolId || '',
+          isActive: true,
+          createdAt: new Date().toISOString(),
+        };
+        
+        console.log('Parsed user from JWT:', user);
+        localStorage.setItem('user', JSON.stringify(user));
+        
+        return { user, token: response.accessToken };
+      } catch (error) {
+        console.error('Error decoding JWT:', error);
+        throw new Error('Failed to decode authentication token');
+      }
     }
-    return response;
+    
+    throw new Error('No access token received');
   },
 
   async register(data: RegisterRequest): Promise<AuthResponse> {

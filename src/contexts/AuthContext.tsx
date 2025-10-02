@@ -2,8 +2,9 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { User, UserRole } from '../types';
 import { authService } from '../services';
 
-interface AuthContextType {
+export interface AuthContextType {
   user: User | null;
+  setUser: React.Dispatch<React.SetStateAction<User | null>>;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
@@ -27,8 +28,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const login = async (email: string, password: string) => {
-    const response = await authService.login({ email, password });
-    setUser(response.user);
+    console.log('AuthContext: Logging in...');
+    const { user, token } = await authService.login({ email, password });
+    console.log('AuthContext: Login successful');
+    console.log('AuthContext: Token:', token);
+    console.log('AuthContext: User:', user);
+    console.log('AuthContext: User roles:', user?.roles);
+    setUser(user);
   };
 
   const logout = () => {
@@ -44,6 +50,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     <AuthContext.Provider
       value={{
         user,
+        setUser,
         isAuthenticated: !!user,
         isLoading,
         login,
