@@ -1,20 +1,36 @@
-import React, { useState } from 'react';
-import { Container, Row, Col, Card, Form, Button, Alert } from 'react-bootstrap';
+import React, { useState, useEffect, useRef } from 'react';
+import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
+import { profileService } from '../services/profileService';
 
 export const Profile: React.FC = () => {
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState({
     firstName: user?.firstName || '',
     lastName: user?.lastName || '',
-    email: user?.email || '',
     phoneNumber: user?.phoneNumber || '',
     address: user?.address || '',
   });
+
+  // Update form data when user changes
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        phoneNumber: user.phoneNumber || '',
+        address: user.address || '',
+      });
+    }
+  }, [user]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({
@@ -23,26 +39,85 @@ export const Profile: React.FC = () => {
     });
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement API call to update profile
-    console.log('Saving profile:', formData);
-    setSaveMessage('Profile updated successfully!');
-    setIsEditing(false);
-    
-    // Clear message after 3 seconds
-    setTimeout(() => setSaveMessage(''), 3000);
+    setErrorMessage('');
+    setSaveMessage('');
+    setIsLoading(true);
+
+    try {
+      const updatedUser = await profileService.updateProfile(formData);
+      
+      // Update user in context and localStorage
+      setUser(updatedUser);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      
+      setSaveMessage('Profile updated successfully!');
+      setIsEditing(false);
+      
+      setTimeout(() => setSaveMessage(''), 3000);
+    } catch (err: any) {
+      console.error('Profile update error:', err);
+      setErrorMessage(err.response?.data?.message || 'Failed to update profile');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleCancel = () => {
     setFormData({
       firstName: user?.firstName || '',
       lastName: user?.lastName || '',
-      email: user?.email || '',
       phoneNumber: user?.phoneNumber || '',
       address: user?.address || '',
     });
     setIsEditing(false);
+  };
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setErrorMessage('Please select an image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setErrorMessage('Image size must not exceed 5MB');
+      return;
+    }
+
+    setUploadingPhoto(true);
+    setErrorMessage('');
+
+    try {
+      const response = await profileService.uploadPhoto(file);
+      
+      // Update user with new photo
+      if (user) {
+        const updatedUser = { ...user, profilePhoto: response.photoUrl.split('/').pop() };
+        setUser(updatedUser);
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+      }
+      
+      setSaveMessage('Profile photo uploaded successfully!');
+      setTimeout(() => setSaveMessage(''), 3000);
+    } catch (err: any) {
+      console.error('Photo upload error:', err);
+      setErrorMessage(err.response?.data?.message || 'Failed to upload photo');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  const getProfilePhotoUrl = () => {
+    if (user?.profilePhoto) {
+      return profileService.getPhotoUrl(user.profilePhoto);
+    }
+    return null;
   };
 
   return (
@@ -57,7 +132,15 @@ export const Profile: React.FC = () => {
 
         {saveMessage && (
           <Alert variant="success" dismissible onClose={() => setSaveMessage('')}>
+            <i className="bi bi-check-circle me-2"></i>
             {saveMessage}
+          </Alert>
+        )}
+
+        {errorMessage && (
+          <Alert variant="danger" dismissible onClose={() => setErrorMessage('')}>
+            <i className="bi bi-exclamation-triangle me-2"></i>
+            {errorMessage}
           </Alert>
         )}
 
@@ -65,13 +148,49 @@ export const Profile: React.FC = () => {
           <Col lg={4} className="mb-4">
             <Card className="border-0 shadow-sm text-center">
               <Card.Body className="p-4">
-                <div className="mb-3">
-                  <div 
-                    className="rounded-circle bg-primary bg-opacity-10 d-inline-flex align-items-center justify-content-center"
-                    style={{ width: '120px', height: '120px' }}
-                  >
-                    <i className="bi bi-person-circle text-primary" style={{ fontSize: '80px' }}></i>
-                  </div>
+                <div className="mb-3 position-relative d-inline-block">
+                  {uploadingPhoto ? (
+                    <div 
+                      className="rounded-circle bg-light d-inline-flex align-items-center justify-content-center"
+                      style={{ width: '120px', height: '120px' }}
+                    >
+                      <Spinner animation="border" variant="primary" />
+                    </div>
+                  ) : (
+                    <>
+                      {getProfilePhotoUrl() ? (
+                        <img
+                          src={getProfilePhotoUrl()!}
+                          alt="Profile"
+                          className="rounded-circle"
+                          style={{ width: '120px', height: '120px', objectFit: 'cover' }}
+                        />
+                      ) : (
+                        <div 
+                          className="rounded-circle bg-primary bg-opacity-10 d-inline-flex align-items-center justify-content-center"
+                          style={{ width: '120px', height: '120px' }}
+                        >
+                          <i className="bi bi-person-circle text-primary" style={{ fontSize: '80px' }}></i>
+                        </div>
+                      )}
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        className="rounded-circle position-absolute"
+                        style={{ bottom: '0', right: '0' }}
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        <i className="bi bi-camera"></i>
+                      </Button>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        onChange={handlePhotoUpload}
+                      />
+                    </>
+                  )}
                 </div>
                 <h4>{user?.firstName} {user?.lastName}</h4>
                 <p className="text-muted mb-3">{user?.email}</p>
@@ -134,6 +253,7 @@ export const Profile: React.FC = () => {
                           onChange={handleInputChange}
                           disabled={!isEditing}
                           placeholder="Enter first name"
+                          required
                         />
                       </Form.Group>
                     </Col>
@@ -147,6 +267,7 @@ export const Profile: React.FC = () => {
                           onChange={handleInputChange}
                           disabled={!isEditing}
                           placeholder="Enter last name"
+                          required
                         />
                       </Form.Group>
                     </Col>
@@ -158,12 +279,13 @@ export const Profile: React.FC = () => {
                         <Form.Label>Email Address</Form.Label>
                         <Form.Control
                           type="email"
-                          name="email"
-                          value={formData.email}
-                          onChange={handleInputChange}
-                          disabled={!isEditing}
-                          placeholder="Enter email"
+                          value={user?.email || ''}
+                          disabled
+                          placeholder="Email cannot be changed"
                         />
+                        <Form.Text className="text-muted">
+                          Email cannot be changed
+                        </Form.Text>
                       </Form.Group>
                     </Col>
                     <Col md={6} className="mb-3">
@@ -200,11 +322,20 @@ export const Profile: React.FC = () => {
 
                   {isEditing && (
                     <div className="d-flex gap-2 mt-4">
-                      <Button variant="primary" type="submit">
-                        <i className="bi bi-check-lg me-2"></i>
-                        Save Changes
+                      <Button variant="primary" type="submit" disabled={isLoading}>
+                        {isLoading ? (
+                          <>
+                            <Spinner animation="border" size="sm" className="me-2" />
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <i className="bi bi-check-lg me-2"></i>
+                            Save Changes
+                          </>
+                        )}
                       </Button>
-                      <Button variant="outline-secondary" type="button" onClick={handleCancel}>
+                      <Button variant="outline-secondary" type="button" onClick={handleCancel} disabled={isLoading}>
                         <i className="bi bi-x-lg me-2"></i>
                         Cancel
                       </Button>

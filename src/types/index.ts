@@ -8,6 +8,7 @@ export interface User {
   schoolId: string;
   phoneNumber?: string;
   address?: string;
+  profilePhoto?: string;
   isActive: boolean;
   createdAt: string;
 }

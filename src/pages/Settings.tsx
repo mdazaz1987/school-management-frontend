@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { Container, Row, Col, Card, Form, Button, Alert, ListGroup } from 'react-bootstrap';
+import { Container, Row, Col, Card, Form, Button, Alert, ListGroup, Spinner } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
+import { profileService } from '../services/profileService';
 
 export const Settings: React.FC = () => {
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [activeTab, setActiveTab] = useState<'password' | 'notifications' | 'preferences'>('password');
   const [saveMessage, setSaveMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -32,7 +34,7 @@ export const Settings: React.FC = () => {
     theme: 'light',
   });
 
-  const handlePasswordChange = (e: React.FormEvent) => {
+  const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
     setSaveMessage('');
@@ -48,12 +50,23 @@ export const Settings: React.FC = () => {
       return;
     }
 
-    // TODO: Implement API call to change password
-    console.log('Changing password...');
-    setSaveMessage('Password changed successfully!');
-    setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    setIsChangingPassword(true);
 
-    setTimeout(() => setSaveMessage(''), 3000);
+    try {
+      await profileService.changePassword({
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword,
+      });
+      
+      setSaveMessage('Password changed successfully!');
+      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setTimeout(() => setSaveMessage(''), 3000);
+    } catch (err: any) {
+      console.error('Password change error:', err);
+      setErrorMessage(err.response?.data?.message || 'Failed to change password');
+    } finally {
+      setIsChangingPassword(false);
+    }
   };
 
   const handleNotificationToggle = (key: keyof typeof notifications) => {
@@ -192,9 +205,18 @@ export const Settings: React.FC = () => {
                       />
                     </Form.Group>
 
-                    <Button variant="primary" type="submit">
-                      <i className="bi bi-check-lg me-2"></i>
-                      Update Password
+                    <Button variant="primary" type="submit" disabled={isChangingPassword}>
+                      {isChangingPassword ? (
+                        <>
+                          <Spinner animation="border" size="sm" className="me-2" />
+                          Updating...
+                        </>
+                      ) : (
+                        <>
+                          <i className="bi bi-check-lg me-2"></i>
+                          Update Password
+                        </>
+                      )}
                     </Button>
                   </Form>
                 </Card.Body>
