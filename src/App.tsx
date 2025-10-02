@@ -12,6 +12,8 @@ import { Profile } from './pages/Profile';
 import { Settings } from './pages/Settings';
 import { StudentList } from './pages/StudentList';
 import { StudentForm } from './pages/StudentForm';
+import { ClassList } from './pages/ClassList';
+import { ClassForm } from './pages/ClassForm';
 import './App.css';
 
 // Protected Route Component
@@ -139,8 +141,33 @@ function App() {
               </ProtectedRoute>
             }
           />
+          {/* Class Management Routes */}
           <Route
             path="/classes"
+            element={
+              <ProtectedRoute>
+                <ClassList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/classes/new"
+            element={
+              <ProtectedRoute>
+                <ClassForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/classes/edit/:id"
+            element={
+              <ProtectedRoute>
+                <ClassForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/classes/:id"
             element={
               <ProtectedRoute>
                 <ComingSoon />
