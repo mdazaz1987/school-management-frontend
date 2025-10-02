@@ -10,6 +10,8 @@ import { ParentDashboard } from './pages/ParentDashboard';
 import { ComingSoon } from './pages/ComingSoon';
 import { Profile } from './pages/Profile';
 import { Settings } from './pages/Settings';
+import { StudentList } from './pages/StudentList';
+import { StudentForm } from './pages/StudentForm';
 import './App.css';
 
 // Protected Route Component
@@ -94,15 +96,41 @@ function App() {
             }
           />
           
-          {/* Common protected routes that show "Coming Soon" */}
+          {/* Student Management Routes */}
           <Route
             path="/students"
+            element={
+              <ProtectedRoute>
+                <StudentList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/students/new"
+            element={
+              <ProtectedRoute>
+                <StudentForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/students/:id/edit"
+            element={
+              <ProtectedRoute>
+                <StudentForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/students/:id"
             element={
               <ProtectedRoute>
                 <ComingSoon />
               </ProtectedRoute>
             }
           />
+          
+          {/* Common protected routes that show "Coming Soon" */}
           <Route
             path="/teachers"
             element={
