@@ -20,6 +20,43 @@ export const Profile: React.FC = () => {
     address: user?.address || '',
   });
 
+  // Load profile data on mount
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        console.log('Loading profile from backend...');
+        const profileData = await profileService.getProfile();
+        console.log('Profile loaded:', profileData);
+        
+        // Update context and localStorage
+        setUser(profileData);
+        localStorage.setItem('user', JSON.stringify(profileData));
+        
+        // Update form data
+        setFormData({
+          firstName: profileData.firstName || '',
+          lastName: profileData.lastName || '',
+          phoneNumber: profileData.phoneNumber || '',
+          address: profileData.address || '',
+        });
+      } catch (err: any) {
+        console.error('Error loading profile:', err);
+        console.error('Error response:', err.response);
+        // If profile load fails, use data from context
+        if (user) {
+          setFormData({
+            firstName: user.firstName || '',
+            lastName: user.lastName || '',
+            phoneNumber: user.phoneNumber || '',
+            address: user.address || '',
+          });
+        }
+      }
+    };
+
+    loadProfile();
+  }, []); // Load once on mount
+
   // Update form data when user changes
   useEffect(() => {
     if (user) {
