@@ -17,12 +17,29 @@ class ApiService {
     this.api.interceptors.request.use(
       (config) => {
         const token = localStorage.getItem('token');
+        console.log('[API Interceptor] Request:', {
+          url: config.url,
+          method: config.method,
+          baseURL: config.baseURL,
+          fullURL: (config.baseURL || '') + (config.url || ''),
+          hasToken: !!token,
+          tokenPreview: token ? token.substring(0, 50) + '...' : 'No token',
+        });
+        
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
+          console.log('[API Interceptor] Authorization header set');
+        } else {
+          console.warn('[API Interceptor] No token found in localStorage!');
         }
+        
+        console.log('[API Interceptor] Final headers:', config.headers);
         return config;
       },
-      (error) => Promise.reject(error)
+      (error) => {
+        console.error('[API Interceptor] Request error:', error);
+        return Promise.reject(error);
+      }
     );
 
     // Response interceptor for error handling
