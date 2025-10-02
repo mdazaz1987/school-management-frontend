@@ -22,7 +22,8 @@ export const ClassForm: React.FC = () => {
     name: '',
     grade: '',
     section: '',
-    schoolId: user?.schoolId || '',
+    // TEMPORARY FIX: Use 'school123' as default until backend JWT includes schoolId
+    schoolId: user?.schoolId || 'school123',
     academicYear: new Date().getFullYear() + '-' + (new Date().getFullYear() + 1),
     capacity: undefined,
     room: '',
