@@ -21,7 +21,10 @@ export const authService = {
           email: payload.email || credentials.email,
           firstName: payload.firstName || '',
           lastName: payload.lastName || '',
-          roles: payload.roles || payload.authorities?.map((a: string) => a.replace('ROLE_', '')) || [],
+          // Handle both comma-separated string and array format
+          roles: typeof payload.roles === 'string' 
+            ? payload.roles.split(',').map((r: string) => r.trim().replace('ROLE_', ''))
+            : (payload.roles || payload.authorities?.map((a: string) => a.replace('ROLE_', '')) || []),
           schoolId: payload.schoolId || '',
           isActive: true,
           createdAt: new Date().toISOString(),
