@@ -4,7 +4,7 @@ import { Layout } from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, useParams } from 'react-router-dom';
 import { studentService } from '../services/studentService';
-import { Student, StudentCreateRequest, StudentUpdateRequest } from '../types';
+import { StudentCreateRequest, StudentUpdateRequest } from '../types';
 
 export const StudentForm: React.FC = () => {
   const { user } = useAuth();

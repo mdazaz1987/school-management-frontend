@@ -7,7 +7,7 @@ import { Student, PageResponse } from '../types';
 import { useNavigate } from 'react-router-dom';
 
 export const StudentList: React.FC = () => {
-  const { user } = useAuth();
+  const { } = useAuth();
   const navigate = useNavigate();
   
   const [students, setStudents] = useState<Student[]>([]);
@@ -29,6 +29,7 @@ export const StudentList: React.FC = () => {
 
   useEffect(() => {
     loadStudents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, filterStatus]);
 
   const loadStudents = async () => {
