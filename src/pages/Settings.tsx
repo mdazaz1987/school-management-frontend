@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert, ListGroup } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
-import { useAuth } from '../contexts/AuthContext';
 
 export const Settings: React.FC = () => {
-  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'password' | 'notifications' | 'preferences'>('password');
   const [saveMessage, setSaveMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
