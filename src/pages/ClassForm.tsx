@@ -73,6 +73,15 @@ export const ClassForm: React.FC = () => {
     setSaving(true);
 
     try {
+      // Debug: Check authentication
+      const token = localStorage.getItem('token');
+      const userStr = localStorage.getItem('user');
+      console.log('=== Class Creation Debug ===');
+      console.log('Has token:', !!token);
+      console.log('User:', userStr ? JSON.parse(userStr) : null);
+      console.log('Form data:', formData);
+      console.log('========================');
+
       if (isEditMode && id) {
         await classService.updateClass(id, formData);
         setSuccess('Class updated successfully!');
@@ -86,7 +95,19 @@ export const ClassForm: React.FC = () => {
       }, 1500);
     } catch (err: any) {
       console.error('Error saving class:', err);
-      setError(err.response?.data?.message || 'Failed to save class');
+      console.error('Error response:', err.response);
+      
+      let errorMessage = 'Failed to save class';
+      
+      if (err.response?.status === 403) {
+        errorMessage = 'Access Denied: You need ADMIN privileges to create classes. Please check your user role.';
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setSaving(false);
     }
