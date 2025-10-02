@@ -8,6 +8,8 @@ import { TeacherDashboard } from './pages/TeacherDashboard';
 import { StudentDashboard } from './pages/StudentDashboard';
 import { ParentDashboard } from './pages/ParentDashboard';
 import { ComingSoon } from './pages/ComingSoon';
+import { Profile } from './pages/Profile';
+import { Settings } from './pages/Settings';
 import './App.css';
 
 // Protected Route Component
@@ -70,6 +72,24 @@ function App() {
             element={
               <ProtectedRoute>
                 <DashboardRouter />
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Profile and Settings - Available for all users */}
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <Settings />
               </ProtectedRoute>
             }
           />
