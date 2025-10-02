@@ -30,9 +30,8 @@ export interface RegisterRequest {
 }
 
 export interface AuthResponse {
-  token: string;
-  type: string;
-  user: User;
+  accessToken: string;
+  tokenType: string;
 }
 
 // Student types
