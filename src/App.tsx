@@ -26,23 +26,32 @@ const ProtectedRoute: React.FC<{ children: React.ReactElement }> = ({ children }
 
 // Dashboard Router Component
 const DashboardRouter: React.FC = () => {
-  const { hasRole } = useAuth();
+  const { hasRole, user } = useAuth();
+
+  console.log('DashboardRouter - Current user:', user);
+  console.log('DashboardRouter - User roles:', user?.roles);
 
   // Route to appropriate dashboard based on user role
   if (hasRole('ADMIN')) {
+    console.log('Rendering Admin Dashboard');
     return <AdminDashboard />;
   } else if (hasRole('TEACHER')) {
+    console.log('Rendering Teacher Dashboard');
     return <TeacherDashboard />;
   } else if (hasRole('STUDENT')) {
+    console.log('Rendering Student Dashboard');
     return <StudentDashboard />;
   } else if (hasRole('PARENT')) {
+    console.log('Rendering Parent Dashboard');
     return <ParentDashboard />;
   }
 
+  console.error('No matching role found for user:', user);
   return (
     <Container className="text-center mt-5">
       <h1>Unauthorized</h1>
       <p>You don't have permission to access this page.</p>
+      <p className="text-muted">User roles: {JSON.stringify(user?.roles)}</p>
     </Container>
   );
 };

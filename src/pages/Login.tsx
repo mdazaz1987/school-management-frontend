@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -7,7 +7,15 @@ export const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useAuth();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      console.log('Already authenticated, redirecting to dashboard...');
+      window.location.href = '/dashboard';
+    }
+  }, [isAuthenticated]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -17,10 +25,15 @@ export const Login: React.FC = () => {
     try {
       console.log('Attempting login with:', email);
       await login(email, password);
-      console.log('Login successful, navigating to dashboard...');
+      console.log('Login successful!');
+      console.log('User stored in localStorage:', localStorage.getItem('user'));
+      console.log('Token stored in localStorage:', localStorage.getItem('token'));
       
-      // Use window.location for more reliable navigation
-      window.location.href = '/dashboard';
+      // Small delay to ensure state is updated, then force reload
+      setTimeout(() => {
+        console.log('Redirecting to dashboard...');
+        window.location.href = '/dashboard';
+      }, 100);
     } catch (err: any) {
       console.error('Login error:', err);
       const errorMessage = err.response?.data?.message 
