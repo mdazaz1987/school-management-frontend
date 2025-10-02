@@ -55,6 +55,7 @@ export const Profile: React.FC = () => {
     };
 
     loadProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Load once on mount
 
   // Update form data when user changes
