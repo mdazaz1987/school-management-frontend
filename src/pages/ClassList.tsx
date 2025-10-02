@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Container, Row, Col, Card, Table, Button, Badge, Alert, Spinner, Form } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
@@ -15,11 +15,7 @@ export const ClassList: React.FC = () => {
   const [success, setSuccess] = useState('');
   const [filterActive, setFilterActive] = useState<boolean | undefined>(true);
 
-  useEffect(() => {
-    loadClasses();
-  }, [filterActive]);
-
-  const loadClasses = async () => {
+  const loadClasses = useCallback(async () => {
     try {
       setLoading(true);
       setError('');
@@ -37,7 +33,11 @@ export const ClassList: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.schoolId, filterActive]);
+
+  useEffect(() => {
+    loadClasses();
+  }, [loadClasses]);
 
   const handleDelete = async (id: string, className: string) => {
     if (!window.confirm(`Are you sure you want to delete class "${className}"?`)) {
