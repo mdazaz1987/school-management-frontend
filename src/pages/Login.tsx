@@ -17,11 +17,19 @@ export const Login: React.FC = () => {
     setIsLoading(true);
 
     try {
+      console.log('Attempting login with:', email);
       await login(email, password);
-      navigate('/dashboard');
+      console.log('Login successful, navigating to dashboard...');
+      
+      // Use window.location for more reliable navigation
+      window.location.href = '/dashboard';
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
-    } finally {
+      console.error('Login error:', err);
+      const errorMessage = err.response?.data?.message 
+        || err.response?.data?.error 
+        || err.message 
+        || 'Login failed. Please check your credentials.';
+      setError(errorMessage);
       setIsLoading(false);
     }
   };

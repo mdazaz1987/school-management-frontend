@@ -27,7 +27,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const login = async (email: string, password: string) => {
+    console.log('AuthContext: Logging in...');
     const response = await authService.login({ email, password });
+    console.log('AuthContext: Login response:', response);
+    console.log('AuthContext: User:', response.user);
+    console.log('AuthContext: User roles:', response.user?.roles);
     setUser(response.user);
   };
 
