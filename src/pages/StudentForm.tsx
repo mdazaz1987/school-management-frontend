@@ -367,14 +367,10 @@ export const StudentForm: React.FC = () => {
                       </Form.Group>
                     </Col>
                   </Row>
-                </Card.Body>
-              </Card>
-            </Tab>
 
-            {/* Academic Information Tab */}
-            <Tab eventKey="academic" title="Academic Information">
-              <Card className="border-0 shadow-sm mb-4">
-                <Card.Body>
+                  <hr className="my-4" />
+                  <h6 className="mb-3">Class Information</h6>
+
                   <Row>
                     <Col md={4}>
                       <Form.Group className="mb-3">
@@ -413,7 +409,14 @@ export const StudentForm: React.FC = () => {
                       </Form.Group>
                     </Col>
                   </Row>
+                </Card.Body>
+              </Card>
+            </Tab>
 
+            {/* Academic Information Tab */}
+            <Tab eventKey="academic" title="Academic Information">
+              <Card className="border-0 shadow-sm mb-4">
+                <Card.Body>
                   <Row>
                     <Col md={6}>
                       <Form.Group className="mb-3">
