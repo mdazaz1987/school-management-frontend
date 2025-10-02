@@ -14,6 +14,8 @@ import { StudentList } from './pages/StudentList';
 import { StudentForm } from './pages/StudentForm';
 import { ClassList } from './pages/ClassList';
 import { ClassForm } from './pages/ClassForm';
+import { ClassDetail } from './pages/ClassDetail';
+import { StudentDetail } from './pages/StudentDetail';
 import './App.css';
 
 // Protected Route Component
@@ -127,7 +129,7 @@ function App() {
             path="/students/:id"
             element={
               <ProtectedRoute>
-                <ComingSoon />
+                <StudentDetail />
               </ProtectedRoute>
             }
           />
@@ -170,7 +172,7 @@ function App() {
             path="/classes/:id"
             element={
               <ProtectedRoute>
-                <ComingSoon />
+                <ClassDetail />
               </ProtectedRoute>
             }
           />
