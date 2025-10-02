@@ -76,11 +76,16 @@ export const Profile: React.FC = () => {
                 <h4>{user?.firstName} {user?.lastName}</h4>
                 <p className="text-muted mb-3">{user?.email}</p>
                 <div className="d-flex flex-wrap gap-1 justify-content-center mb-3">
-                  {user?.roles.map((role) => (
+                  {user?.roles && Array.isArray(user.roles) && user.roles.map((role) => (
                     <span key={role} className="badge bg-primary">
                       {role}
                     </span>
                   ))}
+                  {(!user?.roles || !Array.isArray(user.roles)) && user?.roles && (
+                    <span className="badge bg-primary">
+                      {user.roles}
+                    </span>
+                  )}
                 </div>
                 <hr />
                 <div className="text-start">
