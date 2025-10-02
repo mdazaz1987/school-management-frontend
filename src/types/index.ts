@@ -38,24 +38,157 @@ export interface AuthResponse {
 // Student types
 export interface Student {
   id: string;
+  admissionNumber: string;
   firstName: string;
   lastName: string;
   email: string;
-  phoneNumber?: string;
-  dateOfBirth: string;
-  gender: 'MALE' | 'FEMALE' | 'OTHER';
-  address: string;
+  phone?: string;
+  dateOfBirth?: string;
+  gender?: 'MALE' | 'FEMALE' | 'OTHER';
+  bloodGroup?: string;
+  religion?: string;
+  nationality?: string;
   schoolId: string;
   classId: string;
-  admissionNumber: string;
-  admissionDate: string;
+  section?: string;
+  rollNumber?: string;
   parentId?: string;
+  address?: StudentAddress;
+  parentInfo?: ParentInfo;
+  academicInfo?: AcademicInfo;
+  subjects?: string[];
+  profilePicture?: string;
+  isActive: boolean;
+  admissionDate?: string;
+  createdAt: string;
+  updatedAt: string;
+  performanceRecords?: PerformanceRecord[];
+}
+
+export interface StudentAddress {
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+}
+
+export interface ParentInfo {
+  fatherName?: string;
+  fatherPhone?: string;
+  fatherEmail?: string;
+  fatherOccupation?: string;
+  motherName?: string;
+  motherPhone?: string;
+  motherEmail?: string;
+  motherOccupation?: string;
   guardianName?: string;
   guardianPhone?: string;
+  guardianEmail?: string;
+  guardianRelation?: string;
+}
+
+export interface AcademicInfo {
+  previousSchool?: string;
+  previousClass?: string;
+  previousPercentage?: number;
+  academicYear?: string;
+  stream?: string;
+  achievements?: string[];
+}
+
+export interface PerformanceRecord {
+  examName: string;
+  academicYear: string;
+  term: string;
+  subjectScores: { [subject: string]: number };
+  totalMarks: number;
+  percentage: number;
+  grade: string;
+  remarks?: string;
+  examDate: string;
+}
+
+export interface StudentCreateRequest {
+  admissionNumber: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  dateOfBirth?: string;
+  gender: string;
   bloodGroup?: string;
-  medicalConditions?: string;
-  isActive: boolean;
-  createdAt: string;
+  religion?: string;
+  nationality?: string;
+  schoolId: string;
+  classId: string;
+  section?: string;
+  rollNumber?: string;
+  parentId?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  fatherName?: string;
+  fatherPhone?: string;
+  fatherEmail?: string;
+  fatherOccupation?: string;
+  motherName?: string;
+  motherPhone?: string;
+  motherEmail?: string;
+  motherOccupation?: string;
+  guardianName?: string;
+  guardianPhone?: string;
+  guardianEmail?: string;
+  guardianRelation?: string;
+  previousSchool?: string;
+  previousClass?: string;
+  previousPercentage?: number;
+  academicYear?: string;
+  stream?: string;
+  admissionDate?: string;
+  isActive?: boolean;
+}
+
+export interface StudentUpdateRequest {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  bloodGroup?: string;
+  religion?: string;
+  nationality?: string;
+  classId?: string;
+  section?: string;
+  rollNumber?: string;
+  parentId?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  fatherName?: string;
+  fatherPhone?: string;
+  fatherEmail?: string;
+  fatherOccupation?: string;
+  motherName?: string;
+  motherPhone?: string;
+  motherEmail?: string;
+  motherOccupation?: string;
+  guardianName?: string;
+  guardianPhone?: string;
+  guardianEmail?: string;
+  guardianRelation?: string;
+  previousSchool?: string;
+  previousClass?: string;
+  previousPercentage?: number;
+  academicYear?: string;
+  stream?: string;
+  isActive?: boolean;
+  profilePicture?: string;
 }
 
 // Class types
@@ -237,4 +370,22 @@ export interface ApiResponse<T> {
   success: boolean;
   message: string;
   data?: T;
+}
+
+// Pagination types
+export interface PageRequest {
+  page?: number;
+  size?: number;
+  sort?: string;
+}
+
+export interface PageResponse<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  number: number;
+  first: boolean;
+  last: boolean;
+  empty: boolean;
 }

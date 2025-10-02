@@ -45,6 +45,12 @@ class ApiService {
     return response.data;
   }
 
+  // For paginated endpoints that need full response
+  async getWithFullResponse<T>(url: string, params?: any): Promise<T> {
+    const response = await this.api.get<T>(url, { params });
+    return response.data;
+  }
+
   async post<T>(url: string, data?: any, config?: any): Promise<T> {
     const response = await this.api.post<T>(url, data, config);
     return response.data;
@@ -55,9 +61,19 @@ class ApiService {
     return response.data;
   }
 
+  async patch<T>(url: string, data?: any): Promise<T> {
+    const response = await this.api.patch<T>(url, data);
+    return response.data;
+  }
+
   async delete<T>(url: string): Promise<T> {
     const response = await this.api.delete<T>(url);
     return response.data;
+  }
+
+  // Method to get raw axios instance for special cases
+  getAxiosInstance(): AxiosInstance {
+    return this.api;
   }
 }
 
