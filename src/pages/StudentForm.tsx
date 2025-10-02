@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner, Tabs, Tab } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
@@ -65,14 +65,7 @@ export const StudentForm: React.FC = () => {
     apaarId: '',
   });
 
-  useEffect(() => {
-    loadClasses();
-    if (isEditMode && id) {
-      loadStudent(id);
-    }
-  }, [id, isEditMode]);
-
-  const loadClasses = async () => {
+  const loadClasses = useCallback(async () => {
     try {
       setLoadingClasses(true);
       const classList = await classService.getAllClasses({ schoolId: user?.schoolId });
@@ -82,7 +75,14 @@ export const StudentForm: React.FC = () => {
     } finally {
       setLoadingClasses(false);
     }
-  };
+  }, [user?.schoolId]);
+
+  useEffect(() => {
+    loadClasses();
+    if (isEditMode && id) {
+      loadStudent(id);
+    }
+  }, [id, isEditMode, loadClasses]);
 
   const loadStudent = async (studentId: string) => {
     try {
