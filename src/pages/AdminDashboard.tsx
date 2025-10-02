@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Row, Col, Card, Button, Table, Badge } from 'react-bootstrap';
+import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
@@ -19,6 +20,7 @@ const sidebarItems = [
 
 export const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [stats] = useState({
     totalStudents: 450,
     totalTeachers: 45,
@@ -149,15 +151,15 @@ export const AdminDashboard: React.FC = () => {
                 </Card.Header>
                 <Card.Body>
                   <div className="d-grid gap-2">
-                    <Button variant="primary" size="lg">
+                    <Button variant="primary" size="lg" onClick={() => navigate('/students/new')}>
                       <i className="bi bi-person-plus me-2"></i>
                       Add New Student
                     </Button>
-                    <Button variant="success" size="lg">
+                    <Button variant="success" size="lg" onClick={() => navigate('/exams')}>
                       <i className="bi bi-clipboard-plus me-2"></i>
                       Create Exam
                     </Button>
-                    <Button variant="info" size="lg">
+                    <Button variant="info" size="lg" onClick={() => navigate('/notifications')}>
                       <i className="bi bi-megaphone me-2"></i>
                       Send Notification
                     </Button>

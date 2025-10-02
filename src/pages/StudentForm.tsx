@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner, Tabs, Tab } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, useParams } from 'react-router-dom';
 import { studentService } from '../services/studentService';
-import { StudentCreateRequest, StudentUpdateRequest } from '../types';
+import { classService } from '../services/classService';
+import { StudentCreateRequest, StudentUpdateRequest, SchoolClass } from '../types';
 
 export const StudentForm: React.FC = () => {
   const { user } = useAuth();
@@ -16,6 +17,8 @@ export const StudentForm: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [classes, setClasses] = useState<SchoolClass[]>([]);
+  const [loadingClasses, setLoadingClasses] = useState(false);
 
   // Form data
   const [formData, setFormData] = useState<StudentCreateRequest>({
@@ -58,13 +61,28 @@ export const StudentForm: React.FC = () => {
     stream: '',
     admissionDate: new Date().toISOString().split('T')[0],
     isActive: true,
+    aadhaarNumber: '',
+    apaarId: '',
   });
 
+  const loadClasses = useCallback(async () => {
+    try {
+      setLoadingClasses(true);
+      const classList = await classService.getAllClasses({ schoolId: user?.schoolId });
+      setClasses(classList.filter(c => c.isActive));
+    } catch (err) {
+      console.error('Error loading classes:', err);
+    } finally {
+      setLoadingClasses(false);
+    }
+  }, [user?.schoolId]);
+
   useEffect(() => {
+    loadClasses();
     if (isEditMode && id) {
       loadStudent(id);
     }
-  }, [id, isEditMode]);
+  }, [id, isEditMode, loadClasses]);
 
   const loadStudent = async (studentId: string) => {
     try {
@@ -112,6 +130,8 @@ export const StudentForm: React.FC = () => {
         stream: student.academicInfo?.stream || '',
         admissionDate: student.admissionDate || '',
         isActive: student.isActive,
+        aadhaarNumber: student.aadhaarNumber || '',
+        apaarId: student.apaarId || '',
       });
     } catch (err: any) {
       console.error('Error loading student:', err);
@@ -367,26 +387,34 @@ export const StudentForm: React.FC = () => {
                       </Form.Group>
                     </Col>
                   </Row>
-                </Card.Body>
-              </Card>
-            </Tab>
 
-            {/* Academic Information Tab */}
-            <Tab eventKey="academic" title="Academic Information">
-              <Card className="border-0 shadow-sm mb-4">
-                <Card.Body>
+                  <hr className="my-4" />
+                  <h6 className="mb-3">Class Information</h6>
+
                   <Row>
                     <Col md={4}>
                       <Form.Group className="mb-3">
                         <Form.Label>Class <span className="text-danger">*</span></Form.Label>
-                        <Form.Control
-                          type="text"
+                        <Form.Select
                           name="classId"
                           value={formData.classId}
                           onChange={handleChange}
-                          placeholder="e.g., Grade 10"
                           required
-                        />
+                          disabled={loadingClasses}
+                        >
+                          <option value="">Select Class</option>
+                          {classes.map((cls) => (
+                            <option key={cls.id} value={cls.id}>
+                              {cls.name || cls.className} - {cls.section} ({cls.academicYear})
+                            </option>
+                          ))}
+                        </Form.Select>
+                        {loadingClasses && (
+                          <Form.Text className="text-muted">
+                            <Spinner animation="border" size="sm" className="me-1" />
+                            Loading classes...
+                          </Form.Text>
+                        )}
                       </Form.Group>
                     </Col>
                     <Col md={4}>
@@ -413,7 +441,55 @@ export const StudentForm: React.FC = () => {
                       </Form.Group>
                     </Col>
                   </Row>
+                  
+                  <hr className="my-4" />
+                  <h6 className="mb-3">Government IDs</h6>
 
+                  <Row>
+                    <Col md={6}>
+                      <Form.Group className="mb-3">
+                        <Form.Label>Aadhaar Number</Form.Label>
+                        <Form.Control
+                          type="text"
+                          name="aadhaarNumber"
+                          value={formData.aadhaarNumber}
+                          onChange={handleChange}
+                          placeholder="12 digit Aadhaar number"
+                          maxLength={12}
+                          pattern="\d{12}"
+                        />
+                        <Form.Text className="text-muted">
+                          Enter 12 digit Aadhaar number (stored securely)
+                        </Form.Text>
+                      </Form.Group>
+                    </Col>
+                    <Col md={6}>
+                      <Form.Group className="mb-3">
+                        <Form.Label>APAAR ID</Form.Label>
+                        <Form.Control
+                          type="text"
+                          name="apaarId"
+                          value={formData.apaarId}
+                          onChange={handleChange}
+                          placeholder="12 character APAAR ID"
+                          maxLength={12}
+                          pattern="[A-Z0-9]{12}"
+                          style={{ textTransform: 'uppercase' }}
+                        />
+                        <Form.Text className="text-muted">
+                          12 alphanumeric characters (Automated Permanent Academic Account Registry)
+                        </Form.Text>
+                      </Form.Group>
+                    </Col>
+                  </Row>
+                </Card.Body>
+              </Card>
+            </Tab>
+
+            {/* Academic Information Tab */}
+            <Tab eventKey="academic" title="Academic Information">
+              <Card className="border-0 shadow-sm mb-4">
+                <Card.Body>
                   <Row>
                     <Col md={6}>
                       <Form.Group className="mb-3">

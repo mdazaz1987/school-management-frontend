@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Table, Button, Form, InputGroup, Badge, Pagination, Spinner, Alert, Modal } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
-import { useAuth } from '../contexts/AuthContext';
 import { studentService } from '../services/studentService';
 import { Student, PageResponse } from '../types';
 import { useNavigate } from 'react-router-dom';
 
 export const StudentList: React.FC = () => {
-  const { } = useAuth();
   const navigate = useNavigate();
   
   const [students, setStudents] = useState<Student[]>([]);
