@@ -110,8 +110,8 @@ pipeline {
                         echo "Starting application on port ${APP_PORT}..."
                         cd ${DEPLOY_DIR}
                         
-                        # Start with serve - correct syntax
-                        pm2 start serve --name ${APP_NAME} -- -s build -l ${APP_PORT} -n
+                        # Start with npx serve (handles ES modules properly)
+                        pm2 start "npx serve -s build -l ${APP_PORT} -n" --name ${APP_NAME}
                         sleep 3
                         
                         # Check PM2 status
