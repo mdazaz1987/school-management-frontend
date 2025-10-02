@@ -7,6 +7,7 @@ import { AdminDashboard } from './pages/AdminDashboard';
 import { TeacherDashboard } from './pages/TeacherDashboard';
 import { StudentDashboard } from './pages/StudentDashboard';
 import { ParentDashboard } from './pages/ParentDashboard';
+import { ComingSoon } from './pages/ComingSoon';
 import './App.css';
 
 // Protected Route Component
@@ -62,11 +63,156 @@ function App() {
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
+          
+          {/* Dashboard routes */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <DashboardRouter />
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Common protected routes that show "Coming Soon" */}
+          <Route
+            path="/students"
+            element={
+              <ProtectedRoute>
+                <ComingSoon />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/teachers"
+            element={
+              <ProtectedRoute>
+                <ComingSoon />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/classes"
+            element={
+              <ProtectedRoute>
+                <ComingSoon />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/subjects"
+            element={
+              <ProtectedRoute>
+                <ComingSoon />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/parents"
+            element={
+              <ProtectedRoute>
+                <ComingSoon />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/exams"
+            element={
+              <ProtectedRoute>
+                <ComingSoon />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/fees"
+            element={
+              <ProtectedRoute>
+                <ComingSoon />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/timetable"
+            element={
+              <ProtectedRoute>
+                <ComingSoon />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/attendance"
+            element={
+              <ProtectedRoute>
+                <ComingSoon />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/assignments"
+            element={
+              <ProtectedRoute>
+                <ComingSoon />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/notifications"
+            element={
+              <ProtectedRoute>
+                <ComingSoon />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/grades"
+            element={
+              <ProtectedRoute>
+                <ComingSoon />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/my-classes"
+            element={
+              <ProtectedRoute>
+                <ComingSoon />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/grading"
+            element={
+              <ProtectedRoute>
+                <ComingSoon />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/my-children"
+            element={
+              <ProtectedRoute>
+                <ComingSoon />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/children"
+            element={
+              <ProtectedRoute>
+                <ComingSoon />
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Default redirect */}
+          <Route path="/" element={<Navigate to="/dashboard" />} />
+          
+          {/* Catch-all for any other routes */}
           <Route
             path="/*"
             element={
               <ProtectedRoute>
-                <DashboardRouter />
+                <ComingSoon />
               </ProtectedRoute>
             }
           />
