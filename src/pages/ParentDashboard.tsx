@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Row, Col, Card, Button, Badge, ProgressBar, ListGroup } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
+import { parentService } from '../services/parentService';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -15,26 +16,36 @@ const sidebarItems = [
 
 export const ParentDashboard: React.FC = () => {
   const { user } = useAuth();
-  const [children] = useState([
-    {
-      id: 1,
-      name: 'John Doe',
-      class: 'Grade 10-A',
-      attendance: 94,
-      averageGrade: 87,
-      pendingFees: 0,
-      upcomingExams: 2,
-    },
-    {
-      id: 2,
-      name: 'Jane Doe',
-      class: 'Grade 8-B',
-      attendance: 96,
-      averageGrade: 92,
-      pendingFees: 5000,
-      upcomingExams: 1,
-    },
-  ]);
+  const [children, setChildren] = useState<Array<{
+    id: string;
+    name: string;
+    class: string;
+    attendance: number;
+    averageGrade: number;
+    pendingFees: number;
+    upcomingExams: number;
+  }>>([]);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const resp = await parentService.getDashboard();
+        const mapped = (resp.children || []).map((c) => ({
+          id: c.studentId,
+          name: c.studentName,
+          class: c.className,
+          attendance: Math.round(c.attendancePercentage || 0),
+          averageGrade: 0,
+          pendingFees: 0,
+          upcomingExams: 0,
+        }));
+        setChildren(mapped);
+      } catch (e) {
+        // keep defaults if backend not available
+      }
+    };
+    load();
+  }, []);
 
   const recentActivities = [
     { child: 'John Doe', activity: 'Submitted Math Assignment', type: 'assignment', time: '2 hours ago', color: 'success' },
