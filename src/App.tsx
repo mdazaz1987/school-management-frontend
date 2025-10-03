@@ -18,6 +18,8 @@ import { ClassDetail } from './pages/ClassDetail';
 import { StudentDetail } from './pages/StudentDetail';
 import { DebugAuth } from './pages/DebugAuth';
 import './App.css';
+import { SubjectList } from './pages/SubjectList';
+import { SubjectForm } from './pages/SubjectForm';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactElement }> = ({ children }) => {
@@ -181,7 +183,23 @@ function App() {
             path="/subjects"
             element={
               <ProtectedRoute>
-                <ComingSoon />
+                <SubjectList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/subjects/new"
+            element={
+              <ProtectedRoute>
+                <SubjectForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/subjects/:id/edit"
+            element={
+              <ProtectedRoute>
+                <SubjectForm />
               </ProtectedRoute>
             }
           />
