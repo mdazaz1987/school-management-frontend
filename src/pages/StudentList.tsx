@@ -119,11 +119,11 @@ export const StudentList: React.FC = () => {
 
   const handleActivate = async (student: Student) => {
     try {
-      await studentService.activateStudent(student.id);
+      await studentService.updateStatus(student.id, !student.isActive);
       loadStudents(); // Reload the list
     } catch (err: any) {
-      console.error('Error activating student:', err);
-      setError('Failed to activate student');
+      console.error('Error updating student status:', err);
+      setError(err.response?.data?.message || 'Failed to update student status');
     }
   };
 
