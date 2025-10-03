@@ -22,6 +22,8 @@ import { SubjectList } from './pages/SubjectList';
 import { SubjectForm } from './pages/SubjectForm';
 import { ExamList } from './pages/ExamList';
 import { ExamForm } from './pages/ExamForm';
+import { FeeList } from './pages/FeeList';
+import { FeeForm } from './pages/FeeForm';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactElement }> = ({ children }) => {
@@ -241,7 +243,23 @@ function App() {
             path="/fees"
             element={
               <ProtectedRoute>
-                <ComingSoon />
+                <FeeList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/fees/new"
+            element={
+              <ProtectedRoute>
+                <FeeForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/fees/:id/edit"
+            element={
+              <ProtectedRoute>
+                <FeeForm />
               </ProtectedRoute>
             }
           />
