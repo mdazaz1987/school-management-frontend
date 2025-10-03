@@ -42,6 +42,11 @@ export const classService = {
     return normalizeClass(resp as any);
   },
 
+  async updateClassStatus(id: string, isActive: boolean): Promise<SchoolClass> {
+    const resp = await apiService.put<SchoolClass>(`/classes/${id}/status`, { isActive });
+    return normalizeClass(resp as any);
+  },
+
   async deleteClass(id: string): Promise<void> {
     return apiService.delete<void>(`/classes/${id}`);
   },
