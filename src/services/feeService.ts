@@ -6,6 +6,7 @@ const normalizeFee = (f: any): Fee => {
     id: f.id,
     studentId: f.studentId,
     schoolId: f.schoolId,
+    classId: f.classId,
     feeType: f.feeType || f.type || '',
     amount: Number(f.amount ?? 0),
     discountAmount: f.discount ?? f.discountAmount ?? 0,
@@ -37,7 +38,8 @@ export const feeService = {
     const payload: any = {
       studentId: data.studentId,
       schoolId: data.schoolId,
-      feeType: data.feeType,
+      classId: data.classId,
+      feeType: (data.feeType || '').toString().toUpperCase(),
       feeDescription: (data as any).feeDescription,
       amount: data.amount,
       discount: data.discountAmount,
@@ -46,6 +48,7 @@ export const feeService = {
       academicYear: data.academicYear,
       feeItems: (data as any).feeItems,
       remarks: data.discountReason,
+      status: data.status,
     };
     const created = await apiService.post<any>('/fees', payload);
     return normalizeFee(created);

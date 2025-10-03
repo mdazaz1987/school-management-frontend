@@ -269,12 +269,13 @@ export interface Fee {
   id: string;
   studentId: string;
   schoolId: string;
+  classId: string;
   feeType: string;
   amount: number;
   discountAmount?: number;
   discountReason?: string;
   netAmount: number;
-  status: 'PENDING' | 'PAID' | 'PARTIAL' | 'OVERDUE';
+  status: 'PENDING' | 'PAID' | 'PARTIAL' | 'OVERDUE' | 'WAIVED';
   dueDate: string;
   paidAmount?: number;
   paidDate?: string;

@@ -23,6 +23,7 @@ export const FeeForm: React.FC = () => {
   const [form, setForm] = useState<Partial<Fee>>({
     schoolId: user?.schoolId || '',
     studentId: '',
+    classId: '',
     feeType: '',
     amount: 0,
     discountAmount: 0,
@@ -75,6 +76,7 @@ export const FeeForm: React.FC = () => {
       const payload: Partial<Fee> = {
         schoolId: form.schoolId || user?.schoolId || '',
         studentId: form.studentId || '',
+        classId: form.classId || '',
         feeType: form.feeType || '',
         amount: Number(form.amount ?? 0),
         discountAmount: Number(form.discountAmount ?? 0),
@@ -142,7 +144,15 @@ export const FeeForm: React.FC = () => {
                       <Form.Label>Student</Form.Label>
                       <Form.Select
                         value={form.studentId || ''}
-                        onChange={(e) => handleChange('studentId', e.target.value)}
+                        onChange={(e) => {
+                          const sid = e.target.value;
+                          const stu = students.find((s) => s.id === sid);
+                          setForm((prev) => ({
+                            ...prev,
+                            studentId: sid,
+                            classId: stu?.classId || '',
+                          }));
+                        }}
                         required
                       >
                         <option value="">Select Student</option>
@@ -155,13 +165,22 @@ export const FeeForm: React.FC = () => {
                   <Col md={6} className="mb-3">
                     <Form.Group>
                       <Form.Label>Fee Type</Form.Label>
-                      <Form.Control
-                        type="text"
+                      <Form.Select
                         value={form.feeType || ''}
                         onChange={(e) => handleChange('feeType', e.target.value)}
-                        placeholder="e.g., Tuition, Transport"
                         required
-                      />
+                      >
+                        <option value="">Select Type</option>
+                        <option value="TUITION">TUITION</option>
+                        <option value="ADMISSION">ADMISSION</option>
+                        <option value="EXAMINATION">EXAMINATION</option>
+                        <option value="TRANSPORT">TRANSPORT</option>
+                        <option value="LIBRARY">LIBRARY</option>
+                        <option value="SPORTS">SPORTS</option>
+                        <option value="HOSTEL">HOSTEL</option>
+                        <option value="LABORATORY">LABORATORY</option>
+                        <option value="OTHER">OTHER</option>
+                      </Form.Select>
                     </Form.Group>
                   </Col>
                 </Row>
@@ -234,7 +253,9 @@ export const FeeForm: React.FC = () => {
                       >
                         <option value="PENDING">PENDING</option>
                         <option value="PAID">PAID</option>
+                        <option value="PARTIAL">PARTIAL</option>
                         <option value="OVERDUE">OVERDUE</option>
+                        <option value="WAIVED">WAIVED</option>
                       </Form.Select>
                     </Form.Group>
                   </Col>
