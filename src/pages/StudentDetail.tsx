@@ -3,6 +3,7 @@ import { Container, Row, Col, Card, Button, Badge, Alert, Spinner, ListGroup, Ta
 import { Layout } from '../components/Layout';
 import { useNavigate, useParams } from 'react-router-dom';
 import { studentService } from '../services/studentService';
+import { classService } from '../services/classService';
 import { Student } from '../types';
 import { maskAadhaar } from '../utils/maskAadhaar';
 
@@ -12,6 +13,8 @@ export const StudentDetail: React.FC = () => {
   const [student, setStudent] = useState<Student | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [className, setClassName] = useState<string>('');
 
   useEffect(() => {
     if (id) {
@@ -24,11 +27,35 @@ export const StudentDetail: React.FC = () => {
       setLoading(true);
       const data = await studentService.getStudentById(studentId);
       setStudent(data);
+      // Fetch friendly class name
+      if (data.classId) {
+        try {
+          const cls = await classService.getClassById(data.classId);
+          setClassName(cls.name || cls.className);
+        } catch (e) {
+          setClassName('');
+        }
+      }
     } catch (err: any) {
       console.error('Error loading student:', err);
       setError(err.response?.data?.message || 'Failed to load student details');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleToggleActive = async () => {
+    if (!id || !student) return;
+    try {
+      setSaving(true);
+      setError('');
+      const updated = await studentService.updateStatus(id, !student.isActive);
+      setStudent(updated);
+    } catch (err: any) {
+      console.error('Error updating status:', err);
+      setError(err.response?.data?.message || 'Failed to update status');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -96,6 +123,13 @@ export const StudentDetail: React.FC = () => {
                 </div>
               </div>
               <div className="d-flex gap-2">
+                <Button 
+                  variant={student.isActive ? 'outline-danger' : 'outline-success'}
+                  onClick={handleToggleActive}
+                  disabled={saving}
+                >
+                  {student.isActive ? 'Mark Inactive' : 'Mark Active'}
+                </Button>
                 <Button variant="primary" onClick={() => navigate(`/students/${id}/edit`)}>
                   <i className="bi bi-pencil me-2"></i>
                   Edit
@@ -182,7 +216,7 @@ export const StudentDetail: React.FC = () => {
                   {student.classId && (
                     <ListGroup.Item className="d-flex justify-content-between">
                       <strong>Class:</strong>
-                      <span>{student.classId}</span>
+                      <span>{className || student.classId}</span>
                     </ListGroup.Item>
                   )}
                   {student.section && (

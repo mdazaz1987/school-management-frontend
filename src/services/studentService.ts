@@ -107,7 +107,8 @@ export const studentService = {
    * Get student by admission number
    */
   async getStudentByAdmissionNumber(admissionNumber: string): Promise<Student> {
-    return apiService.get<Student>(`/students/admission/${admissionNumber}`);
+    const data = await apiService.get<any>(`/students/admission/${admissionNumber}`);
+    return normalizeStudent(data);
   },
 
   /**

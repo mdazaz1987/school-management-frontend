@@ -170,6 +170,10 @@ export const StudentForm: React.FC = () => {
         // Update existing student
         const updateData: StudentUpdateRequest = { ...formData };
         await studentService.partialUpdateStudent(id, updateData);
+        // Ensure active flag is persisted via dedicated endpoint
+        if (typeof formData.isActive === 'boolean') {
+          await studentService.updateStatus(id, !!formData.isActive);
+        }
         setSuccess('Student updated successfully!');
       } else {
         // Create new student
