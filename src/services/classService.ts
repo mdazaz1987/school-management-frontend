@@ -1,21 +1,45 @@
 import apiService from './api';
 import { SchoolClass } from '../types';
 
+// Normalize backend payloads that may return `active` instead of `isActive`
+const normalizeClass = (c: any): SchoolClass => ({
+  ...c,
+  isActive: c?.isActive ?? c?.active ?? false,
+});
+
 export const classService = {
   async getAllClasses(params?: { schoolId?: string }): Promise<SchoolClass[]> {
-    return apiService.get<SchoolClass[]>('/classes', params);
+    // Only include schoolId if it is a non-empty string
+    const cleanedParams = params?.schoolId && params.schoolId.trim().length > 0
+      ? { schoolId: params.schoolId }
+      : undefined;
+    const data = await apiService.get<SchoolClass[]>('/classes', cleanedParams);
+    // Normalize each item (map 'active' -> 'isActive')
+    return (data as any[]).map(normalizeClass);
   },
 
   async getClassById(id: string): Promise<SchoolClass> {
-    return apiService.get<SchoolClass>(`/classes/${id}`);
+    const data = await apiService.get<SchoolClass>(`/classes/${id}`);
+    return normalizeClass(data as any);
   },
 
   async createClass(data: Partial<SchoolClass>): Promise<SchoolClass> {
-    return apiService.post<SchoolClass>('/classes', data);
+    // Send `active` to backend for compatibility; keep `isActive` too
+    const payload: any = { ...data };
+    if (payload.isActive !== undefined) {
+      payload.active = payload.isActive;
+    }
+    const resp = await apiService.post<SchoolClass>('/classes', payload);
+    return normalizeClass(resp as any);
   },
 
   async updateClass(id: string, data: Partial<SchoolClass>): Promise<SchoolClass> {
-    return apiService.put<SchoolClass>(`/classes/${id}`, data);
+    const payload: any = { ...data };
+    if (payload.isActive !== undefined) {
+      payload.active = payload.isActive;
+    }
+    const resp = await apiService.put<SchoolClass>(`/classes/${id}`, payload);
+    return normalizeClass(resp as any);
   },
 
   async deleteClass(id: string): Promise<void> {
