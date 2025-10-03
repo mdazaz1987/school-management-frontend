@@ -151,6 +151,14 @@ export const StudentForm: React.FC = () => {
     }));
   };
 
+  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: checked,
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -385,6 +393,21 @@ export const StudentForm: React.FC = () => {
                           value={formData.nationality}
                           onChange={handleChange}
                         />
+                      </Form.Group>
+                    </Col>
+                  </Row>
+
+                  <Row>
+                    <Col md={12}>
+                      <Form.Group className="mb-2">
+                        <Form.Check
+                          type="checkbox"
+                          name="isActive"
+                          label="Active Student"
+                          checked={!!formData.isActive}
+                          onChange={handleCheckboxChange}
+                        />
+                        <Form.Text className="text-muted">Uncheck to create the student as Inactive.</Form.Text>
                       </Form.Group>
                     </Col>
                   </Row>
