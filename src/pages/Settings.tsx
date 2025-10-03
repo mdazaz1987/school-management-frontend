@@ -1,11 +1,16 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert, ListGroup, Spinner } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
 import { profileService } from '../services/profileService';
+import { useAuth } from '../contexts/AuthContext';
+import { School } from '../types';
+import { schoolService } from '../services/schoolService';
 
 export const Settings: React.FC = () => {
+  const { user } = useAuth();
+  const isAdmin = useMemo(() => (user?.roles || []).some(r => r === 'ADMIN' || r === 'ROLE_ADMIN'), [user?.roles]);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
-  const [activeTab, setActiveTab] = useState<'password' | 'notifications' | 'preferences'>('password');
+  const [activeTab, setActiveTab] = useState<'password' | 'notifications' | 'preferences' | 'school'>('password');
   const [saveMessage, setSaveMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -33,6 +38,35 @@ export const Settings: React.FC = () => {
     dateFormat: 'DD/MM/YYYY',
     theme: 'light',
   });
+
+  // School config state (admin-only)
+  const [schoolLoading, setSchoolLoading] = useState(false);
+  const [schoolSaving, setSchoolSaving] = useState(false);
+  const [school, setSchool] = useState<Partial<School>>({
+    id: '',
+    name: '',
+    logo: '',
+    contactInfo: { phone: '', email: '', website: '' },
+    address: { street: '', city: '', state: '', zipCode: '' },
+    configuration: { academicYear: '', gradeSystem: '', currency: 'INR', timezone: 'Asia/Kolkata' },
+    branding: { primaryColor: '#0d6efd', secondaryColor: '#6c757d', theme: 'light' },
+  });
+
+  useEffect(() => {
+    const maybeLoadSchool = async () => {
+      if (!isAdmin || !user?.schoolId) return;
+      try {
+        setSchoolLoading(true);
+        const s = await schoolService.getById(user.schoolId);
+        setSchool(s);
+      } catch (e: any) {
+        // Don't block settings if school fetch fails
+      } finally {
+        setSchoolLoading(false);
+      }
+    };
+    maybeLoadSchool();
+  }, [isAdmin, user?.schoolId]);
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -402,6 +436,239 @@ export const Settings: React.FC = () => {
                         </Form.Group>
                       </Col>
                     </Row>
+                  </Form>
+                </Card.Body>
+              </Card>
+            )}
+
+            {/* School Tab (Admin only) */}
+            {activeTab === 'school' && isAdmin && (
+              <Card className="border-0 shadow-sm">
+                <Card.Header className="bg-white d-flex justify-content-between align-items-center">
+                  <h5 className="mb-0">
+                    <i className="bi bi-building me-2"></i>
+                    School Configuration
+                  </h5>
+                  {schoolLoading && <Spinner animation="border" size="sm" />}
+                </Card.Header>
+                <Card.Body className="p-4">
+                  <Form
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      if (!user?.schoolId) return;
+                      setErrorMessage('');
+                      setSaveMessage('');
+                      setSchoolSaving(true);
+                      try {
+                        const updated = await schoolService.update(user.schoolId, school);
+                        setSchool(updated);
+                        setSaveMessage('School settings saved');
+                        setTimeout(() => setSaveMessage(''), 3000);
+                      } catch (err: any) {
+                        setErrorMessage(err.response?.data?.message || 'Failed to save school');
+                      } finally {
+                        setSchoolSaving(false);
+                      }
+                    }}
+                  >
+                    <Row>
+                      <Col md={6} className="mb-3">
+                        <Form.Group>
+                          <Form.Label>School Name</Form.Label>
+                          <Form.Control
+                            type="text"
+                            value={school.name || ''}
+                            onChange={(e) => setSchool((prev) => ({ ...prev, name: e.target.value }))}
+                            required
+                          />
+                        </Form.Group>
+                      </Col>
+                      <Col md={6} className="mb-3">
+                        <Form.Group>
+                          <Form.Label>Logo URL</Form.Label>
+                          <Form.Control
+                            type="text"
+                            value={school.logo || ''}
+                            onChange={(e) => setSchool((prev) => ({ ...prev, logo: e.target.value }))}
+                          />
+                        </Form.Group>
+                      </Col>
+                    </Row>
+
+                    <Row>
+                      <Col md={6} className="mb-3">
+                        <Form.Group>
+                          <Form.Label>Phone</Form.Label>
+                          <Form.Control
+                            type="text"
+                            value={school.contactInfo?.phone || ''}
+                            onChange={(e) => setSchool((prev) => ({
+                              ...prev,
+                              contactInfo: { ...(prev.contactInfo || {}), phone: e.target.value },
+                            }))}
+                          />
+                        </Form.Group>
+                      </Col>
+                      <Col md={6} className="mb-3">
+                        <Form.Group>
+                          <Form.Label>Email</Form.Label>
+                          <Form.Control
+                            type="email"
+                            value={school.contactInfo?.email || ''}
+                            onChange={(e) => setSchool((prev) => ({
+                              ...prev,
+                              contactInfo: { ...(prev.contactInfo || {}), email: e.target.value },
+                            }))}
+                          />
+                        </Form.Group>
+                      </Col>
+                    </Row>
+
+                    <Row>
+                      <Col md={6} className="mb-3">
+                        <Form.Group>
+                          <Form.Label>Website</Form.Label>
+                          <Form.Control
+                            type="text"
+                            value={school.contactInfo?.website || ''}
+                            onChange={(e) => setSchool((prev) => ({
+                              ...prev,
+                              contactInfo: { ...(prev.contactInfo || {}), website: e.target.value },
+                            }))}
+                          />
+                        </Form.Group>
+                      </Col>
+                      <Col md={6} className="mb-3">
+                        <Form.Group>
+                          <Form.Label>Address (Street)</Form.Label>
+                          <Form.Control
+                            type="text"
+                            value={school.address?.street || ''}
+                            onChange={(e) => setSchool((prev) => ({
+                              ...prev,
+                              address: { ...(prev.address || {}), street: e.target.value },
+                            }))}
+                          />
+                        </Form.Group>
+                      </Col>
+                    </Row>
+
+                    <Row>
+                      <Col md={4} className="mb-3">
+                        <Form.Group>
+                          <Form.Label>City</Form.Label>
+                          <Form.Control
+                            type="text"
+                            value={school.address?.city || ''}
+                            onChange={(e) => setSchool((prev) => ({
+                              ...prev,
+                              address: { ...(prev.address || {}), city: e.target.value },
+                            }))}
+                          />
+                        </Form.Group>
+                      </Col>
+                      <Col md={4} className="mb-3">
+                        <Form.Group>
+                          <Form.Label>State</Form.Label>
+                          <Form.Control
+                            type="text"
+                            value={school.address?.state || ''}
+                            onChange={(e) => setSchool((prev) => ({
+                              ...prev,
+                              address: { ...(prev.address || {}), state: e.target.value },
+                            }))}
+                          />
+                        </Form.Group>
+                      </Col>
+                      <Col md={4} className="mb-3">
+                        <Form.Group>
+                          <Form.Label>Zip Code</Form.Label>
+                          <Form.Control
+                            type="text"
+                            value={school.address?.zipCode || ''}
+                            onChange={(e) => setSchool((prev) => ({
+                              ...prev,
+                              address: { ...(prev.address || {}), zipCode: e.target.value },
+                            }))}
+                          />
+                        </Form.Group>
+                      </Col>
+                    </Row>
+
+                    <Row>
+                      <Col md={3} className="mb-3">
+                        <Form.Group>
+                          <Form.Label>Academic Year</Form.Label>
+                          <Form.Control
+                            type="text"
+                            value={school.configuration?.academicYear || ''}
+                            onChange={(e) => setSchool((prev) => ({
+                              ...prev,
+                              configuration: { ...(prev.configuration || {}), academicYear: e.target.value },
+                            }))}
+                            placeholder="e.g., 2025-2026"
+                          />
+                        </Form.Group>
+                      </Col>
+                      <Col md={3} className="mb-3">
+                        <Form.Group>
+                          <Form.Label>Grade System</Form.Label>
+                          <Form.Control
+                            type="text"
+                            value={school.configuration?.gradeSystem || ''}
+                            onChange={(e) => setSchool((prev) => ({
+                              ...prev,
+                              configuration: { ...(prev.configuration || {}), gradeSystem: e.target.value },
+                            }))}
+                            placeholder="e.g., Percentage"
+                          />
+                        </Form.Group>
+                      </Col>
+                      <Col md={3} className="mb-3">
+                        <Form.Group>
+                          <Form.Label>Currency</Form.Label>
+                          <Form.Control
+                            type="text"
+                            value={school.configuration?.currency || ''}
+                            onChange={(e) => setSchool((prev) => ({
+                              ...prev,
+                              configuration: { ...(prev.configuration || {}), currency: e.target.value },
+                            }))}
+                            placeholder="e.g., INR"
+                          />
+                        </Form.Group>
+                      </Col>
+                      <Col md={3} className="mb-3">
+                        <Form.Group>
+                          <Form.Label>Timezone</Form.Label>
+                          <Form.Control
+                            type="text"
+                            value={school.configuration?.timezone || ''}
+                            onChange={(e) => setSchool((prev) => ({
+                              ...prev,
+                              configuration: { ...(prev.configuration || {}), timezone: e.target.value },
+                            }))}
+                            placeholder="e.g., Asia/Kolkata"
+                          />
+                        </Form.Group>
+                      </Col>
+                    </Row>
+
+                    <div className="d-flex gap-2">
+                      <Button type="submit" variant="primary" disabled={schoolSaving}>
+                        {schoolSaving ? (
+                          <>
+                            <Spinner size="sm" animation="border" className="me-2" />
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <i className="bi bi-check-lg me-2"></i>
+                            Save
+                          </>
+                        )}
+                      </Button>
+                    </div>
                   </Form>
                 </Card.Body>
               </Card>

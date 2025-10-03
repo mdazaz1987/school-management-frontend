@@ -8,20 +8,49 @@ const ensureSeconds = (t?: string): string | undefined => {
   return t;
 };
 
+// Helpers
+const normalizeTimetable = (t: any): Timetable => {
+  return {
+    id: t.id,
+    schoolId: t.schoolId,
+    classId: t.classId,
+    section: t.section,
+    academicYear: t.academicYear,
+    term: t.term,
+    entries: (t.entries || []).map((e: any) => ({
+      day: e.day,
+      period: e.period,
+      startTime: e.startTime,
+      endTime: e.endTime,
+      subjectId: e.subjectId,
+      subjectName: e.subjectName,
+      teacherId: e.teacherId,
+      teacherName: e.teacherName,
+      room: e.room,
+      periodType: e.periodType,
+    })),
+    isActive: t.isActive ?? t.active ?? false,
+    createdAt: t.createdAt,
+    updatedAt: t.updatedAt,
+  } as Timetable;
+};
+
 export const timetableService = {
   async list(params?: { schoolId?: string; academicYear?: string }): Promise<Timetable[]> {
     const data = await apiService.get<any[]>('/timetables', params);
-    return (data || []) as Timetable[];
+    return (data || []).map(normalizeTimetable);
   },
 
   async getById(id: string): Promise<Timetable> {
-    return apiService.get<Timetable>(`/timetables/${id}`);
+    const data = await apiService.get<any>(`/timetables/${id}`);
+    return normalizeTimetable(data);
   },
 
   async getByClass(classId: string, section?: string): Promise<Timetable> {
     const params: any = {};
     if (section) params.section = section;
-    return apiService.get<Timetable>(`/timetables/class/${classId}`, params);
+    const data = await apiService.get<any>(`/timetables/class/${classId}`, params);
+    return normalizeTimetable(data);
   },
 
   async create(data: Partial<Timetable>): Promise<Timetable> {
@@ -37,7 +66,8 @@ export const timetableService = {
         endTime: ensureSeconds(e.endTime),
       } as TimetableEntry)),
     };
-    return apiService.post<Timetable>('/timetables', payload);
+    const created = await apiService.post<any>('/timetables', payload);
+    return normalizeTimetable(created);
   },
 
   async update(id: string, data: Partial<Timetable>): Promise<Timetable> {
@@ -51,7 +81,8 @@ export const timetableService = {
         endTime: ensureSeconds(e.endTime),
       } as TimetableEntry)),
     };
-    return apiService.put<Timetable>(`/timetables/${id}`, payload);
+    const updated = await apiService.put<any>(`/timetables/${id}`, payload);
+    return normalizeTimetable(updated);
   },
 
   async remove(id: string): Promise<{ success: boolean; message: string }> {
