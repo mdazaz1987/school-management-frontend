@@ -112,6 +112,14 @@ export const studentService = {
   },
 
   /**
+   * Get student by email
+   */
+  async getStudentByEmail(email: string): Promise<Student> {
+    const data = await apiService.get<any>(`/students/email/${encodeURIComponent(email)}`);
+    return normalizeStudent(data);
+  },
+
+  /**
    * Search students by name
    */
   async searchStudents(name: string): Promise<Student[]> {
@@ -229,8 +237,16 @@ export const studentService = {
   /**
    * Get student dashboard data
    */
-  async getStudentDashboard(id: string): Promise<any> {
-    return apiService.get<any>(`/students/${id}/portal/dashboard`);
+  async getStudentDashboard(id: string): Promise<{
+    student: any;
+    classInfo: any;
+    attendancePercentage: number;
+    totalDays: number;
+    presentDays: number;
+    pendingAssignments: any[];
+    recentSubmissions: any[];
+  }> {
+    return apiService.get(`/students/${id}/portal/dashboard`);
   },
 
   /**

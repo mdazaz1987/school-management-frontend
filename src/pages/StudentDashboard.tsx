@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Row, Col, Card, Button, Table, Badge, ProgressBar, ListGroup } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
+import { studentService } from '../services/studentService';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -16,26 +17,68 @@ const sidebarItems = [
 
 export const StudentDashboard: React.FC = () => {
   const { user } = useAuth();
-  const [stats] = useState({
-    attendanceRate: 92,
-    pendingAssignments: 3,
-    upcomingExams: 2,
-    completedAssignments: 15,
-    averageGrade: 85,
-    totalSubjects: 8,
+  const [stats, setStats] = useState({
+    attendanceRate: 0,
+    pendingAssignments: 0,
+    upcomingExams: 0,
+    completedAssignments: 0,
+    averageGrade: 0,
+    totalSubjects: 0,
   });
+  const [upcomingAssignments, setUpcomingAssignments] = useState<any[]>([]);
+  const [recentGrades, setRecentGrades] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string>('');
 
-  const upcomingAssignments = [
-    { title: 'Mathematics Assignment 6', subject: 'Mathematics', dueDate: 'Tomorrow', status: 'pending' },
-    { title: 'Physics Lab Report', subject: 'Physics', dueDate: '3 days', status: 'pending' },
-    { title: 'English Essay', subject: 'English', dueDate: '5 days', status: 'pending' },
-  ];
+  useEffect(() => {
+    const load = async () => {
+      if (!user?.email) return;
+      setLoading(true);
+      setError('');
+      try {
+        // Map logged-in user -> student record
+        const student = await studentService.getStudentByEmail(user.email);
+        // Load dashboard
+        const dashboard = await studentService.getStudentDashboard(student.id);
 
-  const recentGrades = [
-    { subject: 'Mathematics', assignment: 'Assignment 5', grade: 'A', marks: '45/50', date: '2 days ago' },
-    { subject: 'Physics', assignment: 'Lab Report 3', grade: 'B+', marks: '42/50', date: '3 days ago' },
-    { subject: 'Chemistry', assignment: 'Quiz 2', grade: 'A-', marks: '18/20', date: '5 days ago' },
-  ];
+        // Stats
+        const attendanceRate = Math.round(dashboard.attendancePercentage || 0);
+        const pendingAssignmentsCount = (dashboard.pendingAssignments || []).length;
+        const completedAssignments = (dashboard.recentSubmissions || []).filter((s: any) => s.status === 'GRADED').length;
+        const totalSubjects = (dashboard.student?.subjects?.length || dashboard.classInfo?.subjects?.length || 0);
+
+        setStats((prev) => ({
+          ...prev,
+          attendanceRate,
+          pendingAssignments: pendingAssignmentsCount,
+          completedAssignments,
+          totalSubjects,
+        }));
+
+        // Lists
+        setUpcomingAssignments((dashboard.pendingAssignments || []).map((a: any) => ({
+          title: a.title || a.name || 'Assignment',
+          subject: a.subject || a.subjectName || '—',
+          dueDate: a.dueDate ? new Date(a.dueDate).toLocaleDateString() : '—',
+          status: 'pending',
+        })));
+
+        setRecentGrades((dashboard.recentSubmissions || []).map((s: any) => ({
+          subject: '—',
+          assignment: s.assignmentId,
+          grade: s.grade || '—',
+          marks: s.marksObtained != null ? String(s.marksObtained) : '—',
+          date: s.submittedAt ? new Date(s.submittedAt).toLocaleString() : '—',
+          status: s.status,
+        })));
+      } catch (e: any) {
+        setError(e.response?.data?.message || 'Failed to load dashboard');
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [user?.email]);
 
   const upcomingClasses = [
     { time: '09:00 AM', subject: 'Mathematics', teacher: 'Mr. Smith', room: 'Room 101' },
