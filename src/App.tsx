@@ -20,6 +20,8 @@ import { DebugAuth } from './pages/DebugAuth';
 import './App.css';
 import { SubjectList } from './pages/SubjectList';
 import { SubjectForm } from './pages/SubjectForm';
+import { ExamList } from './pages/ExamList';
+import { ExamForm } from './pages/ExamForm';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactElement }> = ({ children }) => {
@@ -215,7 +217,23 @@ function App() {
             path="/exams"
             element={
               <ProtectedRoute>
-                <ComingSoon />
+                <ExamList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/exams/new"
+            element={
+              <ProtectedRoute>
+                <ExamForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/exams/:id/edit"
+            element={
+              <ProtectedRoute>
+                <ExamForm />
               </ProtectedRoute>
             }
           />
