@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Row, Col, Card, Button, Table, Badge } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
+import { adminService } from '../services/adminService';
+import { subjectService } from '../services/subjectService';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -21,16 +23,43 @@ const sidebarItems = [
 export const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [stats] = useState({
-    totalStudents: 450,
-    totalTeachers: 45,
-    totalClasses: 24,
-    totalSubjects: 18,
-    presentToday: 420,
-    absentToday: 30,
-    pendingFees: 15,
-    upcomingExams: 5,
+  const [stats, setStats] = useState({
+    totalStudents: 0,
+    totalTeachers: 0,
+    totalClasses: 0,
+    totalSubjects: 0,
+    presentToday: 0,
+    absentToday: 0,
+    pendingFees: 0,
+    upcomingExams: 0,
   });
+
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        const systemStats: any = await adminService.getSystemStats();
+        let totalSubjects = 0;
+        try {
+          const subs = await subjectService.getAllSubjects({ schoolId: user?.schoolId });
+          totalSubjects = subs?.length || 0;
+        } catch (e) {
+          // Non-fatal; leave subjects as 0 if request fails
+          // console.error('Failed to load subjects count', e);
+        }
+        setStats((prev) => ({
+          ...prev,
+          totalStudents: systemStats?.totalStudents || 0,
+          totalTeachers: systemStats?.totalTeachers || 0,
+          totalClasses: systemStats?.totalClasses || 0,
+          totalSubjects,
+        }));
+      } catch (err) {
+        // Keep defaults if backend not available
+        // console.error('Failed to load admin stats', err);
+      }
+    };
+    loadStats();
+  }, [user?.schoolId]);
 
   const recentActivities = [
     { id: 1, type: 'student', message: 'New student admission: John Doe', time: '2 mins ago', badge: 'success' },
