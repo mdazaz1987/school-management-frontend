@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, Button, Table, Badge, ProgressBar, ListGroup } from 'react-bootstrap';
+import { Row, Col, Card, Button, Table, Badge, ProgressBar, ListGroup, Alert, Spinner } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
@@ -97,6 +97,19 @@ export const StudentDashboard: React.FC = () => {
             <h2>Student Dashboard</h2>
             <p className="text-muted">Welcome back, {user?.firstName}! Stay on top of your studies.</p>
           </div>
+
+          {error && (
+            <Alert variant="danger" dismissible onClose={() => setError('')}>
+              {error}
+            </Alert>
+          )}
+
+          {loading && (
+            <div className="mb-3 d-flex align-items-center">
+              <Spinner animation="border" size="sm" className="me-2" />
+              <span>Loading...</span>
+            </div>
+          )}
 
           {/* Statistics Cards */}
           <Row className="mb-4">
