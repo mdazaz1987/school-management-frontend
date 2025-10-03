@@ -32,7 +32,8 @@ export const StudentForm: React.FC = () => {
     bloodGroup: '',
     religion: '',
     nationality: 'Indian',
-    schoolId: user?.schoolId || '',
+    // TEMP FIX: use fallback until JWT includes schoolId reliably
+    schoolId: user?.schoolId || 'school123',
     classId: '',
     section: '',
     rollNumber: '',
