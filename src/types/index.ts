@@ -35,6 +35,47 @@ export interface AuthResponse {
   tokenType: string;
 }
 
+// School types
+export interface Address {
+  street?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  country?: string;
+}
+
+export interface SchoolContactInfo {
+  phone?: string;
+  email?: string;
+  website?: string;
+  fax?: string;
+}
+
+export interface SchoolBranding {
+  primaryColor?: string;
+  secondaryColor?: string;
+  theme?: string;
+}
+
+export interface SchoolConfiguration {
+  academicYear?: string;
+  gradeSystem?: string;
+  currency?: string;
+  timezone?: string;
+}
+
+export interface School {
+  id: string;
+  name: string;
+  logo?: string;
+  contactInfo?: SchoolContactInfo;
+  address?: Address;
+  configuration?: SchoolConfiguration;
+  cmsPages?: Record<string, any>;
+  branding?: SchoolBranding;
+  createdAt?: string;
+}
+
 // Student types
 export interface Student {
   id: string;
@@ -227,8 +268,10 @@ export interface Subject {
   code: string;
   description?: string;
   schoolId: string;
-  category: 'CORE' | 'ELECTIVE' | 'OPTIONAL';
+  type?: 'CORE' | 'ELECTIVE' | 'OPTIONAL' | 'CO_CURRICULAR';
+  category?: string;
   credits?: number;
+  totalHours?: number;
   teacherIds?: string[];
   classIds?: string[];
   syllabus?: string;

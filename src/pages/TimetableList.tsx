@@ -35,11 +35,9 @@ export const TimetableList: React.FC = () => {
       setError('');
       if (isStudent) {
         // Student can only view their class timetable
-        let sid = '';
         if (user?.email) {
           try {
             const stu = await studentService.getStudentByEmail(user.email);
-            sid = stu.id;
             if (stu.classId) {
               try {
                 const tt = await timetableService.getByClass(stu.classId, stu.section);

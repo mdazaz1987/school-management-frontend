@@ -20,12 +20,39 @@ export const subjectService = {
   },
 
   async create(data: Partial<Subject>): Promise<Subject> {
-    const created = await apiService.post<any>('/subjects', data);
+    const payload: any = {
+      name: (data.name || '').trim(),
+      code: (data.code || '').trim(),
+      description: data.description,
+      schoolId: data.schoolId,
+      type: data.type,
+      category: data.category,
+      credits: data.credits,
+      totalHours: data.totalHours,
+      classIds: data.classIds,
+      teacherIds: data.teacherIds,
+      syllabus: data.syllabus,
+    };
+    if (data.isActive !== undefined) payload.active = data.isActive;
+    const created = await apiService.post<any>('/subjects', payload);
     return normalizeSubject(created);
   },
 
   async update(id: string, data: Partial<Subject>): Promise<Subject> {
-    const updated = await apiService.put<any>(`/subjects/${id}`, data);
+    const payload: any = {
+      name: data.name,
+      code: data.code,
+      description: data.description,
+      type: data.type,
+      category: data.category,
+      credits: data.credits,
+      totalHours: data.totalHours,
+      classIds: data.classIds,
+      teacherIds: data.teacherIds,
+      syllabus: data.syllabus,
+    };
+    if (data.isActive !== undefined) payload.active = data.isActive;
+    const updated = await apiService.put<any>(`/subjects/${id}`, payload);
     return normalizeSubject(updated);
   },
 

@@ -21,8 +21,10 @@ export const SubjectForm: React.FC = () => {
     code: '',
     description: '',
     schoolId: user?.schoolId || '',
-    category: 'CORE' as any,
+    type: 'CORE',
+    category: '',
     credits: 0,
+    totalHours: 0,
     isActive: true,
   });
 
@@ -60,8 +62,10 @@ export const SubjectForm: React.FC = () => {
         code: form.code?.trim() || '',
         description: form.description || '',
         schoolId: form.schoolId || user?.schoolId || '',
-        category: form.category || 'CORE',
+        type: form.type || 'CORE',
+        category: form.category || undefined,
         credits: form.credits ?? 0,
+        totalHours: form.totalHours ?? undefined,
         isActive: form.isActive ?? true,
       };
       if (isEdit && id) {
@@ -146,14 +150,16 @@ export const SubjectForm: React.FC = () => {
                 <Row>
                   <Col md={6} className="mb-3">
                     <Form.Group>
-                      <Form.Label>Category</Form.Label>
+                      <Form.Label>Type</Form.Label>
                       <Form.Select
-                        value={form.category as any}
-                        onChange={(e) => handleChange('category', e.target.value as any)}
+                        value={form.type as any}
+                        onChange={(e) => handleChange('type', e.target.value as any)}
+                        required
                       >
                         <option value="CORE">CORE</option>
                         <option value="ELECTIVE">ELECTIVE</option>
                         <option value="OPTIONAL">OPTIONAL</option>
+                        <option value="CO_CURRICULAR">CO_CURRICULAR</option>
                       </Form.Select>
                     </Form.Group>
                   </Col>
@@ -164,6 +170,30 @@ export const SubjectForm: React.FC = () => {
                         type="number"
                         value={form.credits ?? 0}
                         onChange={(e) => handleChange('credits', parseInt(e.target.value || '0', 10))}
+                      />
+                    </Form.Group>
+                  </Col>
+                </Row>
+
+                <Row>
+                  <Col md={6} className="mb-3">
+                    <Form.Group>
+                      <Form.Label>Category (optional)</Form.Label>
+                      <Form.Control
+                        type="text"
+                        value={form.category || ''}
+                        onChange={(e) => handleChange('category', e.target.value)}
+                        placeholder="e.g., Science, Language"
+                      />
+                    </Form.Group>
+                  </Col>
+                  <Col md={6} className="mb-3">
+                    <Form.Group>
+                      <Form.Label>Total Hours (optional)</Form.Label>
+                      <Form.Control
+                        type="number"
+                        value={form.totalHours ?? 0}
+                        onChange={(e) => handleChange('totalHours', parseInt(e.target.value || '0', 10))}
                       />
                     </Form.Group>
                   </Col>

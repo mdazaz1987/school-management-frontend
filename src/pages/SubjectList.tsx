@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Button, Card, Container, Row, Col, Table, Badge, Alert, Spinner, Form } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/Layout';
@@ -14,6 +14,8 @@ export const SubjectList: React.FC = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [query, setQuery] = useState('');
+
+  const isAdmin = useMemo(() => (user?.roles || []).some(r => r === 'ADMIN' || r === 'ROLE_ADMIN'), [user?.roles]);
 
   const load = async () => {
     try {
@@ -74,10 +76,12 @@ export const SubjectList: React.FC = () => {
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                 />
-                <Button variant="primary" onClick={() => navigate('/subjects/new')}>
-                  <i className="bi bi-plus-lg me-2"></i>
-                  New Subject
-                </Button>
+                {isAdmin && (
+                  <Button variant="primary" onClick={() => navigate('/subjects/new')}>
+                    <i className="bi bi-plus-lg me-2"></i>
+                    New Subject
+                  </Button>
+                )}
               </div>
             </div>
           </Col>
@@ -118,7 +122,7 @@ export const SubjectList: React.FC = () => {
                     <th>Category</th>
                     <th>Credits</th>
                     <th>Status</th>
-                    <th className="text-end">Actions</th>
+                    {isAdmin && <th className="text-end">Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -133,26 +137,28 @@ export const SubjectList: React.FC = () => {
                           {s.isActive ? 'Active' : 'Inactive'}
                         </Badge>
                       </td>
-                      <td className="text-end">
-                        <Button
-                          variant="outline-primary"
-                          size="sm"
-                          className="me-2"
-                          onClick={() => navigate(`/subjects/${s.id}/edit`)}
-                          title="Edit"
-                        >
-                          <i className="bi bi-pencil"></i>
-                        </Button>
-                        <Button
-                          variant={s.isActive ? 'outline-danger' : 'outline-success'}
-                          size="sm"
-                          className="me-2"
-                          onClick={() => handleToggleActive(s)}
-                          title={s.isActive ? 'Deactivate' : 'Activate'}
-                        >
-                          <i className={`bi ${s.isActive ? 'bi-x-circle' : 'bi-check-circle'}`}></i>
-                        </Button>
-                      </td>
+                      {isAdmin && (
+                        <td className="text-end">
+                          <Button
+                            variant="outline-primary"
+                            size="sm"
+                            className="me-2"
+                            onClick={() => navigate(`/subjects/${s.id}/edit`)}
+                            title="Edit"
+                          >
+                            <i className="bi bi-pencil"></i>
+                          </Button>
+                          <Button
+                            variant={s.isActive ? 'outline-danger' : 'outline-success'}
+                            size="sm"
+                            className="me-2"
+                            onClick={() => handleToggleActive(s)}
+                            title={s.isActive ? 'Deactivate' : 'Activate'}
+                          >
+                            <i className={`bi ${s.isActive ? 'bi-x-circle' : 'bi-check-circle'}`}></i>
+                          </Button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
