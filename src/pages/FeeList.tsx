@@ -18,6 +18,10 @@ export const FeeList: React.FC = () => {
   const [status, setStatus] = useState<string>('');
   const [q, setQ] = useState('');
 
+  const isAdmin = useMemo(() => (user?.roles || []).some(r => r === 'ADMIN' || r === 'ROLE_ADMIN'), [user?.roles]);
+  const isStudent = useMemo(() => (user?.roles || []).some(r => r === 'STUDENT' || r === 'ROLE_STUDENT'), [user?.roles]);
+  const canManage = isAdmin;
+
   const studentById = useMemo(() => {
     const map: Record<string, Student> = {};
     students.forEach((s) => (map[s.id] = s));
@@ -28,12 +32,26 @@ export const FeeList: React.FC = () => {
     try {
       setLoading(true);
       setError('');
-      const [feeList, stuList] = await Promise.all([
-        feeService.list({ schoolId: user?.schoolId || '', status: status || undefined }),
-        user?.schoolId ? studentService.getStudentsBySchool(user.schoolId) : Promise.resolve([] as Student[]),
-      ]);
-      setFees(feeList);
-      setStudents(stuList);
+      if (isStudent) {
+        // For student role, load only own fees
+        let sid = '';
+        if (user?.email) {
+          try {
+            const stu = await studentService.getStudentByEmail(user.email);
+            sid = stu.id;
+          } catch { /* ignore and keep empty */ }
+        }
+        const feeList = sid ? await feeService.listByStudent(sid, { status: status || undefined }) : [];
+        setFees(feeList);
+        setStudents([]);
+      } else {
+        const [feeList, stuList] = await Promise.all([
+          feeService.list({ schoolId: user?.schoolId || '', status: status || undefined }),
+          user?.schoolId ? studentService.getStudentsBySchool(user.schoolId) : Promise.resolve([] as Student[]),
+        ]);
+        setFees(feeList);
+        setStudents(stuList);
+      }
     } catch (e: any) {
       setError(e.response?.data?.message || 'Failed to load fees');
     } finally {
@@ -44,7 +62,7 @@ export const FeeList: React.FC = () => {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.schoolId, status]);
+  }, [user?.schoolId, status, isStudent, user?.email]);
 
   const handleDelete = async (fee: Fee) => {
     if (!window.confirm('Delete this fee? This cannot be undone.')) return;
@@ -113,7 +131,9 @@ export const FeeList: React.FC = () => {
                   <option value="">All Status</option>
                   <option value="PENDING">Pending</option>
                   <option value="PAID">Paid</option>
+                  <option value="PARTIAL">Partial</option>
                   <option value="OVERDUE">Overdue</option>
+                  <option value="WAIVED">Waived</option>
                 </Form.Select>
                 <Form.Control
                   size="sm"
@@ -122,10 +142,12 @@ export const FeeList: React.FC = () => {
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
                 />
-                <Button variant="primary" onClick={() => navigate('/fees/new')}>
-                  <i className="bi bi-plus-lg me-2"></i>
-                  New Fee
-                </Button>
+                {canManage && (
+                  <Button variant="primary" onClick={() => navigate('/fees/new')}>
+                    <i className="bi bi-plus-lg me-2"></i>
+                    New Fee
+                  </Button>
+                )}
               </div>
             </div>
           </Col>
@@ -166,7 +188,7 @@ export const FeeList: React.FC = () => {
                     <th>Net</th>
                     <th>Due Date</th>
                     <th>Status</th>
-                    <th className="text-end">Actions</th>
+                    {canManage && <th className="text-end">Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -190,51 +212,59 @@ export const FeeList: React.FC = () => {
                         <td className="fw-bold">₹{Number(f.netAmount).toFixed(2)}</td>
                         <td>{f.dueDate ? new Date(f.dueDate).toLocaleDateString() : '-'}</td>
                         <td>
-                          <Badge bg={f.status === 'PAID' ? 'success' : f.status === 'OVERDUE' ? 'danger' : 'warning'}>
+                          <Badge bg={
+                            f.status === 'PAID' ? 'success' :
+                            f.status === 'OVERDUE' ? 'danger' :
+                            f.status === 'PARTIAL' ? 'info' :
+                            f.status === 'WAIVED' ? 'secondary' :
+                            'warning'
+                          }>
                             {f.status}
                           </Badge>
                         </td>
-                        <td className="text-end">
-                          <Button
-                            variant="outline-primary"
-                            size="sm"
-                            className="me-2"
-                            onClick={() => navigate(`/fees/${f.id}/edit`)}
-                            title="Edit"
-                          >
-                            <i className="bi bi-pencil"></i>
-                          </Button>
-                          {(f.status === 'PENDING' || f.status === 'OVERDUE') && (
+                        {canManage && (
+                          <td className="text-end">
                             <Button
-                              variant="outline-success"
+                              variant="outline-primary"
                               size="sm"
                               className="me-2"
-                              onClick={() => handlePay(f)}
-                              title="Mark Paid"
+                              onClick={() => navigate(`/fees/${f.id}/edit`)}
+                              title="Edit"
                             >
-                              <i className="bi bi-cash-coin"></i>
+                              <i className="bi bi-pencil"></i>
                             </Button>
-                          )}
-                          {f.status !== 'PAID' && (
+                            {(f.status === 'PENDING' || f.status === 'OVERDUE' || f.status === 'PARTIAL') && (
+                              <Button
+                                variant="outline-success"
+                                size="sm"
+                                className="me-2"
+                                onClick={() => handlePay(f)}
+                                title="Mark Paid"
+                              >
+                                <i className="bi bi-cash-coin"></i>
+                              </Button>
+                            )}
+                            {f.status !== 'PAID' && f.status !== 'WAIVED' && (
+                              <Button
+                                variant="outline-warning"
+                                size="sm"
+                                className="me-2"
+                                onClick={() => handleDiscount(f)}
+                                title="Apply Discount"
+                              >
+                                <i className="bi bi-percent"></i>
+                              </Button>
+                            )}
                             <Button
-                              variant="outline-warning"
+                              variant="outline-danger"
                               size="sm"
-                              className="me-2"
-                              onClick={() => handleDiscount(f)}
-                              title="Apply Discount"
+                              onClick={() => handleDelete(f)}
+                              title="Delete"
                             >
-                              <i className="bi bi-percent"></i>
+                              <i className="bi bi-trash"></i>
                             </Button>
-                          )}
-                          <Button
-                            variant="outline-danger"
-                            size="sm"
-                            onClick={() => handleDelete(f)}
-                            title="Delete"
-                          >
-                            <i className="bi bi-trash"></i>
-                          </Button>
-                        </td>
+                          </td>
+                        )}
                       </tr>
                     );
                   })}

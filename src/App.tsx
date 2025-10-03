@@ -24,6 +24,8 @@ import { ExamList } from './pages/ExamList';
 import { ExamForm } from './pages/ExamForm';
 import { FeeList } from './pages/FeeList';
 import { FeeForm } from './pages/FeeForm';
+import { TimetableList } from './pages/TimetableList';
+import { TimetableForm } from './pages/TimetableForm';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactElement }> = ({ children }) => {
@@ -267,7 +269,23 @@ function App() {
             path="/timetable"
             element={
               <ProtectedRoute>
-                <ComingSoon />
+                <TimetableList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/timetable/new"
+            element={
+              <ProtectedRoute>
+                <TimetableForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/timetable/:id/edit"
+            element={
+              <ProtectedRoute>
+                <TimetableForm />
               </ProtectedRoute>
             }
           />

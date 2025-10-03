@@ -34,6 +34,14 @@ export const feeService = {
     return normalizeFee(data);
   },
 
+  async listByStudent(studentId: string, params?: { status?: string; academicYear?: string }): Promise<Fee[]> {
+    const query: any = {};
+    if (params?.status) query.status = params.status;
+    if (params?.academicYear) query.academicYear = params.academicYear;
+    const data = await apiService.get<any[]>(`/fees/student/${studentId}`, query);
+    return (data || []).map(normalizeFee);
+  },
+
   async create(data: Partial<Fee>): Promise<Fee> {
     const payload: any = {
       studentId: data.studentId,

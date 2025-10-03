@@ -343,24 +343,34 @@ export interface AssignmentSubmission {
   status: 'SUBMITTED' | 'GRADED' | 'LATE';
 }
 
-// Timetable types
+// Timetable types (aligned with backend)
 export interface Timetable {
   id: string;
-  classId: string;
   schoolId: string;
-  academicYear: string;
-  dayOfWeek: 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY';
-  periods: TimetablePeriod[];
+  classId: string;
+  section?: string;
+  academicYear?: string;
+  term?: string;
+  entries: TimetableEntry[];
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
-export interface TimetablePeriod {
-  periodNumber: number;
-  subjectId: string;
-  teacherId: string;
-  startTime: string;
-  endTime: string;
+export type DayOfWeek = 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY';
+export type PeriodType = 'LECTURE' | 'PRACTICAL' | 'BREAK' | 'LUNCH' | 'ASSEMBLY' | 'SPORTS' | 'LIBRARY';
+
+export interface TimetableEntry {
+  day: DayOfWeek;
+  period: string; // e.g., "Period 1"
+  startTime: string; // HH:mm:ss
+  endTime: string;   // HH:mm:ss
+  subjectId?: string;
+  subjectName?: string;
+  teacherId?: string;
+  teacherName?: string;
   room?: string;
-  type: 'REGULAR' | 'BREAK' | 'LUNCH' | 'SPORTS' | 'ACTIVITY';
+  periodType: PeriodType;
 }
 
 // Dashboard stats
