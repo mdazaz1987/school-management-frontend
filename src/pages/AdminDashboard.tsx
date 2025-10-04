@@ -61,6 +61,16 @@ export const AdminDashboard: React.FC = () => {
         // console.error('Failed to load admin stats', err);
       }
     };
+    const loadAttendance = async () => {
+      try {
+        if (user?.schoolId) {
+          const res = await adminService.getTodayAttendance(user.schoolId);
+          setStats(prev => ({ ...prev, presentToday: res.present || 0, absentToday: res.absent || 0 }));
+        }
+      } catch (e) {
+        // non-fatal
+      }
+    };
     
     const loadNotifications = async () => {
       try {
@@ -73,6 +83,7 @@ export const AdminDashboard: React.FC = () => {
     };
     
     loadStats();
+    loadAttendance();
     loadNotifications();
   }, [user?.schoolId]);
 

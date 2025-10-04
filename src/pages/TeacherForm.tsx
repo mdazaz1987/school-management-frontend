@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner, Nav, Tab } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import { teacherService } from '../services/teacherService';
 import { subjectService } from '../services/subjectService';
 import { classService } from '../services/classService';
@@ -19,9 +20,10 @@ export const TeacherForm: React.FC = () => {
   const [success, setSuccess] = useState('');
   const [activeTab, setActiveTab] = useState('personal');
 
-  // Get user info from localStorage
+  // Prefer schoolId from auth context, fallback to localStorage if needed
+  const { user } = useAuth();
   const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
-  const schoolId = userInfo.schoolId || '';
+  const schoolId = user?.schoolId || userInfo.schoolId || '';
 
   // Form data
   const [formData, setFormData] = useState<TeacherCreateRequest>({
@@ -188,11 +190,12 @@ export const TeacherForm: React.FC = () => {
       
       if (isEditMode && id) {
         // Update existing teacher
-        await teacherService.updateTeacher(id, formData as any);
+        const payload = { ...formData, schoolId: formData.schoolId || schoolId } as any;
+        await teacherService.updateTeacher(id, payload);
         setSuccess('Teacher updated successfully!');
       } else {
         // Create new teacher
-        const response = await teacherService.createTeacher(formData);
+        const response = await teacherService.createTeacher({ ...formData, schoolId: formData.schoolId || schoolId });
         setSuccess('Teacher created successfully!');
         
         // Show credentials if generated

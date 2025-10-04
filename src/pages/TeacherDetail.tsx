@@ -6,7 +6,7 @@ import { teacherService } from '../services/teacherService';
 import { subjectService } from '../services/subjectService';
 import { classService } from '../services/classService';
 import { Teacher, Subject, SchoolClass } from '../types';
-import { FaEdit, FaArrowLeft, FaEnvelope, FaPhone, FaBriefcase, FaGraduationCap, FaChalkboardTeacher, FaBook } from 'react-icons/fa';
+import { FaEdit, FaArrowLeft, FaEnvelope, FaPhone, FaBriefcase, FaGraduationCap, FaChalkboardTeacher, FaBook, FaUserCheck } from 'react-icons/fa';
 
 export const TeacherDetail: React.FC = () => {
   const navigate = useNavigate();
@@ -17,6 +17,7 @@ export const TeacherDetail: React.FC = () => {
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     loadTeacherDetails();
@@ -55,6 +56,19 @@ export const TeacherDetail: React.FC = () => {
       setError(err.response?.data?.message || 'Failed to load teacher details');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleActivate = async () => {
+    if (!teacher) return;
+    try {
+      setSaving(true);
+      await teacherService.activateTeacher(teacher.id);
+      setTeacher({ ...teacher, isActive: true } as any);
+    } catch (e) {
+      setError('Failed to activate teacher');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -148,14 +162,26 @@ export const TeacherDetail: React.FC = () => {
 
                 <hr />
 
-                <Button
-                  variant="primary"
-                  className="w-100"
-                  onClick={() => navigate(`/teachers/${teacher.id}/edit`)}
-                >
-                  <FaEdit className="me-2" />
-                  Edit Teacher
-                </Button>
+                {teacher.isActive ? (
+                  <Button
+                    variant="primary"
+                    className="w-100"
+                    onClick={() => navigate(`/teachers/${teacher.id}/edit`)}
+                  >
+                    <FaEdit className="me-2" />
+                    Edit Teacher
+                  </Button>
+                ) : (
+                  <Button
+                    variant="success"
+                    className="w-100"
+                    onClick={handleActivate}
+                    disabled={saving}
+                  >
+                    <FaUserCheck className="me-2" />
+                    {saving ? 'Activating...' : 'Activate Teacher'}
+                  </Button>
+                )}
               </Card.Body>
             </Card>
           </Col>
@@ -198,6 +224,9 @@ export const TeacherDetail: React.FC = () => {
                           <ListGroup variant="flush">
                             <ListGroup.Item>
                               <strong>Date of Birth:</strong> {teacher.dateOfBirth || 'N/A'}
+                            </ListGroup.Item>
+                            <ListGroup.Item>
+                              <strong>School ID:</strong> {teacher.schoolId || 'N/A'}
                             </ListGroup.Item>
                             <ListGroup.Item>
                               <strong>Gender:</strong> {teacher.gender || 'N/A'}
