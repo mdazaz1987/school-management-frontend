@@ -92,6 +92,7 @@ export interface Student {
   nationality?: string;
   schoolId: string;
   classId: string;
+  className?: string; // User-friendly class name for display
   section?: string;
   rollNumber?: string;
   parentId?: string;
