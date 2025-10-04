@@ -1,10 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Container, Row, Col, Card, Form, Button, Table, Spinner, Alert, Badge, InputGroup } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
 import { attendanceService } from '../services/attendanceService';
 import { studentService } from '../services/studentService';
 import { Attendance, Student } from '../types';
-import { useAuth } from '../contexts/AuthContext';
 
 function getMonthRangeISO(d = new Date()) {
   const start = new Date(d.getFullYear(), d.getMonth(), 1);
@@ -14,8 +13,6 @@ function getMonthRangeISO(d = new Date()) {
 }
 
 export const AttendancePage: React.FC = () => {
-  const { user } = useAuth();
-
   const [studentQuery, setStudentQuery] = useState('');
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
