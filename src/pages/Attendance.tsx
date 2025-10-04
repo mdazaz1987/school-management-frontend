@@ -15,7 +15,6 @@ function getMonthRangeISO(d = new Date()) {
 
 export const AttendancePage: React.FC = () => {
   const { user } = useAuth();
-  const isAdmin = useMemo(() => (user?.roles || []).some(r => r === 'ADMIN' || r === 'ROLE_ADMIN'), [user?.roles]);
 
   const [studentQuery, setStudentQuery] = useState('');
   const [students, setStudents] = useState<Student[]>([]);
