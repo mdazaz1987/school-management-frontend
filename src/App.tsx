@@ -18,6 +18,7 @@ import { ClassDetail } from './pages/ClassDetail';
 import { StudentDetail } from './pages/StudentDetail';
 import { DebugAuth } from './pages/DebugAuth';
 import './App.css';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { SubjectList } from './pages/SubjectList';
 import { SubjectForm } from './pages/SubjectForm';
 import { ExamList } from './pages/ExamList';
@@ -80,8 +81,9 @@ const DashboardRouter: React.FC = () => {
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
+    <ThemeProvider>
+      <AuthProvider>
+        <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
           
@@ -413,8 +415,9 @@ function App() {
             }
           />
         </Routes>
-      </Router>
-    </AuthProvider>
+        </Router>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

@@ -5,9 +5,11 @@ import { profileService } from '../services/profileService';
 import { useAuth } from '../contexts/AuthContext';
 import { School } from '../types';
 import { schoolService } from '../services/schoolService';
+import { useTheme } from '../contexts/ThemeContext';
 
 export const Settings: React.FC = () => {
   const { user } = useAuth();
+  const { theme, setTheme } = useTheme();
   const isAdmin = useMemo(() => (user?.roles || []).some(r => r === 'ADMIN' || r === 'ROLE_ADMIN'), [user?.roles]);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [activeTab, setActiveTab] = useState<'password' | 'notifications' | 'preferences' | 'school'>('password');
@@ -53,6 +55,8 @@ export const Settings: React.FC = () => {
   });
 
   useEffect(() => {
+    // keep Settings theme in sync with global ThemeContext
+    setPreferences((prev) => ({ ...prev, theme }));
     const maybeLoadSchool = async () => {
       if (!isAdmin || !user?.schoolId) return;
       try {
@@ -66,7 +70,7 @@ export const Settings: React.FC = () => {
       }
     };
     maybeLoadSchool();
-  }, [isAdmin, user?.schoolId]);
+  }, [isAdmin, user?.schoolId, theme]);
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -170,6 +174,17 @@ export const Settings: React.FC = () => {
                   <i className="bi bi-gear me-2"></i>
                   Preferences
                 </ListGroup.Item>
+                {isAdmin && (
+                  <ListGroup.Item
+                    action
+                    active={activeTab === 'school'}
+                    onClick={() => setActiveTab('school')}
+                    className="d-flex align-items-center"
+                  >
+                    <i className="bi bi-building me-2"></i>
+                    School
+                  </ListGroup.Item>
+                )}
               </ListGroup>
             </Card>
 
@@ -427,11 +442,15 @@ export const Settings: React.FC = () => {
                           <Form.Label>Theme</Form.Label>
                           <Form.Select
                             value={preferences.theme}
-                            onChange={(e) => handlePreferenceChange('theme', e.target.value)}
+                            onChange={(e) => {
+                              const val = e.target.value as 'light' | 'dark' | 'system';
+                              setTheme(val);
+                              setPreferences((prev) => ({ ...prev, theme: val }));
+                            }}
                           >
                             <option value="light">Light</option>
                             <option value="dark">Dark</option>
-                            <option value="auto">Auto (System)</option>
+                            <option value="system">Auto (System)</option>
                           </Form.Select>
                         </Form.Group>
                       </Col>
@@ -472,6 +491,12 @@ export const Settings: React.FC = () => {
                     }}
                   >
                     <Row>
+                      <Col md={6} className="mb-3">
+                        <Form.Group>
+                          <Form.Label>School ID</Form.Label>
+                          <Form.Control type="text" value={user?.schoolId || ''} disabled readOnly />
+                        </Form.Group>
+                      </Col>
                       <Col md={6} className="mb-3">
                         <Form.Group>
                           <Form.Label>School Name</Form.Label>

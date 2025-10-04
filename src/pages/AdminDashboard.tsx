@@ -20,6 +20,7 @@ const sidebarItems = [
   { path: '/timetable', label: 'Timetable', icon: 'bi-calendar3' },
   { path: '/attendance', label: 'Attendance', icon: 'bi-calendar-check' },
   { path: '/notifications', label: 'Notifications', icon: 'bi-bell' },
+  { path: '/settings', label: 'Settings', icon: 'bi-gear' },
 ];
 
 export const AdminDashboard: React.FC = () => {

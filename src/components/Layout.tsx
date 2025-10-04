@@ -1,6 +1,7 @@
 import React, { ReactNode } from 'react';
 import { Container, Navbar, Nav, NavDropdown } from 'react-bootstrap';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import { NotificationBell } from './NotificationBell';
 
@@ -11,6 +12,7 @@ interface LayoutProps {
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { theme, setTheme, effectiveTheme, toggleTheme } = useTheme();
 
   const handleLogout = () => {
     logout();
@@ -29,6 +31,34 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           <Navbar.Collapse id="basic-navbar-nav">
             <Nav className="ms-auto align-items-center">
               <NotificationBell />
+              <NavDropdown
+                title={
+                  <span title={`Theme: ${theme} (${effectiveTheme})`}>
+                    <i className={`bi ${effectiveTheme === 'dark' ? 'bi-moon-stars' : 'bi-brightness-high'} me-2`}></i>
+                    Theme
+                  </span>
+                }
+                id="theme-dropdown"
+                align="end"
+              >
+                <NavDropdown.Item active={theme === 'light'} onClick={() => setTheme('light')}>
+                  <i className="bi bi-brightness-high me-2"></i>
+                  Light
+                </NavDropdown.Item>
+                <NavDropdown.Item active={theme === 'dark'} onClick={() => setTheme('dark')}>
+                  <i className="bi bi-moon-stars me-2"></i>
+                  Dark
+                </NavDropdown.Item>
+                <NavDropdown.Item active={theme === 'system'} onClick={() => setTheme('system')}>
+                  <i className="bi bi-circle-half me-2"></i>
+                  System
+                </NavDropdown.Item>
+                <NavDropdown.Divider />
+                <NavDropdown.Item onClick={toggleTheme}>
+                  <i className="bi bi-arrow-repeat me-2"></i>
+                  Toggle Light/Dark
+                </NavDropdown.Item>
+              </NavDropdown>
               <NavDropdown
                 title={
                   <span>
