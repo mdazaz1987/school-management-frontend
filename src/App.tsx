@@ -26,6 +26,9 @@ import { FeeList } from './pages/FeeList';
 import { FeeForm } from './pages/FeeForm';
 import { TimetableList } from './pages/TimetableList';
 import { TimetableForm } from './pages/TimetableForm';
+import { TeacherList } from './pages/TeacherList';
+import { TeacherForm } from './pages/TeacherForm';
+import { TeacherDetail } from './pages/TeacherDetail';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactElement }> = ({ children }) => {
@@ -143,12 +146,36 @@ function App() {
             }
           />
           
-          {/* Common protected routes that show "Coming Soon" */}
+          {/* Teacher Management Routes */}
           <Route
             path="/teachers"
             element={
               <ProtectedRoute>
-                <ComingSoon />
+                <TeacherList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/teachers/new"
+            element={
+              <ProtectedRoute>
+                <TeacherForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/teachers/:id/edit"
+            element={
+              <ProtectedRoute>
+                <TeacherForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/teachers/:id"
+            element={
+              <ProtectedRoute>
+                <TeacherDetail />
               </ProtectedRoute>
             }
           />

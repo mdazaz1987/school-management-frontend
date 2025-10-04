@@ -239,6 +239,99 @@ export interface StudentUpdateRequest {
   apaarId?: string;
 }
 
+// Teacher types
+export interface Teacher {
+  id: string;
+  employeeId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  dateOfBirth?: string;
+  gender?: 'MALE' | 'FEMALE' | 'OTHER';
+  bloodGroup?: string;
+  nationality?: string;
+  maritalStatus?: string;
+  schoolId: string;
+  address?: Address;
+  qualificationInfo?: QualificationInfo;
+  employmentInfo?: EmploymentInfo;
+  subjectIds?: string[];
+  classIds?: string[];
+  profilePicture?: string;
+  isActive: boolean;
+  joiningDate?: string;
+  createdAt: string;
+  updatedAt: string;
+  customFields?: Record<string, any>;
+}
+
+export interface QualificationInfo {
+  highestDegree?: string;
+  university?: string;
+  yearOfPassing?: number;
+  certifications?: string[];
+  specializations?: string[];
+  percentage?: number;
+}
+
+export interface EmploymentInfo {
+  designation?: string;
+  department?: string;
+  salary?: number;
+  employmentType?: string;
+  totalExperience?: number;
+  previousSchool?: string;
+  achievements?: string[];
+  bankAccountNumber?: string;
+  bankName?: string;
+  ifscCode?: string;
+  panNumber?: string;
+}
+
+export interface TeacherCreateRequest {
+  employeeId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  bloodGroup?: string;
+  nationality?: string;
+  maritalStatus?: string;
+  schoolId: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  highestDegree?: string;
+  university?: string;
+  yearOfPassing?: number;
+  certifications?: string[];
+  specializations?: string[];
+  percentage?: number;
+  designation?: string;
+  department?: string;
+  salary?: number;
+  employmentType?: string;
+  totalExperience?: number;
+  previousSchoolEmployment?: string;
+  achievements?: string[];
+  bankAccountNumber?: string;
+  bankName?: string;
+  ifscCode?: string;
+  panNumber?: string;
+  subjectIds?: string[];
+  classIds?: string[];
+  joiningDate?: string;
+  passwordMode?: 'GENERATE' | 'CUSTOM' | 'NONE';
+  teacherPassword?: string;
+  sendEmailToTeacher?: boolean;
+  customFields?: Record<string, any>;
+}
+
 // Class types
 export interface SchoolClass {
   id: string;
