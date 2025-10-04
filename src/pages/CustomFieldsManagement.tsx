@@ -115,6 +115,36 @@ export const CustomFieldsManagement: React.FC = () => {
     }
   };
 
+  // Reorder helpers
+  const saveNewOrder = async (updated: CustomFieldConfig[]) => {
+    try {
+      setError('');
+      await customFieldService.reorderFields(
+        updated.map((f, index) => ({ id: f.id, displayOrder: index }))
+      );
+      // Normalize local state order after save
+      setFields(updated.map((f, index) => ({ ...f, displayOrder: index })));
+      setSuccess('Field order updated');
+    } catch (err: any) {
+      console.error('Failed to reorder fields', err);
+      setError(err.response?.data?.message || 'Failed to update field order');
+    }
+  };
+
+  const moveUp = (index: number) => {
+    if (index <= 0) return;
+    const updated = [...fields];
+    [updated[index - 1], updated[index]] = [updated[index], updated[index - 1]];
+    saveNewOrder(updated);
+  };
+
+  const moveDown = (index: number) => {
+    if (index >= fields.length - 1) return;
+    const updated = [...fields];
+    [updated[index + 1], updated[index]] = [updated[index], updated[index + 1]];
+    saveNewOrder(updated);
+  };
+
   return (
     <Layout>
       <Container fluid className="py-4">
@@ -166,7 +196,7 @@ export const CustomFieldsManagement: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {fields.map((field) => (
+                  {fields.map((field, idx) => (
                     <tr key={field.id}>
                       <td>{field.displayOrder}</td>
                       <td>{field.fieldLabel}</td>
@@ -187,10 +217,31 @@ export const CustomFieldsManagement: React.FC = () => {
                       </td>
                       <td>
                         <Button
+                          variant="outline-dark"
+                          size="sm"
+                          className="me-2"
+                          onClick={() => moveUp(idx)}
+                          disabled={idx === 0}
+                          title="Move Up"
+                        >
+                          <i className="bi bi-arrow-up"></i>
+                        </Button>
+                        <Button
+                          variant="outline-dark"
+                          size="sm"
+                          className="me-2"
+                          onClick={() => moveDown(idx)}
+                          disabled={idx === fields.length - 1}
+                          title="Move Down"
+                        >
+                          <i className="bi bi-arrow-down"></i>
+                        </Button>
+                        <Button
                           variant="outline-primary"
                           size="sm"
                           className="me-2"
                           onClick={() => handleShowModal(field)}
+                          title="Edit"
                         >
                           <i className="bi bi-pencil"></i>
                         </Button>
@@ -199,6 +250,7 @@ export const CustomFieldsManagement: React.FC = () => {
                           size="sm"
                           className="me-2"
                           onClick={() => handleToggleActive(field.id)}
+                          title={field.isActive ? 'Mark Inactive' : 'Mark Active'}
                         >
                           <i className={`bi bi-${field.isActive ? 'pause' : 'play'}`}></i>
                         </Button>
@@ -206,6 +258,7 @@ export const CustomFieldsManagement: React.FC = () => {
                           variant="outline-danger"
                           size="sm"
                           onClick={() => handleDelete(field.id)}
+                          title="Delete"
                         >
                           <i className="bi bi-trash"></i>
                         </Button>

@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Row, Col, Card, Button, Table, Badge, ListGroup } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
+import { teacherService } from '../services/teacherService';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -16,14 +17,33 @@ const sidebarItems = [
 
 export const TeacherDashboard: React.FC = () => {
   const { user } = useAuth();
-  const [stats] = useState({
-    myClasses: 4,
-    totalStudents: 120,
-    pendingAssignments: 8,
-    pendingGrading: 15,
+  const [stats, setStats] = useState({
+    myClasses: 0,
+    totalStudents: 0,
+    pendingAssignments: 0,
+    pendingGrading: 0,
     todayClasses: 3,
     attendance: 95,
   });
+
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        const s = await teacherService.getDashboardStats();
+        setStats((prev) => ({
+          ...prev,
+          myClasses: s?.totalClasses || 0,
+          totalStudents: s?.totalStudents || 0,
+          pendingAssignments: s?.totalAssignments || 0,
+          pendingGrading: s?.pendingGrading || 0,
+        }));
+      } catch (err) {
+        // Keep defaults if backend is unavailable
+        // console.error('Failed to load teacher stats', err);
+      }
+    };
+    loadStats();
+  }, []);
 
   const todaySchedule = [
     { time: '09:00 AM', class: 'Grade 10-A', subject: 'Mathematics', room: 'Room 101', status: 'upcoming' },

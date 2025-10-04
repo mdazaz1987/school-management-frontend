@@ -14,7 +14,18 @@ import { StudentList } from './pages/StudentList';
 import { StudentForm } from './pages/StudentForm';
 import { ClassList } from './pages/ClassList';
 import { ClassForm } from './pages/ClassForm';
+import { ClassDetail } from './pages/ClassDetail';
+import { StudentDetail } from './pages/StudentDetail';
+import { DebugAuth } from './pages/DebugAuth';
 import './App.css';
+import { SubjectList } from './pages/SubjectList';
+import { SubjectForm } from './pages/SubjectForm';
+import { ExamList } from './pages/ExamList';
+import { ExamForm } from './pages/ExamForm';
+import { FeeList } from './pages/FeeList';
+import { FeeForm } from './pages/FeeForm';
+import { TimetableList } from './pages/TimetableList';
+import { TimetableForm } from './pages/TimetableForm';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactElement }> = ({ children }) => {
@@ -127,7 +138,7 @@ function App() {
             path="/students/:id"
             element={
               <ProtectedRoute>
-                <ComingSoon />
+                <StudentDetail />
               </ProtectedRoute>
             }
           />
@@ -170,7 +181,7 @@ function App() {
             path="/classes/:id"
             element={
               <ProtectedRoute>
-                <ComingSoon />
+                <ClassDetail />
               </ProtectedRoute>
             }
           />
@@ -178,7 +189,23 @@ function App() {
             path="/subjects"
             element={
               <ProtectedRoute>
-                <ComingSoon />
+                <SubjectList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/subjects/new"
+            element={
+              <ProtectedRoute>
+                <SubjectForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/subjects/:id/edit"
+            element={
+              <ProtectedRoute>
+                <SubjectForm />
               </ProtectedRoute>
             }
           />
@@ -194,7 +221,23 @@ function App() {
             path="/exams"
             element={
               <ProtectedRoute>
-                <ComingSoon />
+                <ExamList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/exams/new"
+            element={
+              <ProtectedRoute>
+                <ExamForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/exams/:id/edit"
+            element={
+              <ProtectedRoute>
+                <ExamForm />
               </ProtectedRoute>
             }
           />
@@ -202,7 +245,23 @@ function App() {
             path="/fees"
             element={
               <ProtectedRoute>
-                <ComingSoon />
+                <FeeList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/fees/new"
+            element={
+              <ProtectedRoute>
+                <FeeForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/fees/:id/edit"
+            element={
+              <ProtectedRoute>
+                <FeeForm />
               </ProtectedRoute>
             }
           />
@@ -210,7 +269,23 @@ function App() {
             path="/timetable"
             element={
               <ProtectedRoute>
-                <ComingSoon />
+                <TimetableList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/timetable/new"
+            element={
+              <ProtectedRoute>
+                <TimetableForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/timetable/:id/edit"
+            element={
+              <ProtectedRoute>
+                <TimetableForm />
               </ProtectedRoute>
             }
           />
@@ -275,6 +350,16 @@ function App() {
             element={
               <ProtectedRoute>
                 <ComingSoon />
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Debug page */}
+          <Route
+            path="/debug-auth"
+            element={
+              <ProtectedRoute>
+                <DebugAuth />
               </ProtectedRoute>
             }
           />

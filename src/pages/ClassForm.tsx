@@ -22,7 +22,8 @@ export const ClassForm: React.FC = () => {
     name: '',
     grade: '',
     section: '',
-    schoolId: user?.schoolId || '',
+    // TEMPORARY FIX: Use 'school123' as default until backend JWT includes schoolId
+    schoolId: user?.schoolId || 'school123',
     academicYear: new Date().getFullYear() + '-' + (new Date().getFullYear() + 1),
     capacity: undefined,
     room: '',
@@ -78,15 +79,41 @@ export const ClassForm: React.FC = () => {
       const userStr = localStorage.getItem('user');
       console.log('=== Class Creation Debug ===');
       console.log('Has token:', !!token);
+      console.log('Token (first 50 chars):', token?.substring(0, 50));
       console.log('User:', userStr ? JSON.parse(userStr) : null);
       console.log('Form data:', formData);
+      console.log('API Base URL:', process.env.REACT_APP_API_URL);
+      
+      // Decode and log JWT payload
+      if (token) {
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          console.log('JWT Payload:', payload);
+          console.log('JWT Roles:', payload.roles);
+        } catch (e) {
+          console.error('Error decoding token:', e);
+        }
+      }
       console.log('========================');
 
+      // Clean up formData - ensure numeric fields have proper values
+      const cleanedData = {
+        ...formData,
+        fees: formData.fees ? Number(formData.fees) : undefined,
+        capacity: formData.capacity ? Number(formData.capacity) : undefined,
+        durationMonths: formData.durationMonths ? Number(formData.durationMonths) : undefined,
+      };
+
+      console.log('Cleaned data to be sent:', cleanedData);
+      console.log('Calling API...');
+
       if (isEditMode && id) {
-        await classService.updateClass(id, formData);
+        const result = await classService.updateClass(id, cleanedData);
+        console.log('Update result:', result);
         setSuccess('Class updated successfully!');
       } else {
-        await classService.createClass(formData);
+        const result = await classService.createClass(cleanedData);
+        console.log('Create result:', result);
         setSuccess('Class created successfully!');
       }
 
@@ -94,13 +121,29 @@ export const ClassForm: React.FC = () => {
         navigate('/classes');
       }, 1500);
     } catch (err: any) {
-      console.error('Error saving class:', err);
+      console.error('=== Error Details ===');
+      console.error('Error object:', err);
       console.error('Error response:', err.response);
+      console.error('Error response data:', err.response?.data);
+      console.error('Error response status:', err.response?.status);
+      console.error('Error response headers:', err.response?.headers);
+      console.error('Error config:', err.config);
+      console.error('Request URL:', err.config?.url);
+      console.error('Request Method:', err.config?.method);
+      console.error('Request Headers:', err.config?.headers);
+      console.error('Request Data:', err.config?.data);
+      console.error('====================');
       
       let errorMessage = 'Failed to save class';
       
       if (err.response?.status === 403) {
         errorMessage = 'Access Denied: You need ADMIN privileges to create classes. Please check your user role.';
+        
+        // Additional debug for 403
+        console.error('403 Debug Info:');
+        console.error('- Token exists:', !!localStorage.getItem('token'));
+        console.error('- User object:', localStorage.getItem('user'));
+        console.error('- Request was sent to:', err.config?.baseURL + err.config?.url);
       } else if (err.response?.data?.message) {
         errorMessage = err.response.data.message;
       } else if (err.message) {

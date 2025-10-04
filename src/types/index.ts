@@ -13,7 +13,7 @@ export interface User {
   createdAt: string;
 }
 
-export type UserRole = 'ADMIN' | 'TEACHER' | 'STUDENT' | 'PARENT';
+export type UserRole = 'ADMIN' | 'TEACHER' | 'STUDENT' | 'PARENT' | 'ROLE_ADMIN' | 'ROLE_TEACHER' | 'ROLE_STUDENT' | 'ROLE_PARENT';
 
 export interface LoginRequest {
   email: string;
@@ -33,6 +33,47 @@ export interface RegisterRequest {
 export interface AuthResponse {
   accessToken: string;
   tokenType: string;
+}
+
+// School types
+export interface Address {
+  street?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  country?: string;
+}
+
+export interface SchoolContactInfo {
+  phone?: string;
+  email?: string;
+  website?: string;
+  fax?: string;
+}
+
+export interface SchoolBranding {
+  primaryColor?: string;
+  secondaryColor?: string;
+  theme?: string;
+}
+
+export interface SchoolConfiguration {
+  academicYear?: string;
+  gradeSystem?: string;
+  currency?: string;
+  timezone?: string;
+}
+
+export interface School {
+  id: string;
+  name: string;
+  logo?: string;
+  contactInfo?: SchoolContactInfo;
+  address?: Address;
+  configuration?: SchoolConfiguration;
+  cmsPages?: Record<string, any>;
+  branding?: SchoolBranding;
+  createdAt?: string;
 }
 
 // Student types
@@ -227,8 +268,10 @@ export interface Subject {
   code: string;
   description?: string;
   schoolId: string;
-  category: 'CORE' | 'ELECTIVE' | 'OPTIONAL';
+  type?: 'CORE' | 'ELECTIVE' | 'OPTIONAL' | 'CO_CURRICULAR';
+  category?: string;
   credits?: number;
+  totalHours?: number;
   teacherIds?: string[];
   classIds?: string[];
   syllabus?: string;
@@ -269,12 +312,13 @@ export interface Fee {
   id: string;
   studentId: string;
   schoolId: string;
+  classId: string;
   feeType: string;
   amount: number;
   discountAmount?: number;
   discountReason?: string;
   netAmount: number;
-  status: 'PENDING' | 'PAID' | 'PARTIAL' | 'OVERDUE';
+  status: 'PENDING' | 'PAID' | 'PARTIAL' | 'OVERDUE' | 'WAIVED';
   dueDate: string;
   paidAmount?: number;
   paidDate?: string;
@@ -342,24 +386,34 @@ export interface AssignmentSubmission {
   status: 'SUBMITTED' | 'GRADED' | 'LATE';
 }
 
-// Timetable types
+// Timetable types (aligned with backend)
 export interface Timetable {
   id: string;
-  classId: string;
   schoolId: string;
-  academicYear: string;
-  dayOfWeek: 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY';
-  periods: TimetablePeriod[];
+  classId: string;
+  section?: string;
+  academicYear?: string;
+  term?: string;
+  entries: TimetableEntry[];
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
-export interface TimetablePeriod {
-  periodNumber: number;
-  subjectId: string;
-  teacherId: string;
-  startTime: string;
-  endTime: string;
+export type DayOfWeek = 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY';
+export type PeriodType = 'LECTURE' | 'PRACTICAL' | 'BREAK' | 'LUNCH' | 'ASSEMBLY' | 'SPORTS' | 'LIBRARY';
+
+export interface TimetableEntry {
+  day: DayOfWeek;
+  period: string; // e.g., "Period 1"
+  startTime: string; // HH:mm:ss
+  endTime: string;   // HH:mm:ss
+  subjectId?: string;
+  subjectName?: string;
+  teacherId?: string;
+  teacherName?: string;
   room?: string;
-  type: 'REGULAR' | 'BREAK' | 'LUNCH' | 'SPORTS' | 'ACTIVITY';
+  periodType: PeriodType;
 }
 
 // Dashboard stats

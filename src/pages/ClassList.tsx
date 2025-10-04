@@ -53,6 +53,17 @@ export const ClassList: React.FC = () => {
     }
   };
 
+  const handleToggleActive = async (cls: SchoolClass) => {
+    try {
+      await classService.updateClassStatus(cls.id, !cls.isActive);
+      setSuccess(`Class marked as ${!cls.isActive ? 'Active' : 'Inactive'}`);
+      loadClasses(); // Reload the list
+    } catch (err: any) {
+      console.error('Error toggling class status:', err);
+      setError(err.response?.data?.message || 'Failed to toggle class status');
+    }
+  };
+
   const formatFees = (fees?: number, feesType?: string) => {
     if (!fees) return 'Not Set';
     return `₹${fees.toLocaleString('en-IN')}/${feesType || 'Year'}`;
@@ -193,6 +204,15 @@ export const ClassList: React.FC = () => {
                         </Badge>
                       </td>
                       <td>
+                        <Button
+                          variant={cls.isActive ? 'outline-danger' : 'outline-success'}
+                          size="sm"
+                          className="me-2"
+                          onClick={() => handleToggleActive(cls)}
+                          title={cls.isActive ? 'Mark Inactive' : 'Mark Active'}
+                        >
+                          <i className={`bi ${cls.isActive ? 'bi-x-circle' : 'bi-check-circle'}`}></i>
+                        </Button>
                         <Button
                           variant="outline-primary"
                           size="sm"
