@@ -173,7 +173,11 @@ export const AdminDashboard: React.FC = () => {
                     </div>
                     <div className="text-center">
                       <i className="bi bi-percent text-primary fs-1"></i>
-                      <h3 className="mt-2">93.3%</h3>
+                      <h3 className="mt-2">
+                        {stats.totalStudents > 0 
+                          ? ((stats.presentToday / stats.totalStudents) * 100).toFixed(1) 
+                          : '0.0'}%
+                      </h3>
                       <p className="text-muted mb-0">Rate</p>
                     </div>
                   </div>
