@@ -3,7 +3,6 @@ import { Container, Row, Col, Card, Button, Badge, Alert, Spinner, ListGroup, Ta
 import { Layout } from '../components/Layout';
 import { useNavigate, useParams } from 'react-router-dom';
 import { studentService } from '../services/studentService';
-import { classService } from '../services/classService';
 import { Student } from '../types';
 import { maskAadhaar } from '../utils/maskAadhaar';
 
@@ -14,7 +13,6 @@ export const StudentDetail: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
-  const [className, setClassName] = useState<string>('');
 
   useEffect(() => {
     if (id) {
@@ -27,15 +25,6 @@ export const StudentDetail: React.FC = () => {
       setLoading(true);
       const data = await studentService.getStudentById(studentId);
       setStudent(data);
-      // Fetch friendly class name
-      if (data.classId) {
-        try {
-          const cls = await classService.getClassById(data.classId);
-          setClassName(cls.name || cls.className);
-        } catch (e) {
-          setClassName('');
-        }
-      }
     } catch (err: any) {
       console.error('Error loading student:', err);
       setError(err.response?.data?.message || 'Failed to load student details');
@@ -216,7 +205,7 @@ export const StudentDetail: React.FC = () => {
                   {student.classId && (
                     <ListGroup.Item className="d-flex justify-content-between">
                       <strong>Class:</strong>
-                      <span>{className || student.classId}</span>
+                      <span>{student.className || student.classId}</span>
                     </ListGroup.Item>
                   )}
                   {student.section && (
