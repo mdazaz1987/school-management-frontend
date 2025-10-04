@@ -427,16 +427,39 @@ export interface Notification {
   id: string;
   title: string;
   message: string;
-  type: 'ASSIGNMENT' | 'EXAM' | 'FEE' | 'ATTENDANCE' | 'EVENT' | 'ANNOUNCEMENT' | 'EMERGENCY';
+  type: 'ASSIGNMENT' | 'EXAM' | 'FEE' | 'ATTENDANCE' | 'EVENT' | 'ANNOUNCEMENT' | 'EMERGENCY' | 'HOLIDAY' | 'RESULT' | 'GENERAL';
   priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
   schoolId: string;
   recipientIds?: string[];
-  recipientRoles?: UserRole[];
-  recipientClassIds?: string[];
+  recipientRoles?: string[];
+  recipientClasses?: string[];
+  sendToAll?: boolean;
+  senderId?: string;
+  senderName?: string;
+  link?: string;
+  attachmentUrl?: string;
   isRead: boolean;
-  scheduledAt?: string;
-  sentAt?: string;
+  readAt?: string;
+  isActive: boolean;
+  expiresAt?: string;
+  scheduledFor?: string;
+  isSent: boolean;
   createdAt: string;
+  updatedAt: string;
+}
+
+export interface NotificationCreateRequest {
+  title: string;
+  message: string;
+  type: Notification['type'];
+  priority: Notification['priority'];
+  recipientIds?: string[];
+  recipientRoles?: string[];
+  recipientClasses?: string[];
+  sendToAll?: boolean;
+  link?: string;
+  attachmentUrl?: string;
+  scheduledFor?: string;
 }
 
 // Attendance types

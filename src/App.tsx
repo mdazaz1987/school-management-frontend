@@ -29,6 +29,7 @@ import { TimetableForm } from './pages/TimetableForm';
 import { TeacherList } from './pages/TeacherList';
 import { TeacherForm } from './pages/TeacherForm';
 import { TeacherDetail } from './pages/TeacherDetail';
+import { Notifications } from './pages/Notifications';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactElement }> = ({ children }) => {
@@ -108,6 +109,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Settings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/notifications"
+            element={
+              <ProtectedRoute>
+                <Notifications />
               </ProtectedRoute>
             }
           />

@@ -2,6 +2,7 @@ import React, { ReactNode } from 'react';
 import { Container, Navbar, Nav, NavDropdown } from 'react-bootstrap';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { NotificationBell } from './NotificationBell';
 
 interface LayoutProps {
   children: ReactNode;
@@ -26,7 +27,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           </Navbar.Brand>
           <Navbar.Toggle aria-controls="basic-navbar-nav" />
           <Navbar.Collapse id="basic-navbar-nav">
-            <Nav className="ms-auto">
+            <Nav className="ms-auto align-items-center">
+              <NotificationBell />
               <NavDropdown
                 title={
                   <span>
