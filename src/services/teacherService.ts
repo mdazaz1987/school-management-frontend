@@ -1,6 +1,12 @@
 import apiService from './api';
 import { Teacher, TeacherCreateRequest, PageResponse, PageRequest } from '../types';
 
+// Normalize backend payloads that may return `active` instead of `isActive`
+const normalizeTeacher = (t: any): Teacher => ({
+  ...t,
+  isActive: t?.isActive ?? t?.active ?? false,
+});
+
 // Helper to build address
 const buildAddress = (d: Partial<TeacherCreateRequest>) => {
   const has = d.addressLine1 || d.addressLine2 || d.city || d.state || d.zipCode;
@@ -54,31 +60,41 @@ export const teacherService = {
     if (params?.size) queryParams.append('size', params.size.toString());
     if (params?.sort) queryParams.append('sort', params.sort);
     
-    return apiService.get(`/teachers?${queryParams.toString()}`);
+    const page = await apiService.get<PageResponse<any>>(`/teachers?${queryParams.toString()}`);
+    return {
+      ...page,
+      content: (page.content || []).map(normalizeTeacher),
+    } as PageResponse<Teacher>;
   },
 
   async getTeacherById(id: string): Promise<Teacher> {
-    return apiService.get(`/teachers/${id}`);
+    const data = await apiService.get<any>(`/teachers/${id}`);
+    return normalizeTeacher(data);
   },
 
   async getTeacherByEmployeeId(employeeId: string): Promise<Teacher> {
-    return apiService.get(`/teachers/employee/${employeeId}`);
+    const data = await apiService.get<any>(`/teachers/employee/${employeeId}`);
+    return normalizeTeacher(data);
   },
 
   async getTeachersBySchool(schoolId: string): Promise<Teacher[]> {
-    return apiService.get(`/teachers/school/${schoolId}`);
+    const list = await apiService.get<any[]>(`/teachers/school/${schoolId}`);
+    return list.map(normalizeTeacher);
   },
 
   async searchTeachers(name: string): Promise<Teacher[]> {
-    return apiService.get(`/teachers/search?name=${encodeURIComponent(name)}`);
+    const list = await apiService.get<any[]>(`/teachers/search?name=${encodeURIComponent(name)}`);
+    return list.map(normalizeTeacher);
   },
 
   async getTeachersBySubject(subjectId: string): Promise<Teacher[]> {
-    return apiService.get(`/teachers/subject/${subjectId}`);
+    const list = await apiService.get<any[]>(`/teachers/subject/${subjectId}`);
+    return list.map(normalizeTeacher);
   },
 
   async getTeachersByClass(classId: string): Promise<Teacher[]> {
-    return apiService.get(`/teachers/class/${classId}`);
+    const list = await apiService.get<any[]>(`/teachers/class/${classId}`);
+    return list.map(normalizeTeacher);
   },
 
   async createTeacher(data: TeacherCreateRequest): Promise<any> {
@@ -112,11 +128,13 @@ export const teacherService = {
   },
 
   async updateTeacher(id: string, data: Partial<Teacher>): Promise<Teacher> {
-    return apiService.put(`/teachers/${id}`, data);
+    const resp = await apiService.put<any>(`/teachers/${id}`, data);
+    return normalizeTeacher(resp);
   },
 
   async partialUpdateTeacher(id: string, updates: Partial<Teacher>): Promise<Teacher> {
-    return apiService.patch(`/teachers/${id}`, updates);
+    const resp = await apiService.patch<any>(`/teachers/${id}`, updates);
+    return normalizeTeacher(resp);
   },
 
   async deleteTeacher(id: string): Promise<void> {
@@ -124,7 +142,8 @@ export const teacherService = {
   },
 
   async activateTeacher(id: string): Promise<Teacher> {
-    return apiService.post(`/teachers/${id}/activate`, {});
+    const resp = await apiService.post<any>(`/teachers/${id}/activate`, {});
+    return normalizeTeacher(resp);
   },
 
   // Teacher dashboard

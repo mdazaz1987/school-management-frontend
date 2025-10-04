@@ -484,7 +484,22 @@ export const Settings: React.FC = () => {
                         setSaveMessage('School settings saved');
                         setTimeout(() => setSaveMessage(''), 3000);
                       } catch (err: any) {
-                        setErrorMessage(err.response?.data?.message || 'Failed to save school');
+                        // If school not found, create it using the provided fields
+                        if (err?.response?.status === 404) {
+                          try {
+                            const created = await schoolService.create({
+                              id: user.schoolId,
+                              ...school,
+                            });
+                            setSchool(created);
+                            setSaveMessage('School created and settings saved');
+                            setTimeout(() => setSaveMessage(''), 3000);
+                          } catch (createErr: any) {
+                            setErrorMessage(createErr.response?.data?.message || 'Failed to create school');
+                          }
+                        } else {
+                          setErrorMessage(err.response?.data?.message || 'Failed to save school');
+                        }
                       } finally {
                         setSchoolSaving(false);
                       }
