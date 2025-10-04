@@ -1,5 +1,5 @@
 import apiService from './api';
-import { Notification, NotificationCreateRequest, PageResponse, PageRequest } from '../types';
+import { Notification, NotificationCreateRequest } from '../types';
 
 export const notificationService = {
   // Get all notifications (Admin/Teacher)
