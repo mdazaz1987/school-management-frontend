@@ -2,13 +2,20 @@ import apiService from './api';
 import { AuthResponse, LoginRequest, RegisterRequest, User } from '../types';
 
 export const authService = {
-  async login(credentials: LoginRequest): Promise<{ user: User; token: string }> {
+  async login(credentials: LoginRequest): Promise<{ user: User; token: string; passwordChangeRequired?: boolean }> {
     // First, login to get token
     const response = await apiService.post<AuthResponse>('/auth/login', credentials);
     
     if (response.accessToken) {
       // Store token
       localStorage.setItem('token', response.accessToken);
+      
+      // Store password change requirement flag
+      if (response.passwordChangeRequired) {
+        localStorage.setItem('passwordChangeRequired', 'true');
+      } else {
+        localStorage.removeItem('passwordChangeRequired');
+      }
       
       // Decode JWT to get user info (basic decoding, just get the payload)
       try {
@@ -33,7 +40,7 @@ export const authService = {
         console.log('Parsed user from JWT:', user);
         localStorage.setItem('user', JSON.stringify(user));
         
-        return { user, token: response.accessToken };
+        return { user, token: response.accessToken, passwordChangeRequired: response.passwordChangeRequired };
       } catch (error) {
         console.error('Error decoding JWT:', error);
         throw new Error('Failed to decode authentication token');
@@ -54,6 +61,7 @@ export const authService = {
   logout() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('passwordChangeRequired');
     window.location.href = '/login';
   },
 
@@ -68,5 +76,22 @@ export const authService = {
 
   isAuthenticated(): boolean {
     return !!this.getToken();
+  },
+
+  isPasswordChangeRequired(): boolean {
+    return localStorage.getItem('passwordChangeRequired') === 'true';
+  },
+
+  clearPasswordChangeRequired() {
+    localStorage.removeItem('passwordChangeRequired');
+  },
+
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    await apiService.post('/auth/change-password', {
+      currentPassword,
+      newPassword,
+    });
+    // Clear the flag after successful change
+    this.clearPasswordChangeRequired();
   },
 };

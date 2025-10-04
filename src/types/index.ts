@@ -33,6 +33,7 @@ export interface RegisterRequest {
 export interface AuthResponse {
   accessToken: string;
   tokenType: string;
+  passwordChangeRequired?: boolean;
 }
 
 // School types
