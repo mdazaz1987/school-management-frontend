@@ -2,29 +2,24 @@ import apiService from './api';
 import { Notification, NotificationCreateRequest, PageResponse, PageRequest } from '../types';
 
 export const notificationService = {
-  // Get all notifications with pagination (Admin)
-  async getAllNotifications(params?: PageRequest): Promise<PageResponse<Notification>> {
+  // Get all notifications (Admin/Teacher)
+  async getAllNotifications(schoolId?: string, type?: string): Promise<Notification[]> {
     const queryParams = new URLSearchParams();
-    if (params?.page !== undefined) queryParams.append('page', params.page.toString());
-    if (params?.size) queryParams.append('size', params.size.toString());
-    if (params?.sort) queryParams.append('sort', params.sort);
+    if (schoolId) queryParams.append('schoolId', schoolId);
+    if (type) queryParams.append('type', type);
     
     return apiService.get(`/notifications?${queryParams.toString()}`);
   },
 
-  // Get notifications for current user's school
-  async getSchoolNotifications(schoolId: string): Promise<Notification[]> {
-    return apiService.get(`/notifications/school/${schoolId}`);
-  },
-
   // Get notifications for current user
   async getMyNotifications(): Promise<Notification[]> {
-    return apiService.get('/notifications/my');
+    return apiService.get('/notifications/my-notifications');
   },
 
   // Get unread count
   async getUnreadCount(): Promise<number> {
-    return apiService.get('/notifications/unread-count');
+    const response: { count: number } = await apiService.get('/notifications/unread-count');
+    return response.count;
   },
 
   // Get notification by ID
@@ -32,38 +27,68 @@ export const notificationService = {
     return apiService.get(`/notifications/${id}`);
   },
 
-  // Create new notification (Admin)
+  // Create new notification (Admin/Teacher)
   async createNotification(data: NotificationCreateRequest): Promise<Notification> {
     return apiService.post('/notifications', data);
   },
 
-  // Update notification (Admin)
+  // Update notification (Admin/Teacher)
   async updateNotification(id: string, data: Partial<Notification>): Promise<Notification> {
     return apiService.put(`/notifications/${id}`, data);
   },
 
   // Mark notification as read
   async markAsRead(id: string): Promise<void> {
-    return apiService.post(`/notifications/${id}/read`, {});
+    return apiService.put(`/notifications/${id}/mark-read`, {});
   },
 
   // Mark all notifications as read
   async markAllAsRead(): Promise<void> {
-    return apiService.post('/notifications/read-all', {});
+    return apiService.put('/notifications/mark-all-read', {});
   },
 
-  // Delete notification (Admin)
+  // Delete notification (Admin/Teacher)
   async deleteNotification(id: string): Promise<void> {
     return apiService.delete(`/notifications/${id}`);
   },
 
-  // Broadcast notification to entire school (Admin)
-  async broadcastNotification(data: {
+  // Send notification to all users in school (Admin only)
+  async sendToAll(data: {
     title: string;
     message: string;
     type: Notification['type'];
     priority: Notification['priority'];
+    link?: string;
   }): Promise<Notification> {
-    return apiService.post('/notifications/broadcast', data);
+    return apiService.post('/notifications/send-to-all', data);
+  },
+
+  // Send notification to specific users
+  async sendToUsers(data: {
+    title: string;
+    message: string;
+    type: Notification['type'];
+    priority: Notification['priority'];
+    userIds: string[];
+    link?: string;
+  }): Promise<Notification> {
+    return apiService.post('/notifications/send-to-users', data);
+  },
+
+  // Send notification to specific role
+  async sendToRole(data: {
+    title: string;
+    message: string;
+    type: Notification['type'];
+    priority: Notification['priority'];
+    role: string;
+    link?: string;
+  }): Promise<Notification> {
+    return apiService.post('/notifications/send-to-role', data);
+  },
+
+  // Get scheduled notifications
+  async getScheduledNotifications(schoolId: string): Promise<Notification[]> {
+    return apiService.get(`/notifications/scheduled?schoolId=${schoolId}`);
   },
 };
