@@ -38,6 +38,11 @@ import { StudentAttendance } from './pages/StudentAttendance';
 import { StudentTimetable } from './pages/StudentTimetable';
 import { StudentFeePayment } from './pages/StudentFeePayment';
 import { StudentNotifications } from './pages/StudentNotifications';
+import { ParentChildren } from './pages/ParentChildren';
+import { ParentAttendance } from './pages/ParentAttendance';
+import { ParentPerformance } from './pages/ParentPerformance';
+import { ParentFees } from './pages/ParentFees';
+import { ParentNotifications } from './pages/ParentNotifications';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactElement }> = ({ children }) => {
@@ -445,6 +450,48 @@ function App() {
             element={
               <ProtectedRoute>
                 <StudentNotifications />
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Parent Portal Routes */}
+          <Route
+            path="/parent/children"
+            element={
+              <ProtectedRoute>
+                <ParentChildren />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/parent/attendance"
+            element={
+              <ProtectedRoute>
+                <ParentAttendance />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/parent/performance"
+            element={
+              <ProtectedRoute>
+                <ParentPerformance />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/parent/fees"
+            element={
+              <ProtectedRoute>
+                <ParentFees />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/parent/notifications"
+            element={
+              <ProtectedRoute>
+                <ParentNotifications />
               </ProtectedRoute>
             }
           />
