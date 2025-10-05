@@ -127,8 +127,30 @@ export const teacherService = {
     return apiService.post('/teachers', payload);
   },
 
-  async updateTeacher(id: string, data: Partial<Teacher>): Promise<Teacher> {
-    const resp = await apiService.put<any>(`/teachers/${id}`, data);
+  async updateTeacher(id: string, data: any): Promise<Teacher> {
+    // Build nested structure like createTeacher does
+    const payload: any = {
+      employeeId: data.employeeId,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      email: data.email,
+      phone: data.phone,
+      dateOfBirth: data.dateOfBirth,
+      gender: data.gender,
+      bloodGroup: data.bloodGroup,
+      nationality: data.nationality,
+      maritalStatus: data.maritalStatus,
+      schoolId: data.schoolId,
+      address: buildAddress(data),
+      qualificationInfo: buildQualificationInfo(data),
+      employmentInfo: buildEmploymentInfo(data),
+      subjectIds: data.subjectIds || [],
+      classIds: data.classIds || [],
+      joiningDate: data.joiningDate,
+      profilePicture: data.profilePicture,
+      customFields: data.customFields || {},
+    };
+    const resp = await apiService.put<any>(`/teachers/${id}`, payload);
     return normalizeTeacher(resp);
   },
 
