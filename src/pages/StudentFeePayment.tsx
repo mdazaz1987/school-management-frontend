@@ -106,9 +106,14 @@ export const StudentFeePayment: React.FC = () => {
         </Col>
         <Col md={10}>
           <div className="mb-4">
-            <h2>Fee Payment</h2>
-            <p className="text-muted">Manage your fee payments</p>
+            <h2>My Fee Payment</h2>
+            <p className="text-muted">View and manage your fee payments</p>
           </div>
+
+          <Alert variant="info" className="mb-4">
+            <i className="bi bi-info-circle me-2"></i>
+            This page shows only your fee information. Contact the admin office for any fee-related queries.
+          </Alert>
 
           {error && <Alert variant="danger">{error}</Alert>}
 

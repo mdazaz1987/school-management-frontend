@@ -143,6 +143,11 @@ export const StudentAssignments: React.FC = () => {
             <p className="text-muted">View and submit your assignments</p>
           </div>
 
+          <Alert variant="info" className="mb-4">
+            <i className="bi bi-info-circle me-2"></i>
+            This page shows all assignments assigned to you. Submit before the due date to avoid penalties.
+          </Alert>
+
           {error && (
             <Alert variant="danger" dismissible onClose={() => setError('')}>
               {error}

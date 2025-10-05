@@ -84,8 +84,13 @@ export const StudentTimetable: React.FC = () => {
         <Col md={10}>
           <div className="mb-4">
             <h2>My Timetable</h2>
-            <p className="text-muted">Your weekly class schedule</p>
+            <p className="text-muted">Your weekly class schedule for Academic Year 2024-2025</p>
           </div>
+
+          <Alert variant="info" className="mb-4">
+            <i className="bi bi-info-circle me-2"></i>
+            This is your class section timetable for the current academic year.
+          </Alert>
 
           {error && <Alert variant="danger">{error}</Alert>}
 

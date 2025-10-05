@@ -147,7 +147,7 @@ export const StudentNotifications: React.FC = () => {
           <div className="mb-4">
             <div className="d-flex justify-content-between align-items-center">
               <div>
-                <h2>Notifications</h2>
+                <h2>My Notifications</h2>
                 <p className="text-muted">Stay updated with important announcements</p>
               </div>
               {unreadCount > 0 && (
@@ -157,6 +157,12 @@ export const StudentNotifications: React.FC = () => {
               )}
             </div>
           </div>
+
+          <Alert variant="info" className="mb-4">
+            <i className="bi bi-info-circle me-2"></i>
+            <strong>You will receive notifications about:</strong> New assignments, Exam results, Fee reminders, 
+            Attendance updates, Timetable changes, School announcements, and Upcoming events.
+          </Alert>
 
           {error && <Alert variant="danger">{error}</Alert>}
 

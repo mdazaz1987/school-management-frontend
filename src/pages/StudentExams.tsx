@@ -155,9 +155,14 @@ export const StudentExams: React.FC = () => {
         </Col>
         <Col md={10}>
           <div className="mb-4">
-            <h2>Exams & Results</h2>
-            <p className="text-muted">Track your upcoming exams and view your results</p>
+            <h2>My Exams & Results</h2>
+            <p className="text-muted">View your upcoming exams and past results (Read-Only)</p>
           </div>
+
+          <Alert variant="info" className="mb-4">
+            <i className="bi bi-info-circle me-2"></i>
+            This page displays only your exam schedule and results. Results will be published by teachers after evaluation.
+          </Alert>
 
           {error && (
             <Alert variant="danger" dismissible onClose={() => setError('')}>
