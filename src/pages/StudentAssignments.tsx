@@ -258,9 +258,13 @@ export const StudentAssignments: React.FC = () => {
                               <strong>{assignment.marksObtained}</strong> / {assignment.totalMarks}
                             </td>
                             <td>
-                              <Badge bg={assignment.grade.startsWith('A') ? 'success' : assignment.grade.startsWith('B') ? 'primary' : 'warning'}>
-                                {assignment.grade}
-                              </Badge>
+                              {assignment.grade ? (
+                                <Badge bg={assignment.grade.startsWith('A') ? 'success' : assignment.grade.startsWith('B') ? 'primary' : 'warning'}>
+                                  {assignment.grade}
+                                </Badge>
+                              ) : (
+                                <Badge bg="secondary">Not Graded</Badge>
+                              )}
                             </td>
                             <td>{assignment.feedback}</td>
                           </tr>
