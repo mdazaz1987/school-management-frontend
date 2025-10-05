@@ -122,10 +122,16 @@ export const TeacherDetail: React.FC = () => {
               <Card.Body className="text-center">
                 {teacher.profilePicture ? (
                   <img
-                    src={teacher.profilePicture}
+                    src={teacher.profilePicture.startsWith('http') 
+                      ? teacher.profilePicture 
+                      : `${process.env.REACT_APP_API_URL || 'http://localhost:8080/api'}/profile/photo/${teacher.profilePicture}`}
                     alt={`${teacher.firstName} ${teacher.lastName}`}
                     className="rounded-circle mb-3"
                     style={{ width: '150px', height: '150px', objectFit: 'cover' }}
+                    onError={(e) => {
+                      // Fallback to initials if image fails to load
+                      e.currentTarget.style.display = 'none';
+                    }}
                   />
                 ) : (
                   <div

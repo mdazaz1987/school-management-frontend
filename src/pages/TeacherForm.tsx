@@ -363,7 +363,17 @@ export const TeacherForm: React.FC = () => {
                             name="dateOfBirth"
                             value={formData.dateOfBirth}
                             onChange={handleChange}
+                            max={(() => {
+                              // Maximum date: 14 years ago from today
+                              const maxDate = new Date();
+                              maxDate.setFullYear(maxDate.getFullYear() - 14);
+                              return maxDate.toISOString().split('T')[0];
+                            })()}
+                            min="1900-01-01"
                           />
+                          <Form.Text className="text-muted">
+                            Teacher must be at least 14 years old
+                          </Form.Text>
                         </Form.Group>
                       </Col>
                       <Col md={3}>
