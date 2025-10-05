@@ -43,6 +43,12 @@ import { ParentAttendance } from './pages/ParentAttendance';
 import { ParentPerformance } from './pages/ParentPerformance';
 import { ParentFees } from './pages/ParentFees';
 import { ParentNotifications } from './pages/ParentNotifications';
+import { TeacherMyClasses } from './pages/TeacherMyClasses';
+import { TeacherAssignments } from './pages/TeacherAssignments';
+import { TeacherAttendance } from './pages/TeacherAttendance';
+import { TeacherGrading } from './pages/TeacherGrading';
+import { TeacherTimetable } from './pages/TeacherTimetable';
+import { TeacherStudents } from './pages/TeacherStudents';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactElement }> = ({ children }) => {
@@ -492,6 +498,56 @@ function App() {
             element={
               <ProtectedRoute>
                 <ParentNotifications />
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Teacher Portal Routes */}
+          <Route
+            path="/teacher/my-classes"
+            element={
+              <ProtectedRoute>
+                <TeacherMyClasses />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/teacher/assignments"
+            element={
+              <ProtectedRoute>
+                <TeacherAssignments />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/teacher/attendance"
+            element={
+              <ProtectedRoute>
+                <TeacherAttendance />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/teacher/grading"
+            element={
+              <ProtectedRoute>
+                <TeacherGrading />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/teacher/timetable"
+            element={
+              <ProtectedRoute>
+                <TeacherTimetable />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/teacher/students"
+            element={
+              <ProtectedRoute>
+                <TeacherStudents />
               </ProtectedRoute>
             }
           />

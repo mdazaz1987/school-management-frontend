@@ -7,12 +7,12 @@ import { teacherService } from '../services/teacherService';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
-  { path: '/my-classes', label: 'My Classes', icon: 'bi-door-open' },
-  { path: '/assignments', label: 'Assignments', icon: 'bi-file-text' },
-  { path: '/attendance', label: 'Attendance', icon: 'bi-calendar-check' },
-  { path: '/grading', label: 'Grading', icon: 'bi-star' },
-  { path: '/timetable', label: 'My Timetable', icon: 'bi-calendar3' },
-  { path: '/students', label: 'Students', icon: 'bi-people' },
+  { path: '/teacher/my-classes', label: 'My Classes', icon: 'bi-door-open' },
+  { path: '/teacher/assignments', label: 'Assignments', icon: 'bi-file-text' },
+  { path: '/teacher/attendance', label: 'Attendance', icon: 'bi-calendar-check' },
+  { path: '/teacher/grading', label: 'Grading', icon: 'bi-star' },
+  { path: '/teacher/timetable', label: 'My Timetable', icon: 'bi-calendar3' },
+  { path: '/teacher/students', label: 'Students', icon: 'bi-people' },
 ];
 
 export const TeacherDashboard: React.FC = () => {
