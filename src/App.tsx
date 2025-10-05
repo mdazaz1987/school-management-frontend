@@ -32,6 +32,12 @@ import { TeacherForm } from './pages/TeacherForm';
 import { TeacherDetail } from './pages/TeacherDetail';
 import { Notifications } from './pages/Notifications';
 import { AttendancePage } from './pages/Attendance';
+import { StudentAssignments } from './pages/StudentAssignments';
+import { StudentExams } from './pages/StudentExams';
+import { StudentAttendance } from './pages/StudentAttendance';
+import { StudentTimetable } from './pages/StudentTimetable';
+import { StudentFeePayment } from './pages/StudentFeePayment';
+import { StudentNotifications } from './pages/StudentNotifications';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactElement }> = ({ children }) => {
@@ -389,6 +395,56 @@ function App() {
             element={
               <ProtectedRoute>
                 <ComingSoon />
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Student Portal Routes */}
+          <Route
+            path="/student/assignments"
+            element={
+              <ProtectedRoute>
+                <StudentAssignments />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student/exams"
+            element={
+              <ProtectedRoute>
+                <StudentExams />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student/attendance"
+            element={
+              <ProtectedRoute>
+                <StudentAttendance />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student/timetable"
+            element={
+              <ProtectedRoute>
+                <StudentTimetable />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student/fees"
+            element={
+              <ProtectedRoute>
+                <StudentFeePayment />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student/notifications"
+            element={
+              <ProtectedRoute>
+                <StudentNotifications />
               </ProtectedRoute>
             }
           />
