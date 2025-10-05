@@ -78,7 +78,7 @@ export const TeacherMyClasses: React.FC = () => {
 
   const getClassesForDate = (date: string) => {
     const dayOfWeek = new Date(date).toLocaleDateString('en-US', { weekday: 'short' });
-    return classes.current.filter(c => c.schedule.includes(dayOfWeek));
+    return classes.current.filter((c: any) => c.schedule.includes(dayOfWeek));
   };
 
   const selectedDateClasses = getClassesForDate(selectedDate);
@@ -145,7 +145,7 @@ export const TeacherMyClasses: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {classes.current.map((cls) => (
+                      {classes.current.map((cls: any) => (
                         <tr key={cls.id}>
                           <td><strong>{cls.name}</strong></td>
                           <td><Badge bg="primary">{cls.subject}</Badge></td>
@@ -183,7 +183,7 @@ export const TeacherMyClasses: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {classes.past.map((cls) => (
+                      {classes.past.map((cls: any) => (
                         <tr key={cls.id}>
                           <td><strong>{cls.name}</strong></td>
                           <td><Badge bg="secondary">{cls.subject}</Badge></td>
