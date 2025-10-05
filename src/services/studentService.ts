@@ -180,6 +180,8 @@ export const studentService = {
     parentPassword?: string;
     sendEmailToStudent: boolean;
     sendEmailToParents: boolean;
+    createParentAccount?: boolean;
+    parentAccountType?: 'father' | 'mother' | 'guardian';
   }): Promise<{
     student: Student;
     credentialsCreated: Array<{
@@ -222,7 +224,9 @@ export const studentService = {
       studentPassword: options.studentPassword,
       parentPassword: options.parentPassword,
       sendEmailToStudent: options.sendEmailToStudent,
-      sendEmailToParents: options.sendEmailToParents
+      sendEmailToParents: options.sendEmailToParents,
+      createParentAccount: options.createParentAccount ?? false,
+      parentAccountType: options.parentAccountType || 'father'
     };
 
     const resp = await apiService.post<any>('/students', payload);

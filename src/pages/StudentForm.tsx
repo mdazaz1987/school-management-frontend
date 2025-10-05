@@ -31,6 +31,10 @@ export const StudentForm: React.FC = () => {
   const [sendEmailToParents, setSendEmailToParents] = useState(true);
   const [showCredentialsModal, setShowCredentialsModal] = useState(false);
   const [createdCredentials, setCreatedCredentials] = useState<any[]>([]);
+  
+  // Parent account creation options
+  const [createParentAccount, setCreateParentAccount] = useState(true);
+  const [parentAccountType, setParentAccountType] = useState<'father' | 'mother' | 'guardian'>('father');
 
   // Form data
   const [formData, setFormData] = useState<StudentCreateRequest>({
@@ -209,6 +213,19 @@ export const StudentForm: React.FC = () => {
           navigate('/students');
         }, 1500);
       } else {
+        // Validate parent email if creating parent account
+        if (createParentAccount) {
+          const parentEmail = parentAccountType === 'father' ? formData.fatherEmail :
+                             parentAccountType === 'mother' ? formData.motherEmail :
+                             formData.guardianEmail;
+          
+          if (!parentEmail || !parentEmail.trim()) {
+            setError(`Please provide ${parentAccountType}'s email to create parent account`);
+            setSaving(false);
+            return;
+          }
+        }
+        
         // Create new student with password options
         const response = await studentService.createStudentWithCredentials({
           student: formData,
@@ -216,7 +233,9 @@ export const StudentForm: React.FC = () => {
           studentPassword: passwordMode === 'CUSTOM' ? studentPassword : undefined,
           parentPassword: passwordMode === 'CUSTOM' ? (parentPassword || studentPassword) : undefined,
           sendEmailToStudent,
-          sendEmailToParents
+          sendEmailToParents,
+          createParentAccount,
+          parentAccountType
         });
 
         setSuccess('Student created successfully!');
@@ -817,6 +836,77 @@ export const StudentForm: React.FC = () => {
                       </Form.Group>
                     </Col>
                   </Row>
+                  
+                  {/* Parent Account Creation Section */}
+                  {!isEditMode && (
+                    <>
+                      <hr className="my-4" />
+                      <h6 className="mb-3 text-primary">
+                        <i className="bi bi-person-lock me-2"></i>
+                        Parent Login Account
+                      </h6>
+                      <Alert variant="info" className="mb-3">
+                        <i className="bi bi-info-circle me-2"></i>
+                        Create a parent account to allow parents to access the portal and track their child's progress.
+                      </Alert>
+                      
+                      <Form.Group className="mb-3">
+                        <Form.Check
+                          type="checkbox"
+                          id="createParentAccount"
+                          label="Create parent login account"
+                          checked={createParentAccount}
+                          onChange={(e) => setCreateParentAccount(e.target.checked)}
+                        />
+                      </Form.Group>
+                      
+                      {createParentAccount && (
+                        <Card className="bg-light">
+                          <Card.Body>
+                            <Form.Group className="mb-3">
+                              <Form.Label className="fw-bold">Select Parent for Account Creation *</Form.Label>
+                              <div className="d-flex gap-3">
+                                <Form.Check
+                                  type="radio"
+                                  id="parent-father"
+                                  name="parentAccountType"
+                                  label="Father"
+                                  checked={parentAccountType === 'father'}
+                                  onChange={() => setParentAccountType('father')}
+                                />
+                                <Form.Check
+                                  type="radio"
+                                  id="parent-mother"
+                                  name="parentAccountType"
+                                  label="Mother"
+                                  checked={parentAccountType === 'mother'}
+                                  onChange={() => setParentAccountType('mother')}
+                                />
+                                <Form.Check
+                                  type="radio"
+                                  id="parent-guardian"
+                                  name="parentAccountType"
+                                  label="Guardian"
+                                  checked={parentAccountType === 'guardian'}
+                                  onChange={() => setParentAccountType('guardian')}
+                                />
+                              </div>
+                            </Form.Group>
+                            
+                            <Alert variant="warning" className="mb-0">
+                              <small>
+                                <i className="bi bi-exclamation-triangle me-2"></i>
+                                <strong>Login Email:</strong> The selected parent's email will be used for portal login.
+                                {parentAccountType === 'father' && ` (${formData.fatherEmail || 'Not provided'})`}
+                                {parentAccountType === 'mother' && ` (${formData.motherEmail || 'Not provided'})`}
+                                {parentAccountType === 'guardian' && ` (${formData.guardianEmail || 'Not provided'})`}
+                              </small>
+                            </Alert>
+                          </Card.Body>
+                        </Card>
+                      )}
+                    </>
+                  )}
                 </Card.Body>
               </Card>
             </Tab>
