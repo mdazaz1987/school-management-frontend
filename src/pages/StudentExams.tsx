@@ -3,7 +3,6 @@ import { Row, Col, Card, Table, Badge, Tabs, Tab, ProgressBar, Alert, Spinner } 
 import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
-import { studentService } from '../services/studentService';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -25,6 +24,7 @@ export const StudentExams: React.FC = () => {
 
   useEffect(() => {
     loadExamsAndResults();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.email]);
 
   const loadExamsAndResults = async () => {

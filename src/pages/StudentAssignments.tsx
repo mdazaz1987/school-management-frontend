@@ -23,11 +23,12 @@ export const StudentAssignments: React.FC = () => {
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
   const [submissionText, setSubmissionText] = useState('');
-  const [submissionFile, setSubmissionFile] = useState<File | null>(null);
+  const [, setSubmissionFile] = useState<File | null>(null);
   const [activeTab, setActiveTab] = useState('pending');
 
   useEffect(() => {
     loadAssignments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.email]);
 
   const loadAssignments = async () => {
@@ -36,7 +37,8 @@ export const StudentAssignments: React.FC = () => {
     setError('');
     try {
       const student = await studentService.getStudentByEmail(user.email);
-      const dashboard = await studentService.getStudentDashboard(student.id);
+      // Dashboard data can be used for future enhancements
+      // const dashboard = await studentService.getStudentDashboard(student.id);
       
       // Mock assignments data (replace with actual API call)
       const mockAssignments = [
