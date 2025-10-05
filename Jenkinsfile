@@ -79,6 +79,20 @@ pipeline {
                         pm2 stop ${APP_NAME} || true
                         pm2 delete ${APP_NAME} || true
                         
+                        # Kill any process on port ${APP_PORT}
+                        echo "Checking for processes on port ${APP_PORT}..."
+                        PORT_PID=\$(lsof -ti :${APP_PORT} 2>/dev/null || echo "")
+                        if [ -n "\$PORT_PID" ]; then
+                            echo "Killing process \$PORT_PID on port ${APP_PORT}..."
+                            kill -9 \$PORT_PID || true
+                            sleep 2
+                        else
+                            echo "No process found on port ${APP_PORT}"
+                        fi
+                        
+                        # Clean up any stale PM2 processes
+                        pm2 flush ${APP_NAME} || true
+                        
                         # Create deployment directory if it doesn't exist (without sudo)
                         mkdir -p ${DEPLOY_DIR} || echo "Directory exists or no permission, continuing..."
                         

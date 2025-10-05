@@ -18,6 +18,7 @@ import { ClassDetail } from './pages/ClassDetail';
 import { StudentDetail } from './pages/StudentDetail';
 import { DebugAuth } from './pages/DebugAuth';
 import './App.css';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { SubjectList } from './pages/SubjectList';
 import { SubjectForm } from './pages/SubjectForm';
 import { ExamList } from './pages/ExamList';
@@ -26,6 +27,29 @@ import { FeeList } from './pages/FeeList';
 import { FeeForm } from './pages/FeeForm';
 import { TimetableList } from './pages/TimetableList';
 import { TimetableForm } from './pages/TimetableForm';
+import { TeacherList } from './pages/TeacherList';
+import { TeacherForm } from './pages/TeacherForm';
+import { TeacherDetail } from './pages/TeacherDetail';
+import { Notifications } from './pages/Notifications';
+import { AttendancePage } from './pages/Attendance';
+import { StudentAssignments } from './pages/StudentAssignments';
+import { StudentExams } from './pages/StudentExams';
+import { StudentAttendance } from './pages/StudentAttendance';
+import { StudentTimetable } from './pages/StudentTimetable';
+import { StudentFeePayment } from './pages/StudentFeePayment';
+import { StudentNotifications } from './pages/StudentNotifications';
+import { ParentChildren } from './pages/ParentChildren';
+import { ParentAttendance } from './pages/ParentAttendance';
+import { ParentPerformance } from './pages/ParentPerformance';
+import { ParentFees } from './pages/ParentFees';
+import { ParentNotifications } from './pages/ParentNotifications';
+import { TeacherMyClasses } from './pages/TeacherMyClasses';
+import { TeacherAssignments } from './pages/TeacherAssignments';
+import { TeacherAttendance } from './pages/TeacherAttendance';
+import { TeacherGrading } from './pages/TeacherGrading';
+import { TeacherTimetable } from './pages/TeacherTimetable';
+import { ContactSupport } from './pages/ContactSupport';
+import { TeacherStudents } from './pages/TeacherStudents';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactElement }> = ({ children }) => {
@@ -76,8 +100,9 @@ const DashboardRouter: React.FC = () => {
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
+    <ThemeProvider>
+      <AuthProvider>
+        <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
           
@@ -105,6 +130,22 @@ function App() {
             element={
               <ProtectedRoute>
                 <Settings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/contact-support"
+            element={
+              <ProtectedRoute>
+                <ContactSupport />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/notifications"
+            element={
+              <ProtectedRoute>
+                <Notifications />
               </ProtectedRoute>
             }
           />
@@ -143,12 +184,36 @@ function App() {
             }
           />
           
-          {/* Common protected routes that show "Coming Soon" */}
+          {/* Teacher Management Routes */}
           <Route
             path="/teachers"
             element={
               <ProtectedRoute>
-                <ComingSoon />
+                <TeacherList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/teachers/new"
+            element={
+              <ProtectedRoute>
+                <TeacherForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/teachers/:id/edit"
+            element={
+              <ProtectedRoute>
+                <TeacherForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/teachers/:id"
+            element={
+              <ProtectedRoute>
+                <TeacherDetail />
               </ProtectedRoute>
             }
           />
@@ -293,7 +358,7 @@ function App() {
             path="/attendance"
             element={
               <ProtectedRoute>
-                <ComingSoon />
+                <AttendancePage />
               </ProtectedRoute>
             }
           />
@@ -354,6 +419,148 @@ function App() {
             }
           />
           
+          {/* Student Portal Routes */}
+          <Route
+            path="/student/assignments"
+            element={
+              <ProtectedRoute>
+                <StudentAssignments />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student/exams"
+            element={
+              <ProtectedRoute>
+                <StudentExams />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student/attendance"
+            element={
+              <ProtectedRoute>
+                <StudentAttendance />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student/timetable"
+            element={
+              <ProtectedRoute>
+                <StudentTimetable />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student/fees"
+            element={
+              <ProtectedRoute>
+                <StudentFeePayment />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student/notifications"
+            element={
+              <ProtectedRoute>
+                <StudentNotifications />
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Parent Portal Routes */}
+          <Route
+            path="/parent/children"
+            element={
+              <ProtectedRoute>
+                <ParentChildren />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/parent/attendance"
+            element={
+              <ProtectedRoute>
+                <ParentAttendance />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/parent/performance"
+            element={
+              <ProtectedRoute>
+                <ParentPerformance />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/parent/fees"
+            element={
+              <ProtectedRoute>
+                <ParentFees />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/parent/notifications"
+            element={
+              <ProtectedRoute>
+                <ParentNotifications />
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Teacher Portal Routes */}
+          <Route
+            path="/teacher/my-classes"
+            element={
+              <ProtectedRoute>
+                <TeacherMyClasses />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/teacher/assignments"
+            element={
+              <ProtectedRoute>
+                <TeacherAssignments />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/teacher/attendance"
+            element={
+              <ProtectedRoute>
+                <TeacherAttendance />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/teacher/grading"
+            element={
+              <ProtectedRoute>
+                <TeacherGrading />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/teacher/timetable"
+            element={
+              <ProtectedRoute>
+                <TeacherTimetable />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/teacher/students"
+            element={
+              <ProtectedRoute>
+                <TeacherStudents />
+              </ProtectedRoute>
+            }
+          />
+          
           {/* Debug page */}
           <Route
             path="/debug-auth"
@@ -377,8 +584,9 @@ function App() {
             }
           />
         </Routes>
-      </Router>
-    </AuthProvider>
+        </Router>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

@@ -6,6 +6,8 @@ import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
 import { adminService } from '../services/adminService';
 import { subjectService } from '../services/subjectService';
+import { notificationService } from '../services/notificationService';
+import { Notification } from '../types';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -18,6 +20,7 @@ const sidebarItems = [
   { path: '/timetable', label: 'Timetable', icon: 'bi-calendar3' },
   { path: '/attendance', label: 'Attendance', icon: 'bi-calendar-check' },
   { path: '/notifications', label: 'Notifications', icon: 'bi-bell' },
+  { path: '/settings', label: 'Settings', icon: 'bi-gear' },
 ];
 
 export const AdminDashboard: React.FC = () => {
@@ -33,6 +36,7 @@ export const AdminDashboard: React.FC = () => {
     pendingFees: 0,
     upcomingExams: 0,
   });
+  const [recentActivities, setRecentActivities] = useState<Notification[]>([]);
 
   useEffect(() => {
     const loadStats = async () => {
@@ -58,16 +62,31 @@ export const AdminDashboard: React.FC = () => {
         // console.error('Failed to load admin stats', err);
       }
     };
+    const loadAttendance = async () => {
+      try {
+        if (user?.schoolId) {
+          const res = await adminService.getTodayAttendance(user.schoolId);
+          setStats(prev => ({ ...prev, presentToday: res.present || 0, absentToday: res.absent || 0 }));
+        }
+      } catch (e) {
+        // non-fatal
+      }
+    };
+    
+    const loadNotifications = async () => {
+      try {
+        const notifications = await notificationService.getMyNotifications();
+        // Get latest 5 notifications
+        setRecentActivities(notifications.slice(0, 5));
+      } catch (err) {
+        console.error('Failed to load notifications:', err);
+      }
+    };
+    
     loadStats();
+    loadAttendance();
+    loadNotifications();
   }, [user?.schoolId]);
-
-  const recentActivities = [
-    { id: 1, type: 'student', message: 'New student admission: John Doe', time: '2 mins ago', badge: 'success' },
-    { id: 2, type: 'fee', message: '15 pending fee payments', time: '10 mins ago', badge: 'warning' },
-    { id: 3, type: 'exam', message: 'Mid-term exam scheduled for Grade 10', time: '1 hour ago', badge: 'info' },
-    { id: 4, type: 'attendance', message: '30 students absent today', time: '2 hours ago', badge: 'danger' },
-    { id: 5, type: 'notification', message: 'System update completed', time: '3 hours ago', badge: 'secondary' },
-  ];
 
   return (
     <Layout>
@@ -166,7 +185,11 @@ export const AdminDashboard: React.FC = () => {
                     </div>
                     <div className="text-center">
                       <i className="bi bi-percent text-primary fs-1"></i>
-                      <h3 className="mt-2">93.3%</h3>
+                      <h3 className="mt-2">
+                        {stats.totalStudents > 0 
+                          ? ((stats.presentToday / stats.totalStudents) * 100).toFixed(1) 
+                          : '0.0'}%
+                      </h3>
                       <p className="text-muted mb-0">Rate</p>
                     </div>
                   </div>
@@ -204,29 +227,84 @@ export const AdminDashboard: React.FC = () => {
               <Card className="border-0 shadow-sm">
                 <Card.Header className="bg-white d-flex justify-content-between align-items-center">
                   <h5 className="mb-0">Recent Activities</h5>
-                  <Button variant="link" size="sm">View All</Button>
+                  <Button variant="link" size="sm" onClick={() => navigate('/notifications')}>View All</Button>
                 </Card.Header>
                 <Card.Body className="p-0">
-                  <Table hover className="mb-0">
-                    <tbody>
-                      {recentActivities.map((activity) => (
-                        <tr key={activity.id}>
-                          <td style={{ width: '60px' }}>
-                            <Badge bg={activity.badge} className="p-2">
-                              <i className={`bi bi-${activity.type === 'student' ? 'person' : activity.type === 'fee' ? 'cash' : activity.type === 'exam' ? 'clipboard' : activity.type === 'attendance' ? 'calendar' : 'bell'}`}></i>
-                            </Badge>
-                          </td>
-                          <td>
-                            <div>{activity.message}</div>
-                            <small className="text-muted">{activity.time}</small>
-                          </td>
-                          <td style={{ width: '100px' }} className="text-end">
-                            <Button variant="outline-primary" size="sm">View</Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </Table>
+                  {recentActivities.length === 0 ? (
+                    <div className="text-center py-4 text-muted">
+                      <i className="bi bi-bell fs-1 opacity-50"></i>
+                      <p className="mt-2">No recent activities</p>
+                    </div>
+                  ) : (
+                    <Table hover className="mb-0">
+                      <tbody>
+                        {recentActivities.map((activity) => {
+                          const getBadgeColor = (type: string) => {
+                            switch (type) {
+                              case 'ASSIGNMENT': return 'primary';
+                              case 'EXAM': return 'info';
+                              case 'FEE': return 'warning';
+                              case 'ATTENDANCE': return 'danger';
+                              case 'ANNOUNCEMENT': return 'success';
+                              case 'EMERGENCY': return 'danger';
+                              default: return 'secondary';
+                            }
+                          };
+                          
+                          const getIcon = (type: string) => {
+                            switch (type) {
+                              case 'ASSIGNMENT': return 'clipboard';
+                              case 'EXAM': return 'clipboard-check';
+                              case 'FEE': return 'cash';
+                              case 'ATTENDANCE': return 'calendar-check';
+                              case 'ANNOUNCEMENT': return 'megaphone';
+                              case 'EMERGENCY': return 'exclamation-triangle';
+                              default: return 'bell';
+                            }
+                          };
+                          
+                          const formatTime = (dateString: string) => {
+                            const date = new Date(dateString);
+                            const now = new Date();
+                            const diffMs = now.getTime() - date.getTime();
+                            const diffMins = Math.floor(diffMs / 60000);
+                            const diffHours = Math.floor(diffMs / 3600000);
+                            const diffDays = Math.floor(diffMs / 86400000);
+
+                            if (diffMins < 1) return 'Just now';
+                            if (diffMins < 60) return `${diffMins} mins ago`;
+                            if (diffHours < 24) return `${diffHours} hours ago`;
+                            if (diffDays < 7) return `${diffDays} days ago`;
+                            return date.toLocaleDateString();
+                          };
+                          
+                          return (
+                            <tr key={activity.id}>
+                              <td style={{ width: '60px' }}>
+                                <Badge bg={getBadgeColor(activity.type)} className="p-2">
+                                  <i className={`bi bi-${getIcon(activity.type)}`}></i>
+                                </Badge>
+                              </td>
+                              <td>
+                                <div><strong>{activity.title}</strong></div>
+                                <div className="text-muted small">{activity.message}</div>
+                                <small className="text-muted">{formatTime(activity.createdAt)}</small>
+                              </td>
+                              <td style={{ width: '100px' }} className="text-end">
+                                <Button 
+                                  variant="outline-primary" 
+                                  size="sm"
+                                  onClick={() => navigate('/notifications')}
+                                >
+                                  View
+                                </Button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </Table>
+                  )}
                 </Card.Body>
               </Card>
             </Col>

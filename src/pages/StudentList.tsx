@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Table, Button, Form, InputGroup, Badge, Pagination, Spinner, Alert, Modal } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
 import { studentService } from '../services/studentService';
-import { classService } from '../services/classService';
 import { Student, PageResponse } from '../types';
 import { useNavigate } from 'react-router-dom';
 
@@ -25,7 +24,6 @@ export const StudentList: React.FC = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [classMap, setClassMap] = useState<Record<string, string>>({});
 
   useEffect(() => {
     loadStudents();
@@ -54,23 +52,6 @@ export const StudentList: React.FC = () => {
       setStudents(filteredStudents);
       setTotalPages(response.totalPages);
       setTotalElements(response.totalElements);
-
-      // Load friendly class names for displayed students
-      const ids = Array.from(new Set(filteredStudents.map(s => s.classId).filter(Boolean)));
-      const missing = ids.filter(id => !classMap[id]);
-      if (missing.length > 0) {
-        try {
-          const results = await Promise.all(missing.map(id => classService.getClassById(id)));
-          const update: Record<string, string> = {};
-          results.forEach((c, idx) => {
-            const key = missing[idx];
-            update[key] = c.name || c.className;
-          });
-          setClassMap(prev => ({ ...prev, ...update }));
-        } catch (e) {
-          console.warn('Failed to resolve class names', e);
-        }
-      }
     } catch (err: any) {
       console.error('Error loading students:', err);
       setError(err.response?.data?.message || 'Failed to load students');
@@ -141,8 +122,8 @@ export const StudentList: React.FC = () => {
   };
 
   const getClassName = (student: Student) => {
-    const base = classMap[student.classId] || student.classId;
-    return student.section ? `${base} - ${student.section}` : base;
+    // Use className field populated by backend, fallback to classId if not available
+    return student.className || student.classId || 'N/A';
   };
 
   return (

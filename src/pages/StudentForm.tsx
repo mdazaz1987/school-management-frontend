@@ -6,6 +6,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { studentService } from '../services/studentService';
 import { classService } from '../services/classService';
 import { StudentCreateRequest, StudentUpdateRequest, SchoolClass } from '../types';
+import { CredentialsModal } from '../components/CredentialsModal';
 
 export const StudentForm: React.FC = () => {
   const { user } = useAuth();
@@ -19,6 +20,21 @@ export const StudentForm: React.FC = () => {
   const [success, setSuccess] = useState('');
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [loadingClasses, setLoadingClasses] = useState(false);
+  
+  // Password creation options
+  const [passwordMode, setPasswordMode] = useState<'CUSTOM' | 'GENERATE' | 'NONE'>('GENERATE');
+  const [studentPassword, setStudentPassword] = useState('');
+  const [studentPasswordConfirm, setStudentPasswordConfirm] = useState('');
+  const [parentPassword, setParentPassword] = useState('');
+  const [parentPasswordConfirm, setParentPasswordConfirm] = useState('');
+  const [sendEmailToStudent, setSendEmailToStudent] = useState(true);
+  const [sendEmailToParents, setSendEmailToParents] = useState(true);
+  const [showCredentialsModal, setShowCredentialsModal] = useState(false);
+  const [createdCredentials, setCreatedCredentials] = useState<any[]>([]);
+  
+  // Parent account creation options
+  const [createParentAccount, setCreateParentAccount] = useState(true);
+  const [parentAccountType, setParentAccountType] = useState<'father' | 'mother' | 'guardian'>('father');
 
   // Form data
   const [formData, setFormData] = useState<StudentCreateRequest>({
@@ -163,11 +179,28 @@ export const StudentForm: React.FC = () => {
     e.preventDefault();
     setError('');
     setSuccess('');
+
+    // Validate passwords if in CUSTOM mode
+    if (!isEditMode && passwordMode === 'CUSTOM') {
+      if (studentPassword && studentPassword !== studentPasswordConfirm) {
+        setError('Student passwords do not match');
+        return;
+      }
+      if (parentPassword && parentPassword !== parentPasswordConfirm) {
+        setError('Parent passwords do not match');
+        return;
+      }
+      if (!studentPassword || studentPassword.length < 8) {
+        setError('Student password must be at least 8 characters');
+        return;
+      }
+    }
+
     setSaving(true);
 
     try {
       if (isEditMode && id) {
-        // Update existing student
+        // Update existing student (no password changes in edit mode)
         const updateData: StudentUpdateRequest = { ...formData };
         await studentService.partialUpdateStudent(id, updateData);
         // Ensure active flag is persisted via dedicated endpoint
@@ -175,15 +208,56 @@ export const StudentForm: React.FC = () => {
           await studentService.updateStatus(id, !!formData.isActive);
         }
         setSuccess('Student updated successfully!');
+        
+        setTimeout(() => {
+          navigate('/students');
+        }, 1500);
       } else {
-        // Create new student
-        await studentService.createStudent(formData);
-        setSuccess('Student created successfully!');
-      }
+        // Validate parent email if creating parent account
+        if (createParentAccount) {
+          const parentEmail = parentAccountType === 'father' ? formData.fatherEmail :
+                             parentAccountType === 'mother' ? formData.motherEmail :
+                             formData.guardianEmail;
+          
+          if (!parentEmail || !parentEmail.trim()) {
+            setError(`Please provide ${parentAccountType}'s email to create parent account`);
+            setSaving(false);
+            return;
+          }
+        }
+        
+        // Create new student with password options
+        const response = await studentService.createStudentWithCredentials({
+          student: formData,
+          passwordMode,
+          studentPassword: passwordMode === 'CUSTOM' ? studentPassword : undefined,
+          parentPassword: passwordMode === 'CUSTOM' ? (parentPassword || studentPassword) : undefined,
+          sendEmailToStudent,
+          sendEmailToParents,
+          createParentAccount,
+          parentAccountType
+        });
 
-      setTimeout(() => {
-        navigate('/students');
-      }, 1500);
+        setSuccess('Student created successfully!');
+
+        // Show credentials modal if there are credentials to display
+        if (response.credentialsCreated && response.credentialsCreated.length > 0) {
+          const credsWithPasswords = response.credentialsCreated.filter((c: any) => c.password);
+          if (credsWithPasswords.length > 0) {
+            setCreatedCredentials(response.credentialsCreated);
+            setShowCredentialsModal(true);
+          } else {
+            // No passwords to display, navigate immediately
+            setTimeout(() => {
+              navigate('/students');
+            }, 1500);
+          }
+        } else {
+          setTimeout(() => {
+            navigate('/students');
+          }, 1500);
+        }
+      }
     } catch (err: any) {
       console.error('Error saving student:', err);
       setError(err.response?.data?.message || 'Failed to save student');
@@ -336,7 +410,17 @@ export const StudentForm: React.FC = () => {
                           name="dateOfBirth"
                           value={formData.dateOfBirth}
                           onChange={handleChange}
+                          max={(() => {
+                            // Maximum date: 3 years ago from today
+                            const maxDate = new Date();
+                            maxDate.setFullYear(maxDate.getFullYear() - 3);
+                            return maxDate.toISOString().split('T')[0];
+                          })()}
+                          min="1900-01-01"
                         />
+                        <Form.Text className="text-muted">
+                          Student must be at least 3 years old
+                        </Form.Text>
                       </Form.Group>
                     </Col>
                     <Col md={4}>
@@ -752,6 +836,77 @@ export const StudentForm: React.FC = () => {
                       </Form.Group>
                     </Col>
                   </Row>
+                  
+                  {/* Parent Account Creation Section */}
+                  {!isEditMode && (
+                    <>
+                      <hr className="my-4" />
+                      <h6 className="mb-3 text-primary">
+                        <i className="bi bi-person-lock me-2"></i>
+                        Parent Login Account
+                      </h6>
+                      <Alert variant="info" className="mb-3">
+                        <i className="bi bi-info-circle me-2"></i>
+                        Create a parent account to allow parents to access the portal and track their child's progress.
+                      </Alert>
+                      
+                      <Form.Group className="mb-3">
+                        <Form.Check
+                          type="checkbox"
+                          id="createParentAccount"
+                          label="Create parent login account"
+                          checked={createParentAccount}
+                          onChange={(e) => setCreateParentAccount(e.target.checked)}
+                        />
+                      </Form.Group>
+                      
+                      {createParentAccount && (
+                        <Card className="bg-light">
+                          <Card.Body>
+                            <Form.Group className="mb-3">
+                              <Form.Label className="fw-bold">Select Parent for Account Creation *</Form.Label>
+                              <div className="d-flex gap-3">
+                                <Form.Check
+                                  type="radio"
+                                  id="parent-father"
+                                  name="parentAccountType"
+                                  label="Father"
+                                  checked={parentAccountType === 'father'}
+                                  onChange={() => setParentAccountType('father')}
+                                />
+                                <Form.Check
+                                  type="radio"
+                                  id="parent-mother"
+                                  name="parentAccountType"
+                                  label="Mother"
+                                  checked={parentAccountType === 'mother'}
+                                  onChange={() => setParentAccountType('mother')}
+                                />
+                                <Form.Check
+                                  type="radio"
+                                  id="parent-guardian"
+                                  name="parentAccountType"
+                                  label="Guardian"
+                                  checked={parentAccountType === 'guardian'}
+                                  onChange={() => setParentAccountType('guardian')}
+                                />
+                              </div>
+                            </Form.Group>
+                            
+                            <Alert variant="warning" className="mb-0">
+                              <small>
+                                <i className="bi bi-exclamation-triangle me-2"></i>
+                                <strong>Login Email:</strong> The selected parent's email will be used for portal login.
+                                {parentAccountType === 'father' && ` (${formData.fatherEmail || 'Not provided'})`}
+                                {parentAccountType === 'mother' && ` (${formData.motherEmail || 'Not provided'})`}
+                                {parentAccountType === 'guardian' && ` (${formData.guardianEmail || 'Not provided'})`}
+                              </small>
+                            </Alert>
+                          </Card.Body>
+                        </Card>
+                      )}
+                    </>
+                  )}
                 </Card.Body>
               </Card>
             </Tab>
@@ -828,6 +983,186 @@ export const StudentForm: React.FC = () => {
                 </Card.Body>
               </Card>
             </Tab>
+
+            {/* User Account Creation Tab - Only for new students */}
+            {!isEditMode && (
+              <Tab eventKey="userAccount" title="User Account">
+                <Card className="border-0 shadow-sm mb-4">
+                  <Card.Body>
+                    <Alert variant="info">
+                      <i className="bi bi-info-circle me-2"></i>
+                      User accounts will be automatically created for the student and their parents/guardians.
+                      Choose how to configure the login passwords below.
+                    </Alert>
+
+                    <h6 className="mb-3">Password Configuration</h6>
+                    
+                    <Form.Group className="mb-4">
+                      <Form.Label>Password Mode</Form.Label>
+                      <div>
+                        <Form.Check
+                          type="radio"
+                          id="password-mode-generate"
+                          label="Generate Random Passwords"
+                          checked={passwordMode === 'GENERATE'}
+                          onChange={() => setPasswordMode('GENERATE')}
+                          className="mb-2"
+                        />
+                        <Form.Text className="d-block text-muted mb-3 ms-4">
+                          System will generate secure random passwords. You can view and copy them after student creation.
+                        </Form.Text>
+
+                        <Form.Check
+                          type="radio"
+                          id="password-mode-custom"
+                          label="Set Custom Passwords"
+                          checked={passwordMode === 'CUSTOM'}
+                          onChange={() => setPasswordMode('CUSTOM')}
+                          className="mb-2"
+                        />
+                        <Form.Text className="d-block text-muted mb-3 ms-4">
+                          Manually set passwords for the student and parents. Users can login immediately with these passwords.
+                        </Form.Text>
+
+                        <Form.Check
+                          type="radio"
+                          id="password-mode-none"
+                          label="Don't Create User Accounts"
+                          checked={passwordMode === 'NONE'}
+                          onChange={() => setPasswordMode('NONE')}
+                          className="mb-2"
+                        />
+                        <Form.Text className="d-block text-muted ms-4">
+                          Skip user account creation. You can create accounts manually later.
+                        </Form.Text>
+                      </div>
+                    </Form.Group>
+
+                    {passwordMode === 'CUSTOM' && (
+                      <>
+                        <hr className="my-4" />
+                        <h6 className="mb-3">Student Password</h6>
+                        <Row>
+                          <Col md={6}>
+                            <Form.Group className="mb-3">
+                              <Form.Label>Password <span className="text-danger">*</span></Form.Label>
+                              <Form.Control
+                                type="password"
+                                value={studentPassword}
+                                onChange={(e) => setStudentPassword(e.target.value)}
+                                placeholder="Enter password (min 8 characters)"
+                                minLength={8}
+                              />
+                            </Form.Group>
+                          </Col>
+                          <Col md={6}>
+                            <Form.Group className="mb-3">
+                              <Form.Label>Confirm Password <span className="text-danger">*</span></Form.Label>
+                              <Form.Control
+                                type="password"
+                                value={studentPasswordConfirm}
+                                onChange={(e) => setStudentPasswordConfirm(e.target.value)}
+                                placeholder="Re-enter password"
+                                minLength={8}
+                                isInvalid={studentPasswordConfirm !== '' && studentPassword !== studentPasswordConfirm}
+                              />
+                              <Form.Control.Feedback type="invalid">
+                                Passwords do not match
+                              </Form.Control.Feedback>
+                            </Form.Group>
+                          </Col>
+                        </Row>
+
+                        <hr className="my-4" />
+                        <h6 className="mb-3">Parent/Guardian Password</h6>
+                        <Alert variant="secondary" className="mb-3">
+                          <small>
+                            <i className="bi bi-info-circle me-1"></i>
+                            Same password will be used for all parent/guardian accounts (Father, Mother, Guardian).
+                          </small>
+                        </Alert>
+                        <Row>
+                          <Col md={6}>
+                            <Form.Group className="mb-3">
+                              <Form.Label>Password</Form.Label>
+                              <Form.Control
+                                type="password"
+                                value={parentPassword}
+                                onChange={(e) => setParentPassword(e.target.value)}
+                                placeholder="Enter password (min 8 characters)"
+                                minLength={8}
+                              />
+                              <Form.Text className="text-muted">
+                                Leave blank to use same password as student
+                              </Form.Text>
+                            </Form.Group>
+                          </Col>
+                          <Col md={6}>
+                            <Form.Group className="mb-3">
+                              <Form.Label>Confirm Password</Form.Label>
+                              <Form.Control
+                                type="password"
+                                value={parentPasswordConfirm}
+                                onChange={(e) => setParentPasswordConfirm(e.target.value)}
+                                placeholder="Re-enter password"
+                                minLength={8}
+                                isInvalid={parentPasswordConfirm !== '' && parentPassword !== parentPasswordConfirm}
+                              />
+                              <Form.Control.Feedback type="invalid">
+                                Passwords do not match
+                              </Form.Control.Feedback>
+                            </Form.Group>
+                          </Col>
+                        </Row>
+                      </>
+                    )}
+
+                    {passwordMode !== 'NONE' && (
+                      <>
+                        <hr className="my-4" />
+                        <h6 className="mb-3">Email Notifications</h6>
+                        <Form.Group className="mb-3">
+                          <Form.Check
+                            type="checkbox"
+                            id="send-email-student"
+                            label="Send credentials to student via email"
+                            checked={sendEmailToStudent}
+                            onChange={(e) => setSendEmailToStudent(e.target.checked)}
+                          />
+                          <Form.Text className="text-muted d-block ms-4">
+                            Email will be sent to: {formData.email || '(not provided)'}
+                          </Form.Text>
+                        </Form.Group>
+                        <Form.Group className="mb-3">
+                          <Form.Check
+                            type="checkbox"
+                            id="send-email-parents"
+                            label="Send credentials to parents/guardians via email"
+                            checked={sendEmailToParents}
+                            onChange={(e) => setSendEmailToParents(e.target.checked)}
+                          />
+                          <Form.Text className="text-muted d-block ms-4">
+                            Emails will be sent to: 
+                            {formData.fatherEmail && ` ${formData.fatherEmail}`}
+                            {formData.motherEmail && `, ${formData.motherEmail}`}
+                            {formData.guardianEmail && `, ${formData.guardianEmail}`}
+                            {!formData.fatherEmail && !formData.motherEmail && !formData.guardianEmail && ' (none provided)'}
+                          </Form.Text>
+                        </Form.Group>
+
+                        {passwordMode === 'GENERATE' && (
+                          <Alert variant="warning" className="mt-3">
+                            <i className="bi bi-exclamation-triangle me-2"></i>
+                            <strong>Important:</strong> Generated passwords will be displayed after student creation. 
+                            Make sure to save them securely!
+                          </Alert>
+                        )}
+                      </>
+                    )}
+                  </Card.Body>
+                </Card>
+              </Tab>
+            )}
           </Tabs>
 
           {/* Action Buttons */}
@@ -858,6 +1193,17 @@ export const StudentForm: React.FC = () => {
             </Button>
           </div>
         </Form>
+
+        {/* Credentials Display Modal */}
+        <CredentialsModal
+          show={showCredentialsModal}
+          onHide={() => {
+            setShowCredentialsModal(false);
+            navigate('/students');
+          }}
+          credentials={createdCredentials}
+          studentName={`${formData.firstName} ${formData.lastName}`}
+        />
       </Container>
     </Layout>
   );

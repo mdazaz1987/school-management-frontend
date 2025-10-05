@@ -1,4 +1,5 @@
 import apiService from './api';
+import { authService } from './authService';
 import { Subject } from '../types';
 
 const normalizeSubject = (s: any): Subject => {
@@ -24,7 +25,8 @@ export const subjectService = {
       name: (data.name || '').trim(),
       code: (data.code || '').trim(),
       description: data.description,
-      schoolId: data.schoolId,
+      // Fallback to logged-in user's schoolId if not provided in form/state
+      schoolId: data.schoolId || authService.getStoredUser()?.schoolId,
       type: data.type,
       category: data.category,
       credits: data.credits,

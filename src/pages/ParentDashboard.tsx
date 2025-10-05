@@ -7,11 +7,11 @@ import { parentService } from '../services/parentService';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
-  { path: '/children', label: 'My Children', icon: 'bi-people' },
-  { path: '/attendance', label: 'Attendance', icon: 'bi-calendar-check' },
-  { path: '/grades', label: 'Grades', icon: 'bi-star' },
-  { path: '/fees', label: 'Fee Payments', icon: 'bi-cash-coin' },
-  { path: '/notifications', label: 'Notifications', icon: 'bi-bell' },
+  { path: '/parent/children', label: 'My Children', icon: 'bi-people' },
+  { path: '/parent/attendance', label: 'Attendance', icon: 'bi-calendar-check' },
+  { path: '/parent/performance', label: 'Performance', icon: 'bi-star' },
+  { path: '/parent/fees', label: 'Fee Payments', icon: 'bi-cash-coin' },
+  { path: '/parent/notifications', label: 'Notifications', icon: 'bi-bell' },
 ];
 
 export const ParentDashboard: React.FC = () => {

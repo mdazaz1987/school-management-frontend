@@ -1,7 +1,9 @@
 import React, { ReactNode } from 'react';
 import { Container, Navbar, Nav, NavDropdown } from 'react-bootstrap';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { useNavigate } from 'react-router-dom';
+import { NotificationBell } from './NotificationBell';
 
 interface LayoutProps {
   children: ReactNode;
@@ -10,6 +12,10 @@ interface LayoutProps {
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { theme, setTheme, effectiveTheme, toggleTheme, colorTheme, setColorTheme } = useTheme();
+  
+  // Get school name from user's school or use default
+  const schoolName = (user as any)?.schoolName || 'School Management System';
 
   const handleLogout = () => {
     logout();
@@ -18,15 +24,62 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <div>
-      <Navbar bg="primary" variant="dark" expand="lg" className="mb-4">
+      <Navbar className="navbar-primary mb-4" variant="dark" expand="lg">
         <Container fluid>
           <Navbar.Brand href="/dashboard">
             <i className="bi bi-mortarboard-fill me-2"></i>
-            School Management System
+            {schoolName}
           </Navbar.Brand>
           <Navbar.Toggle aria-controls="basic-navbar-nav" />
           <Navbar.Collapse id="basic-navbar-nav">
-            <Nav className="ms-auto">
+            <Nav className="ms-auto align-items-center">
+              <NotificationBell />
+              <NavDropdown
+                title={
+                  <span title={`Theme: ${theme} (${effectiveTheme})`}>
+                    <i className={`bi ${effectiveTheme === 'dark' ? 'bi-moon-stars' : 'bi-brightness-high'} me-2`}></i>
+                    Theme
+                  </span>
+                }
+                id="theme-dropdown"
+                align="end"
+              >
+                <NavDropdown.Header>Mode</NavDropdown.Header>
+                <NavDropdown.Item active={theme === 'light'} onClick={() => setTheme('light')}>
+                  <i className="bi bi-brightness-high me-2"></i>
+                  Light
+                </NavDropdown.Item>
+                <NavDropdown.Item active={theme === 'dark'} onClick={() => setTheme('dark')}>
+                  <i className="bi bi-moon-stars me-2"></i>
+                  Dark
+                </NavDropdown.Item>
+                <NavDropdown.Item active={theme === 'system'} onClick={() => setTheme('system')}>
+                  <i className="bi bi-circle-half me-2"></i>
+                  System
+                </NavDropdown.Item>
+                <NavDropdown.Divider />
+                <NavDropdown.Header>Color</NavDropdown.Header>
+                <NavDropdown.Item active={colorTheme === 'blue'} onClick={() => setColorTheme('blue')}>
+                  <i className="bi bi-circle-fill me-2" style={{color: '#0d6efd'}}></i>
+                  Blue
+                </NavDropdown.Item>
+                <NavDropdown.Item active={colorTheme === 'purple'} onClick={() => setColorTheme('purple')}>
+                  <i className="bi bi-circle-fill me-2" style={{color: '#6f42c1'}}></i>
+                  Purple
+                </NavDropdown.Item>
+                <NavDropdown.Item active={colorTheme === 'maroon'} onClick={() => setColorTheme('maroon')}>
+                  <i className="bi bi-circle-fill me-2" style={{color: '#800020'}}></i>
+                  Maroon
+                </NavDropdown.Item>
+                <NavDropdown.Item active={colorTheme === 'green'} onClick={() => setColorTheme('green')}>
+                  <i className="bi bi-circle-fill me-2" style={{color: '#198754'}}></i>
+                  Green
+                </NavDropdown.Item>
+                <NavDropdown.Item active={colorTheme === 'orange'} onClick={() => setColorTheme('orange')}>
+                  <i className="bi bi-circle-fill me-2" style={{color: '#fd7e14'}}></i>
+                  Orange
+                </NavDropdown.Item>
+              </NavDropdown>
               <NavDropdown
                 title={
                   <span>

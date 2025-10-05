@@ -9,7 +9,7 @@ import { subjectService } from '../services/subjectService';
 export const SubjectForm: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, hasRole } = useAuth();
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -29,6 +29,8 @@ export const SubjectForm: React.FC = () => {
   });
 
   const isEdit = Boolean(id);
+
+  const isAdmin = hasRole ? hasRole('ADMIN') : (user?.roles || []).some((r: string) => r === 'ADMIN' || r === 'ROLE_ADMIN');
 
   useEffect(() => {
     const load = async () => {
@@ -82,6 +84,29 @@ export const SubjectForm: React.FC = () => {
       setSaving(false);
     }
   };
+
+  if (!isAdmin) {
+    return (
+      <Layout>
+        <Container className="py-4">
+          <Row className="mb-4">
+            <Col>
+              <div className="d-flex justify-content-between align-items-center">
+                <div>
+                  <h2>Unauthorized</h2>
+                  <p className="text-muted">You need Admin role to manage subjects.</p>
+                </div>
+                <div>
+                  <Button variant="secondary" onClick={() => navigate('/subjects')}>Back to Subjects</Button>
+                </div>
+              </div>
+            </Col>
+          </Row>
+          <Alert variant="warning">Only admins can create or edit subjects.</Alert>
+        </Container>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>

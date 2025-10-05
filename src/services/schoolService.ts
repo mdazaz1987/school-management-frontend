@@ -6,6 +6,10 @@ export const schoolService = {
     return apiService.get<School>(`/admin/schools/${id}`);
   },
 
+  async create(data: Partial<School>): Promise<School> {
+    return apiService.post<School>(`/admin/schools`, data);
+  },
+
   async update(id: string, data: Partial<School>): Promise<School> {
     // Pass nested structure as-is; backend expects School model
     const payload: any = {

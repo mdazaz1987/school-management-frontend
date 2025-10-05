@@ -128,11 +128,11 @@ export const studentService = {
   },
 
   /**
-   * Create a new student
+   * Create a new student (legacy method - without password options)
    */
   async createStudent(data: StudentCreateRequest): Promise<Student> {
     // Transform flat form into nested backend model
-    const payload: any = {
+    const studentPayload: any = {
       admissionNumber: data.admissionNumber,
       firstName: data.firstName,
       lastName: data.lastName,
@@ -157,8 +157,84 @@ export const studentService = {
       aadhaarNumber: data.aadhaarNumber,
       apaarId: data.apaarId,
     };
-    const resp = await apiService.post<Student>('/students', payload);
-    return normalizeStudent(resp as any);
+    
+    // Wrap in new API format
+    const payload = {
+      student: studentPayload,
+      passwordMode: 'GENERATE',
+      sendEmailToStudent: true,
+      sendEmailToParents: true
+    };
+    
+    const resp = await apiService.post<any>('/students', payload);
+    return normalizeStudent(resp.student as any);
+  },
+
+  /**
+   * Create a new student with password configuration options
+   */
+  async createStudentWithCredentials(options: {
+    student: StudentCreateRequest;
+    passwordMode: 'CUSTOM' | 'GENERATE' | 'NONE';
+    studentPassword?: string;
+    parentPassword?: string;
+    sendEmailToStudent: boolean;
+    sendEmailToParents: boolean;
+    createParentAccount?: boolean;
+    parentAccountType?: 'father' | 'mother' | 'guardian';
+  }): Promise<{
+    student: Student;
+    credentialsCreated: Array<{
+      email: string;
+      password?: string;
+      role: string;
+      name: string;
+    }>;
+  }> {
+    // Transform flat form into nested backend model
+    const studentPayload: any = {
+      admissionNumber: options.student.admissionNumber,
+      firstName: options.student.firstName,
+      lastName: options.student.lastName,
+      email: options.student.email,
+      phone: options.student.phone,
+      dateOfBirth: options.student.dateOfBirth,
+      gender: options.student.gender,
+      bloodGroup: options.student.bloodGroup,
+      religion: options.student.religion,
+      nationality: options.student.nationality,
+      schoolId: options.student.schoolId,
+      classId: options.student.classId,
+      section: options.student.section,
+      rollNumber: options.student.rollNumber,
+      parentId: options.student.parentId,
+      address: buildAddress(options.student),
+      parentInfo: buildParentInfo(options.student),
+      academicInfo: buildAcademicInfo(options.student),
+      isActive: options.student.isActive !== undefined ? options.student.isActive : true,
+      active: options.student.isActive !== undefined ? options.student.isActive : true,
+      admissionDate: options.student.admissionDate,
+      aadhaarNumber: options.student.aadhaarNumber,
+      apaarId: options.student.apaarId,
+    };
+
+    const payload = {
+      student: studentPayload,
+      passwordMode: options.passwordMode,
+      studentPassword: options.studentPassword,
+      parentPassword: options.parentPassword,
+      sendEmailToStudent: options.sendEmailToStudent,
+      sendEmailToParents: options.sendEmailToParents,
+      createParentAccount: options.createParentAccount ?? false,
+      parentAccountType: options.parentAccountType || 'father'
+    };
+
+    const resp = await apiService.post<any>('/students', payload);
+    
+    return {
+      student: normalizeStudent(resp.student as any),
+      credentialsCreated: resp.credentialsCreated || []
+    };
   },
 
   /**
@@ -261,5 +337,119 @@ export const studentService = {
    */
   async addPerformanceRecord(id: string, data: any): Promise<any> {
     return apiService.post<any>(`/students/${id}/performance`, data);
+  },
+
+  // ===== LEAVE APPLICATION SYSTEM =====
+  
+  /**
+   * Apply for leave
+   */
+  async applyForLeave(data: {
+    startDate: string;
+    endDate: string;
+    reason: string;
+    leaveType: 'SICK' | 'PERSONAL' | 'FAMILY' | 'OTHER';
+  }): Promise<any> {
+    return apiService.post('/student/leave/apply', data);
+  },
+
+  /**
+   * Get my leave applications
+   */
+  async getMyLeaveApplications(): Promise<any[]> {
+    return apiService.get('/student/leave/my-applications');
+  },
+
+  /**
+   * Cancel leave application
+   */
+  async cancelLeaveApplication(leaveId: string): Promise<void> {
+    return apiService.delete(`/student/leave/${leaveId}`);
+  },
+
+  // ===== STUDENT PORTAL =====
+
+  /**
+   * Get student's own dashboard
+   */
+  async getMyDashboard(): Promise<any> {
+    return apiService.get('/student/dashboard');
+  },
+
+  /**
+   * Get my assignments
+   */
+  async getMyAssignments(): Promise<any[]> {
+    return apiService.get('/student/assignments');
+  },
+
+  /**
+   * Submit assignment
+   */
+  async submitAssignment(assignmentId: string, data: FormData): Promise<any> {
+    return apiService.post(`/student/assignments/${assignmentId}/submit`, data);
+  },
+
+  /**
+   * Get my attendance
+   */
+  async getMyAttendance(startDate?: string, endDate?: string): Promise<any[]> {
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    return apiService.get(`/student/attendance?${params.toString()}`);
+  },
+
+  /**
+   * Request attendance correction
+   */
+  async requestAttendanceCorrection(data: {
+    date: string;
+    period: string;
+    reason: string;
+  }): Promise<any> {
+    return apiService.post('/student/attendance/correction-request', data);
+  },
+
+  /**
+   * Get my exams
+   */
+  async getMyExams(): Promise<any[]> {
+    return apiService.get('/student/exams');
+  },
+
+  /**
+   * Get my results
+   */
+  async getMyResults(): Promise<any[]> {
+    return apiService.get('/student/results');
+  },
+
+  /**
+   * Get my fees
+   */
+  async getMyFees(): Promise<any[]> {
+    return apiService.get('/student/fees');
+  },
+
+  /**
+   * Get my timetable
+   */
+  async getMyTimetable(): Promise<any> {
+    return apiService.get('/student/timetable');
+  },
+
+  /**
+   * Get my notifications
+   */
+  async getMyNotifications(): Promise<any[]> {
+    return apiService.get('/student/notifications');
+  },
+
+  /**
+   * Mark notification as read
+   */
+  async markNotificationAsRead(notificationId: string): Promise<void> {
+    return apiService.put(`/student/notifications/${notificationId}/read`, {});
   },
 };
