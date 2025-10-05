@@ -177,4 +177,62 @@ export const teacherService = {
   }> {
     return apiService.get('/teacher/dashboard/stats');
   },
+
+  // Teacher Portal - Classes
+  async getMyClasses(): Promise<any[]> {
+    return apiService.get('/teacher/classes');
+  },
+
+  async getClassDetails(classId: string): Promise<any> {
+    return apiService.get(`/teacher/classes/${classId}`);
+  },
+
+  async getClassStudents(classId: string): Promise<any[]> {
+    return apiService.get(`/teacher/classes/${classId}/students`);
+  },
+
+  // Teacher Portal - Assignments
+  async getMyAssignments(): Promise<any[]> {
+    return apiService.get('/teacher/assignments');
+  },
+
+  async getClassAssignments(classId: string): Promise<any[]> {
+    return apiService.get(`/teacher/classes/${classId}/assignments`);
+  },
+
+  async createAssignment(assignment: any): Promise<any> {
+    return apiService.post('/teacher/assignments', assignment);
+  },
+
+  async updateAssignment(assignmentId: string, assignment: any): Promise<any> {
+    return apiService.put(`/teacher/assignments/${assignmentId}`, assignment);
+  },
+
+  async deleteAssignment(assignmentId: string): Promise<void> {
+    return apiService.delete(`/teacher/assignments/${assignmentId}`);
+  },
+
+  async getAssignmentSubmissions(assignmentId: string): Promise<any[]> {
+    return apiService.get(`/teacher/assignments/${assignmentId}/submissions`);
+  },
+
+  async gradeSubmission(submissionId: string, marks: number, feedback: string): Promise<any> {
+    return apiService.put(`/teacher/submissions/${submissionId}/grade`, { marks, feedback });
+  },
+
+  // Teacher Portal - Attendance
+  async recordAttendance(classId: string, attendance: any): Promise<any> {
+    return apiService.post(`/teacher/classes/${classId}/attendance`, attendance);
+  },
+
+  async getClassAttendance(classId: string, startDate?: string, endDate?: string): Promise<any[]> {
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    return apiService.get(`/teacher/classes/${classId}/attendance?${params.toString()}`);
+  },
+
+  async updateAttendance(attendanceId: string, attendance: any): Promise<any> {
+    return apiService.put(`/teacher/attendance/${attendanceId}`, attendance);
+  },
 };

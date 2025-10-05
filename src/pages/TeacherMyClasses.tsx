@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, Table, Badge, Button, Form, Tabs, Tab } from 'react-bootstrap';
+import { Row, Col, Card, Table, Badge, Button, Form, Tabs, Tab, Spinner, Alert } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
+import { teacherService } from '../services/teacherService';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -18,56 +19,62 @@ export const TeacherMyClasses: React.FC = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('current');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [classes, setClasses] = useState<any>({ current: [], past: [], upcoming: [] });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const mockClasses = {
-    current: [
-      {
-        id: '1',
-        name: 'Grade 10-A',
-        subject: 'Mathematics',
-        students: 35,
-        schedule: 'Mon, Wed, Fri - 09:00 AM',
-        room: 'Room 101',
-        academicYear: '2024-2025',
-        term: 'Second Term'
-      },
-      {
-        id: '2',
-        name: 'Grade 10-B',
-        subject: 'Mathematics',
-        students: 32,
-        schedule: 'Mon, Wed, Fri - 10:30 AM',
-        room: 'Room 102',
-        academicYear: '2024-2025',
-        term: 'Second Term'
-      },
-      {
-        id: '3',
-        name: 'Grade 11-A',
-        subject: 'Physics',
-        students: 28,
-        schedule: 'Tue, Thu - 02:00 PM',
-        room: 'Lab 1',
-        academicYear: '2024-2025',
-        term: 'Second Term'
-      }
-    ],
-    past: [
-      {
-        id: '4',
-        name: 'Grade 9-A',
-        subject: 'Mathematics',
-        students: 30,
-        schedule: 'Mon, Wed, Fri - 09:00 AM',
-        room: 'Room 101',
-        academicYear: '2023-2024',
-        term: 'Second Term'
-      }
-    ],
-    upcoming: []
+  useEffect(() => {
+    loadClasses();
+  }, []);
+
+  const loadClasses = async () => {
+    try {
+      setLoading(true);
+      const data = await teacherService.getMyClasses();
+      
+      // Separate classes by academic year
+      const currentYear = new Date().getFullYear();
+      const current = data.filter((c: any) => c.academicYear?.includes(currentYear.toString()) || !c.academicYear);
+      const past = data.filter((c: any) => c.academicYear && parseInt(c.academicYear.split('-')[0]) < currentYear);
+      
+      setClasses({
+        current: current.map((c: any) => ({
+          id: c.id,
+          name: `${c.grade || 'Class'} ${c.section || ''}`.trim(),
+          subject: c.subject || 'N/A',
+          students: c.studentIds?.length || 0,
+          schedule: 'Check Timetable',
+          room: c.room || 'TBA',
+          academicYear: c.academicYear || `${currentYear}-${currentYear + 1}`,
+          term: c.term || 'Current Term'
+        })),
+        past: past.map((c: any) => ({
+          id: c.id,
+          name: `${c.grade || 'Class'} ${c.section || ''}`.trim(),
+          subject: c.subject || 'N/A',
+          students: c.studentIds?.length || 0,
+          schedule: 'Check Timetable',
+          room: c.room || 'TBA',
+          academicYear: c.academicYear,
+          term: c.term || 'Past Term'
+        })),
+        upcoming: []
+      });
+    } catch (err: any) {
+      console.error('Failed to load classes:', err);
+      setError('Failed to load classes. Using demo data.');
+      // Keep demo data on error
+      setClasses({
+        current: [
+          { id: '1', name: 'Grade 10-A', subject: 'Mathematics', students: 35, schedule: 'Mon, Wed, Fri - 09:00 AM', room: 'Room 101', academicYear: '2024-2025', term: 'Second Term' }
+        ],
+        past: [],
+        upcoming: []
+      });
+    } finally {
+      setLoading(false);
+    }
   };
-
-  const [classes, setClasses] = useState(mockClasses);
 
   const getClassesForDate = (date: string) => {
     const dayOfWeek = new Date(date).toLocaleDateString('en-US', { weekday: 'short' });
@@ -88,6 +95,19 @@ export const TeacherMyClasses: React.FC = () => {
             <p className="text-muted">Manage your assigned classes</p>
           </div>
 
+          {error && (
+            <Alert variant="warning" dismissible onClose={() => setError('')}>
+              {error}
+            </Alert>
+          )}
+
+          {loading ? (
+            <div className="text-center py-5">
+              <Spinner animation="border" />
+              <p className="mt-2">Loading classes...</p>
+            </div>
+          ) : (
+            <>
           {/* Date Selector */}
           <Card className="border-0 shadow-sm mb-4">
             <Card.Body>
@@ -187,6 +207,8 @@ export const TeacherMyClasses: React.FC = () => {
               </Card>
             </Tab>
           </Tabs>
+            </>
+          )}
         </Col>
       </Row>
     </Layout>
