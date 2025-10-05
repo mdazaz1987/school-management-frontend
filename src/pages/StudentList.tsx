@@ -25,8 +25,8 @@ export const StudentList: React.FC = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
   const [deleting, setDeleting] = useState(false);
-  // Classes map for ID -> class object
-  const [classMap, setClassMap] = useState<Record<string, any>>({});
+  // Classes map for ID -> display name with academic year
+  const [classMap, setClassMap] = useState<Record<string, string>>({});
 
   useEffect(() => {
     loadStudents();
@@ -34,13 +34,16 @@ export const StudentList: React.FC = () => {
   }, [currentPage, filterStatus]);
 
   useEffect(() => {
-    // Load classes once to map IDs to class objects for display
+    // Load classes once to map IDs to names for display
     const loadClasses = async () => {
       try {
         const classes = await classService.getAllClasses();
-        const map: Record<string, any> = {};
+        const map: Record<string, string> = {};
         for (const c of classes) {
-          map[c.id] = c;
+          const derived = c.className || c.name || `${c.grade ?? ''}`.trim();
+          // Format: "Grade 10 - A (2024-2025)"
+          const displayName = `${derived} - ${c.section} (${c.academicYear})`;
+          map[c.id] = displayName;
         }
         setClassMap(map);
       } catch (e) {
@@ -142,17 +145,8 @@ export const StudentList: React.FC = () => {
   };
 
   const getClassName = (student: Student) => {
-    // Prefer backend-provided className
-    if (student.className) return student.className;
-    
-    // Otherwise construct from class object
-    const cls = classMap[student.classId];
-    if (cls) {
-      return `${cls.name || cls.className} - ${cls.section} (${cls.academicYear})`;
-    }
-    
-    // Final fallback
-    return student.classId || 'N/A';
+    // Prefer backend-provided className, otherwise map via classId, finally fallback to id
+    return student.className || classMap[student.classId] || student.classId || 'N/A';
   };
 
   return (

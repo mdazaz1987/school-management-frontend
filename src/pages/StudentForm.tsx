@@ -391,7 +391,17 @@ export const StudentForm: React.FC = () => {
                           name="dateOfBirth"
                           value={formData.dateOfBirth}
                           onChange={handleChange}
+                          max={(() => {
+                            // Maximum date: 3 years ago from today
+                            const maxDate = new Date();
+                            maxDate.setFullYear(maxDate.getFullYear() - 3);
+                            return maxDate.toISOString().split('T')[0];
+                          })()}
+                          min="1900-01-01"
                         />
+                        <Form.Text className="text-muted">
+                          Student must be at least 3 years old
+                        </Form.Text>
                       </Form.Group>
                     </Col>
                     <Col md={4}>
