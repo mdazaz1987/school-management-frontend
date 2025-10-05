@@ -36,8 +36,8 @@ export const StudentAssignments: React.FC = () => {
     setLoading(true);
     setError('');
     try {
-      const student = await studentService.getStudentByEmail(user.email);
-      // Dashboard data can be used for future enhancements
+      // Fetch student data for future enhancements
+      // const student = await studentService.getStudentByEmail(user.email);
       // const dashboard = await studentService.getStudentDashboard(student.id);
       
       // Mock assignments data (replace with actual API call)
