@@ -143,6 +143,7 @@ export const StudentList: React.FC = () => {
   };
 
   const getClassName = (student: Student) => {
+    console.log(student);
     // Prefer backend-provided className, otherwise map via classId, finally fallback to id
     return student.className || classMap[student.classId] || student.classId || 'N/A';
   };
