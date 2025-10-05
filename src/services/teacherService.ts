@@ -180,7 +180,13 @@ export const teacherService = {
 
   // Teacher Portal - Classes
   async getMyClasses(): Promise<any[]> {
-    return apiService.get('/teacher/classes');
+    // Fetch all classes (allowed for TEACHER) and filter by teacherId === current user id
+    const stored = localStorage.getItem('user');
+    const me = stored ? JSON.parse(stored) : {};
+    const userId = me?.id;
+    const schoolId = me?.schoolId;
+    const all = await apiService.get<any[]>('/classes', schoolId ? { schoolId } : undefined);
+    return (all || []).filter((c: any) => !userId || c.teacherId === userId);
   },
 
   async getClassDetails(classId: string): Promise<any> {
@@ -189,6 +195,11 @@ export const teacherService = {
 
   async getClassStudents(classId: string): Promise<any[]> {
     return apiService.get(`/teacher/classes/${classId}/students`);
+  },
+
+  // Prefer this for detailed student info (rollNumber, section, etc.)
+  async getClassStudentsV2(classId: string): Promise<any[]> {
+    return apiService.get(`/classes/${classId}/students`);
   },
 
   // Teacher Portal - Assignments
@@ -217,6 +228,15 @@ export const teacherService = {
 
   async updateAssignment(assignmentId: string, assignment: any): Promise<any> {
     return apiService.put(`/teacher/assignments/${assignmentId}`, assignment);
+  },
+
+  // V2 assignment endpoints (teacher-scoped)
+  async createAssignmentV2(teacherId: string, assignment: any): Promise<any> {
+    return apiService.post(`/teachers/${teacherId}/assignments`, assignment);
+  },
+
+  async updateAssignmentV2(teacherId: string, assignmentId: string, assignment: any): Promise<any> {
+    return apiService.put(`/teachers/${teacherId}/assignments/${assignmentId}`, assignment);
   },
 
   async deleteAssignment(assignmentId: string): Promise<void> {

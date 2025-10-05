@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Row, Col, Card, Table, Badge, Button, Modal, Form, Alert } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
+import { useAuth } from '../contexts/AuthContext';
+import { teacherService } from '../services/teacherService';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -14,61 +16,81 @@ const sidebarItems = [
 ];
 
 export const TeacherAssignments: React.FC = () => {
+  const { user } = useAuth();
   const [showModal, setShowModal] = useState(false);
   const [editingAssignment, setEditingAssignment] = useState<any>(null);
   const [success, setSuccess] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [classes, setClasses] = useState<any[]>([]);
   
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    classSection: '',
+    classId: '',
     subject: '',
     dueDate: '',
     totalMarks: 100
   });
 
-  const [assignments, setAssignments] = useState([
-    {
-      id: '1',
-      title: 'Mathematics - Chapter 5 Exercise',
-      class: 'Grade 10-A',
-      subject: 'Mathematics',
-      dueDate: '2025-10-15',
-      totalMarks: 100,
-      submissions: 28,
-      totalStudents: 35,
-      status: 'active'
-    },
-    {
-      id: '2',
-      title: 'Physics Lab Report',
-      class: 'Grade 11-A',
-      subject: 'Physics',
-      dueDate: '2025-10-20',
-      totalMarks: 50,
-      submissions: 15,
-      totalStudents: 28,
-      status: 'active'
-    }
-  ]);
+  const [assignments, setAssignments] = useState<any[]>([]);
 
-  const handleCreate = () => {
-    const newAssignment = {
-      id: Date.now().toString(),
-      title: formData.title,
-      class: formData.classSection,
-      subject: formData.subject,
-      dueDate: formData.dueDate,
-      totalMarks: formData.totalMarks,
-      submissions: 0,
-      totalStudents: 35,
-      status: 'active'
-    };
-    setAssignments([...assignments, newAssignment]);
-    setSuccess('Assignment created and notifications sent to all students!');
-    setShowModal(false);
-    resetForm();
-    setTimeout(() => setSuccess(''), 3000);
+  useEffect(() => {
+    loadClassesAndAssignments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  const loadClassesAndAssignments = async () => {
+    setLoading(true); setError('');
+    try {
+      const cls = await teacherService.getMyClasses();
+      setClasses(cls);
+      const list = user?.id 
+        ? await teacherService.listTeacherAssignments(user.id)
+        : await teacherService.getMyAssignments();
+      const normalized = (list || []).map((a: any) => ({
+        id: a.id,
+        title: a.title,
+        classId: a.classId,
+        class: a.className || a.classId,
+        subject: a.subject || a.subjectName,
+        dueDate: a.dueDate,
+        totalMarks: a.maxMarks || a.totalMarks,
+        submissions: a.submissionsCount || 0,
+        totalStudents: a.totalStudents || 0,
+        status: a.isActive === false ? 'inactive' : 'active'
+      }));
+      setAssignments(normalized);
+    } catch (e: any) {
+      setError(e?.response?.data?.message || 'Failed to load assignments');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreate = async () => {
+    if (!user?.id) return;
+    try {
+      setLoading(true); setError('');
+      const payload: any = {
+        title: formData.title,
+        description: formData.description,
+        classId: formData.classId,
+        subject: formData.subject,
+        dueDate: formData.dueDate,
+        maxMarks: formData.totalMarks,
+      };
+      const created = await teacherService.createAssignmentV2(user.id, payload);
+      setSuccess('Assignment created successfully.');
+      setShowModal(false);
+      resetForm();
+      await loadClassesAndAssignments();
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (e: any) {
+      setError(e?.response?.data?.message || 'Failed to create assignment');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleEdit = (assignment: any) => {
@@ -76,7 +98,7 @@ export const TeacherAssignments: React.FC = () => {
     setFormData({
       title: assignment.title,
       description: '',
-      classSection: assignment.class,
+      classId: assignment.classId || '',
       subject: assignment.subject,
       dueDate: assignment.dueDate,
       totalMarks: assignment.totalMarks
@@ -84,22 +106,44 @@ export const TeacherAssignments: React.FC = () => {
     setShowModal(true);
   };
 
-  const handleUpdate = () => {
-    setAssignments(assignments.map(a => 
-      a.id === editingAssignment.id ? { ...a, ...formData } : a
-    ));
-    setSuccess('Assignment updated successfully!');
-    setShowModal(false);
-    setEditingAssignment(null);
-    resetForm();
-    setTimeout(() => setSuccess(''), 3000);
+  const handleUpdate = async () => {
+    if (!user?.id || !editingAssignment) return;
+    try {
+      setLoading(true); setError('');
+      const payload: any = {
+        title: formData.title,
+        description: formData.description,
+        classId: formData.classId,
+        subject: formData.subject,
+        dueDate: formData.dueDate,
+        maxMarks: formData.totalMarks,
+      };
+      await teacherService.updateAssignmentV2(user.id, editingAssignment.id, payload);
+      setSuccess('Assignment updated successfully!');
+      setShowModal(false);
+      setEditingAssignment(null);
+      resetForm();
+      await loadClassesAndAssignments();
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (e: any) {
+      setError(e?.response?.data?.message || 'Failed to update assignment');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDelete = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this assignment?')) {
-      setAssignments(assignments.filter(a => a.id !== id));
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this assignment?')) return;
+    try {
+      setLoading(true); setError('');
+      await teacherService.deleteAssignment(id);
       setSuccess('Assignment deleted successfully!');
+      await loadClassesAndAssignments();
       setTimeout(() => setSuccess(''), 3000);
+    } catch (e: any) {
+      setError(e?.response?.data?.message || 'Failed to delete assignment');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -107,7 +151,7 @@ export const TeacherAssignments: React.FC = () => {
     setFormData({
       title: '',
       description: '',
-      classSection: '',
+      classId: '',
       subject: '',
       dueDate: '',
       totalMarks: 100
@@ -138,6 +182,7 @@ export const TeacherAssignments: React.FC = () => {
           </div>
 
           {success && <Alert variant="success" dismissible onClose={() => setSuccess('')}>{success}</Alert>}
+          {error && <Alert variant="danger" dismissible onClose={() => setError('')}>{error}</Alert>}
 
           <Card className="border-0 shadow-sm">
             <Card.Body>
@@ -209,13 +254,15 @@ export const TeacherAssignments: React.FC = () => {
                     <Form.Group className="mb-3">
                       <Form.Label>Class/Section *</Form.Label>
                       <Form.Select
-                        value={formData.classSection}
-                        onChange={(e) => setFormData({ ...formData, classSection: e.target.value })}
+                        value={formData.classId}
+                        onChange={(e) => setFormData({ ...formData, classId: e.target.value })}
                       >
                         <option value="">Select class...</option>
-                        <option value="Grade 10-A">Grade 10-A</option>
-                        <option value="Grade 10-B">Grade 10-B</option>
-                        <option value="Grade 11-A">Grade 11-A</option>
+                        {classes.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.className || `${c.grade || 'Class'}${c.section ? ' - ' + c.section : ''}`}
+                          </option>
+                        ))}
                       </Form.Select>
                     </Form.Group>
                   </Col>
@@ -266,13 +313,13 @@ export const TeacherAssignments: React.FC = () => {
             </Modal.Body>
             <Modal.Footer>
               <Button variant="secondary" onClick={() => setShowModal(false)}>Cancel</Button>
-              <Button 
-                variant="primary" 
-                onClick={editingAssignment ? handleUpdate : handleCreate}
-                disabled={!formData.title || !formData.classSection || !formData.subject || !formData.dueDate}
-              >
-                {editingAssignment ? 'Update' : 'Create'} Assignment
-              </Button>
+                <Button 
+                  variant="primary" 
+                  onClick={editingAssignment ? handleUpdate : handleCreate}
+                  disabled={!formData.title || !formData.classId || !formData.subject || !formData.dueDate}
+                >
+                  {editingAssignment ? 'Update' : 'Create'} Assignment
+                </Button>
             </Modal.Footer>
           </Modal>
         </Col>

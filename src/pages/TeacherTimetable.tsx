@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Row, Col, Card, Table, Badge, Form } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
+import { timetableService } from '../services/timetableService';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -15,6 +16,36 @@ const sidebarItems = [
 
 export const TeacherTimetable: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [schedule, setSchedule] = useState<any[]>([]);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const stored = localStorage.getItem('user');
+        const me = stored ? JSON.parse(stored) : {};
+        const schoolId = me?.schoolId;
+        const teacherId = me?.id;
+        const all = await timetableService.list(schoolId ? { schoolId } : undefined);
+        const day = new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
+        const entries = (all || [])
+          .flatMap((t: any) => (t.entries || []).map((e: any) => ({ ...e, classId: t.classId, className: t.className })))
+          .filter((e: any) => String(e.day).toUpperCase() === day)
+          .filter((e: any) => !teacherId || e.teacherId === teacherId)
+          .map((e: any) => ({
+            time: String(e.startTime).slice(0,5),
+            duration: e.endTime && e.startTime ? '1h' : '',
+            class: e.className || e.classId,
+            subject: e.subjectName || '—',
+            room: e.room || '—',
+          }))
+          .sort((a: any, b: any) => a.time.localeCompare(b.time));
+        setSchedule(entries);
+      } catch {
+        setSchedule([]);
+      }
+    };
+    load();
+  }, [selectedDate]);
 
   const getPeriodStatus = (time: string, date: string) => {
     const now = new Date();
@@ -48,21 +79,8 @@ export const TeacherTimetable: React.FC = () => {
     }
   };
 
-  const timetable = [
-    { day: 'Monday', time: '09:00', duration: '1h', class: 'Grade 10-A', subject: 'Mathematics', room: 'Room 101' },
-    { day: 'Monday', time: '10:30', duration: '1h', class: 'Grade 10-B', subject: 'Mathematics', room: 'Room 102' },
-    { day: 'Tuesday', time: '09:00', duration: '1h', class: 'Grade 11-A', subject: 'Physics', room: 'Lab 1' },
-    { day: 'Tuesday', time: '14:00', duration: '1h', class: 'Grade 10-A', subject: 'Mathematics', room: 'Room 101' },
-    { day: 'Wednesday', time: '09:00', duration: '1h', class: 'Grade 10-A', subject: 'Mathematics', room: 'Room 101' },
-    { day: 'Wednesday', time: '10:30', duration: '1h', class: 'Grade 10-B', subject: 'Mathematics', room: 'Room 102' },
-    { day: 'Thursday', time: '09:00', duration: '1h', class: 'Grade 11-A', subject: 'Physics', room: 'Lab 1' },
-    { day: 'Thursday', time: '14:00', duration: '1h', class: 'Grade 10-B', subject: 'Mathematics', room: 'Room 102' },
-    { day: 'Friday', time: '09:00', duration: '1h', class: 'Grade 10-A', subject: 'Mathematics', room: 'Room 101' },
-    { day: 'Friday', time: '10:30', duration: '1h', class: 'Grade 11-A', subject: 'Physics', room: 'Lab 1' },
-  ];
-
   const selectedDayOfWeek = new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long' });
-  const todaySchedule = timetable.filter(t => t.day === selectedDayOfWeek);
+  const todaySchedule = schedule;
 
   return (
     <Layout>

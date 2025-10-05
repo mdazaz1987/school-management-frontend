@@ -333,6 +333,15 @@ export const studentService = {
   },
 
   /**
+   * Get upcoming exams for a student (within next `days` days; default backend is 30 days)
+   */
+  async getUpcomingExams(id: string, days: number = 30, fromDate?: string): Promise<any[]> {
+    const params: any = { days };
+    if (fromDate) params.fromDate = fromDate;
+    return apiService.get<any[]>(`/students/${id}/exams/upcoming`, params);
+  },
+
+  /**
    * Add performance record
    */
   async addPerformanceRecord(id: string, data: any): Promise<any> {

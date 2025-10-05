@@ -4,6 +4,7 @@ import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
 import { studentService } from '../services/studentService';
+import { timetableService } from '../services/timetableService';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -27,6 +28,7 @@ export const StudentDashboard: React.FC = () => {
   });
   const [upcomingAssignments, setUpcomingAssignments] = useState<any[]>([]);
   const [recentGrades, setRecentGrades] = useState<any[]>([]);
+  const [todayClasses, setTodayClasses] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
 
@@ -40,6 +42,26 @@ export const StudentDashboard: React.FC = () => {
         const student = await studentService.getStudentByEmail(user.email);
         // Load dashboard
         const dashboard = await studentService.getStudentDashboard(student.id);
+        // Load timetable for today's classes
+        try {
+          const classId = (student as any).classId;
+          const section = (student as any).section;
+          const tt = await timetableService.getByClass(classId, section);
+          const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
+          const entries = (tt.entries || []).filter((e: any) => String(e.day).toUpperCase() === dayName);
+          const classesForToday = entries.map((e: any) => ({
+            time: String(e.startTime).slice(0,5),
+            subject: e.subjectName || '—',
+            teacher: e.teacherName || '—',
+            room: e.room || '—',
+          }));
+          setTodayClasses(classesForToday);
+        } catch {}
+        // Upcoming exams count
+        try {
+          const exams = await studentService.getUpcomingExams((student as any).id, 30);
+          setStats((prev) => ({ ...prev, upcomingExams: exams.length }));
+        } catch {}
 
         // Stats
         const attendanceRate = Math.round(dashboard.attendancePercentage || 0);
@@ -80,11 +102,7 @@ export const StudentDashboard: React.FC = () => {
     load();
   }, [user?.email]);
 
-  const upcomingClasses = [
-    { time: '09:00 AM', subject: 'Mathematics', teacher: 'Mr. Smith', room: 'Room 101' },
-    { time: '11:00 AM', subject: 'Physics', teacher: 'Dr. Johnson', room: 'Lab 1' },
-    { time: '02:00 PM', subject: 'English', teacher: 'Ms. Williams', room: 'Room 203' },
-  ];
+  const upcomingClasses = todayClasses;
 
   return (
     <Layout>

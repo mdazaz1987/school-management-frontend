@@ -23,13 +23,21 @@ export const StudentNotifications: React.FC = () => {
 
   useEffect(() => {
     loadNotifications();
-  }, [user?.email]);
+  }, [user?.id]);
 
   const loadNotifications = async () => {
     setLoading(true);
+    setError('');
     try {
+      const idFromAuth = (user as any)?.id;
       const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
-      const list = await notificationService.getByUser(storedUser.id);
+      const userId = idFromAuth || storedUser?.id;
+      if (!userId) {
+        setNotifications([]);
+        setError('User not identified. Please login again.');
+        return;
+      }
+      const list = await notificationService.getByUser(userId);
       // Normalize for UI
       const normalized = (list || []).map((n: any) => ({
         id: n.id,

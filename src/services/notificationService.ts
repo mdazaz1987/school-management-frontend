@@ -11,9 +11,13 @@ export const notificationService = {
     return apiService.get(`/notifications?${queryParams.toString()}`);
   },
 
-  // Get notifications for current user
+  // Get notifications for current user (resolved from Auth/localStorage)
   async getMyNotifications(): Promise<Notification[]> {
-    return apiService.get('/notifications/my-notifications');
+    const stored = localStorage.getItem('user');
+    const parsed = stored ? JSON.parse(stored) : {};
+    const userId = parsed?.id;
+    if (!userId) throw new Error('Missing user id');
+    return this.getByUser(userId);
   },
 
   // New: get notifications by userId (backend implementation)
@@ -21,10 +25,10 @@ export const notificationService = {
     return apiService.get(`/notifications`, { userId });
   },
 
-  // Get unread count
+  // Get unread count (client-side)
   async getUnreadCount(): Promise<number> {
-    const response: { count: number } = await apiService.get('/notifications/unread-count');
-    return response.count;
+    const list = await this.getMyNotifications();
+    return (list || []).filter((n: any) => !!n && (n as any).read === false).length;
   },
 
   // Get notification by ID
@@ -54,7 +58,12 @@ export const notificationService = {
 
   // Mark all notifications as read
   async markAllAsRead(): Promise<void> {
-    return apiService.put('/notifications/mark-all-read', {});
+    const list = await this.getMyNotifications();
+    await Promise.all(
+      (list || [])
+        .filter((n: any) => n && (n as any).isRead === false || (n as any).read === false)
+        .map((n: any) => this.markAsRead((n as any).id))
+    );
   },
 
   // Delete notification (Admin/Teacher)

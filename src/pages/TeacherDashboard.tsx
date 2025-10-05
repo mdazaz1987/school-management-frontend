@@ -5,6 +5,7 @@ import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
 import { teacherService } from '../services/teacherService';
+import { timetableService } from '../services/timetableService';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -39,6 +40,20 @@ export const TeacherDashboard: React.FC = () => {
           pendingAssignments: s?.totalAssignments || 0,
           pendingGrading: s?.pendingGrading || 0,
         }));
+        // Load today's schedule from timetables
+        try {
+          const stored = localStorage.getItem('user');
+          const me = stored ? JSON.parse(stored) : {};
+          const schoolId = me?.schoolId;
+          const teacherId = me?.id;
+          const all = await timetableService.list(schoolId ? { schoolId } : undefined);
+          const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
+          const todays = (all || [])
+            .flatMap((t: any) => (t.entries || []).map((e: any) => ({ ...e, classId: t.classId })))
+            .filter((e: any) => String(e.day).toUpperCase() === dayName)
+            .filter((e: any) => !teacherId || e.teacherId === teacherId);
+          setStats((prev) => ({ ...prev, todayClasses: todays.length }));
+        } catch {}
       } catch (err) {
         // Keep defaults if backend is unavailable
         // console.error('Failed to load teacher stats', err);
@@ -47,11 +62,32 @@ export const TeacherDashboard: React.FC = () => {
     loadStats();
   }, []);
 
-  const todaySchedule = [
-    { time: '09:00 AM', class: 'Grade 10-A', subject: 'Mathematics', room: 'Room 101', status: 'upcoming' },
-    { time: '10:30 AM', class: 'Grade 10-B', subject: 'Mathematics', room: 'Room 102', status: 'upcoming' },
-    { time: '02:00 PM', class: 'Grade 11-A', subject: 'Physics', room: 'Lab 1', status: 'upcoming' },
-  ];
+  const [todaySchedule, setTodaySchedule] = useState<any[]>([]);
+  useEffect(() => {
+    const loadSchedule = async () => {
+      try {
+        const stored = localStorage.getItem('user');
+        const me = stored ? JSON.parse(stored) : {};
+        const schoolId = me?.schoolId;
+        const teacherId = me?.id;
+        const all = await timetableService.list(schoolId ? { schoolId } : undefined);
+        const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
+        const entries = (all || [])
+          .flatMap((t: any) => (t.entries || []).map((e: any) => ({ ...e, classId: t.classId, className: t.className })))
+          .filter((e: any) => String(e.day).toUpperCase() === dayName)
+          .filter((e: any) => !teacherId || e.teacherId === teacherId)
+          .map((e: any) => ({
+            time: String(e.startTime).slice(0,5),
+            class: e.className || e.classId,
+            subject: e.subjectName || '—',
+            room: e.room || '—',
+            status: 'upcoming',
+          }));
+        setTodaySchedule(entries);
+      } catch {}
+    };
+    loadSchedule();
+  }, []);
 
   const recentSubmissions = [
     { student: 'John Doe', assignment: 'Math Assignment 5', class: 'Grade 10-A', submittedAt: '2 hours ago', status: 'pending' },

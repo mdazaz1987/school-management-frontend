@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
-import { Row, Col, Card, Table, Button, Form, Badge, Alert } from 'react-bootstrap';
+import React, { useEffect, useState } from 'react';
+import { Row, Col, Card, Table, Button, Form, Badge, Alert, Spinner } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
+import { teacherService } from '../services/teacherService';
+import apiService from '../services/api';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -14,33 +16,84 @@ const sidebarItems = [
 ];
 
 export const TeacherAttendance: React.FC = () => {
+  const [classes, setClasses] = useState<any[]>([]);
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [searchStudent, setSearchStudent] = useState('');
   const [success, setSuccess] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const [students, setStudents] = useState([
-    { id: '1', name: 'John Doe', rollNo: '101', status: 'PRESENT' },
-    { id: '2', name: 'Jane Smith', rollNo: '102', status: 'PRESENT' },
-    { id: '3', name: 'Mike Johnson', rollNo: '103', status: 'ABSENT' },
-    { id: '4', name: 'Sarah Williams', rollNo: '104', status: 'PRESENT' },
-    { id: '5', name: 'Tom Brown', rollNo: '105', status: 'LATE' },
-  ]);
+  const [students, setStudents] = useState<any[]>([]);
+
+  useEffect(() => {
+    const loadClasses = async () => {
+      try {
+        setLoading(true); setError('');
+        const cls = await teacherService.getMyClasses();
+        setClasses(cls);
+      } catch (e: any) {
+        setError(e?.response?.data?.message || 'Failed to load classes');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadClasses();
+  }, []);
+
+  useEffect(() => {
+    const loadStudents = async () => {
+      if (!selectedClass) { setStudents([]); return; }
+      try {
+        setLoading(true); setError('');
+        const list = await teacherService.getClassStudentsV2(selectedClass);
+        const mapped = (list || []).map((s: any, idx: number) => ({
+          id: s.id,
+          name: `${s.firstName || ''} ${s.lastName || ''}`.trim() || s.fullName || s.name,
+          rollNo: s.rollNumber || String(idx + 1),
+          schoolId: s.schoolId,
+          status: 'PRESENT',
+        }));
+        setStudents(mapped);
+      } catch (e: any) {
+        setError(e?.response?.data?.message || 'Failed to load students');
+        setStudents([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadStudents();
+  }, [selectedClass]);
 
   const handleMarkAttendance = (studentId: string, status: string) => {
     setStudents(students.map(s => 
       s.id === studentId ? { ...s, status } : s
     ));
-    
-    const student = students.find(s => s.id === studentId);
-    if (status === 'ABSENT' && student) {
-      console.log(`Notification sent to student ${student.name} and parents`);
-    }
   };
 
-  const handleSaveAttendance = () => {
-    setSuccess(`Attendance saved for ${selectedClass} on ${new Date(selectedDate).toLocaleDateString()}. Notifications sent to absent students and parents.`);
-    setTimeout(() => setSuccess(''), 3000);
+  const handleSaveAttendance = async () => {
+    if (!selectedClass || students.length === 0) return;
+    try {
+      setLoading(true); setError('');
+      const date = selectedDate; // YYYY-MM-DD
+      const payloads = students.map((s) => ({
+        studentId: s.id,
+        schoolId: s.schoolId,
+        date,
+        status: s.status,
+        remarks: undefined,
+      }));
+      // Save sequentially to avoid overloading backend
+      for (const p of payloads) {
+        await apiService.post(`/teacher/classes/${selectedClass}/attendance`, p);
+      }
+      setSuccess(`Attendance saved for selected class on ${new Date(selectedDate).toLocaleDateString()}.`);
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (e: any) {
+      setError(e?.response?.data?.message || 'Failed to save attendance');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleMarkAll = (status: string) => {
@@ -71,6 +124,7 @@ export const TeacherAttendance: React.FC = () => {
           </div>
 
           {success && <Alert variant="success" dismissible onClose={() => setSuccess('')}>{success}</Alert>}
+          {error && <Alert variant="danger" dismissible onClose={() => setError('')}>{error}</Alert>}
 
           <Card className="border-0 shadow-sm mb-4">
             <Card.Body>
@@ -83,9 +137,11 @@ export const TeacherAttendance: React.FC = () => {
                       onChange={(e) => setSelectedClass(e.target.value)}
                     >
                       <option value="">Select class...</option>
-                      <option value="Grade 10-A">Grade 10-A - Mathematics</option>
-                      <option value="Grade 10-B">Grade 10-B - Mathematics</option>
-                      <option value="Grade 11-A">Grade 11-A - Physics</option>
+                      {classes.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.className || `${c.grade || 'Class'}${c.section ? ' - ' + c.section : ''}`}
+                        </option>
+                      ))}
                     </Form.Select>
                   </Form.Group>
                 </Col>
@@ -129,6 +185,9 @@ export const TeacherAttendance: React.FC = () => {
 
           {selectedClass && (
             <>
+              {loading && (
+                <div className="text-center py-3"><Spinner animation="border" size="sm" /></div>
+              )}
               <Row className="mb-4">
                 <Col md={4}>
                   <Card className="border-0 shadow-sm text-center">
