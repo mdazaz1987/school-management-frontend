@@ -3,9 +3,11 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner, Badge } from 'react-bootstrap';
 import { useAuth } from '../contexts/AuthContext';
-import { Timetable, TimetableEntry, DayOfWeek, PeriodType, SchoolClass } from '../types';
+import { Timetable, TimetableEntry, DayOfWeek, PeriodType, SchoolClass, Subject, Teacher } from '../types';
 import { timetableService } from '../services/timetableService';
 import { classService } from '../services/classService';
+import { subjectService } from '../services/subjectService';
+import { teacherService } from '../services/teacherService';
 
 const dayOptions: DayOfWeek[] = ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY','SUNDAY'];
 const periodTypeOptions: PeriodType[] = ['LECTURE','PRACTICAL','BREAK','LUNCH','ASSEMBLY','SPORTS','LIBRARY'];
@@ -22,6 +24,8 @@ export const TimetableForm: React.FC = () => {
   const [success, setSuccess] = useState('');
 
   const [classes, setClasses] = useState<SchoolClass[]>([]);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
 
   const currentYear = useMemo(() => {
     const y = new Date().getFullYear();
@@ -54,8 +58,14 @@ export const TimetableForm: React.FC = () => {
       try {
         setLoading(true);
         setError('');
-        const cls = user?.schoolId ? await classService.getAllClasses({ schoolId: user.schoolId }) : [];
+        const [cls, subj, tchr] = await Promise.all([
+          user?.schoolId ? classService.getAllClasses({ schoolId: user.schoolId }) : [],
+          user?.schoolId ? subjectService.getAllSubjects({ schoolId: user.schoolId }) : [],
+          user?.schoolId ? teacherService.getTeachersBySchool(user.schoolId) : [],
+        ]);
         setClasses(cls);
+        setSubjects(subj.filter(s => s.isActive));
+        setTeachers(tchr.filter(t => t.isActive));
         if (isEdit && id) {
           const tt = await timetableService.getById(id);
           setForm(tt);
@@ -79,6 +89,15 @@ export const TimetableForm: React.FC = () => {
       const entries = [...(prev.entries || [])];
       const item = { ...(entries[index] || {}) } as TimetableEntry;
       (item as any)[key] = value;
+      
+      // Auto-calculate end time when start time changes
+      if (key === 'startTime' && value) {
+        const [hours, minutes] = value.split(':').map(Number);
+        const endHours = hours + 1;
+        const endTime = `${String(endHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+        item.endTime = endTime;
+      }
+      
       entries[index] = item;
       return { ...prev, entries };
     });
@@ -289,8 +308,11 @@ export const TimetableForm: React.FC = () => {
                               type="time"
                               value={entry.startTime || ''}
                               onChange={(e) => handleEntryChange(idx, 'startTime', e.target.value)}
+                              min="05:00"
+                              max="20:00"
                               required
                             />
+                            <Form.Text className="text-muted">5 AM - 8 PM</Form.Text>
                           </Form.Group>
                         </Col>
                         <Col md={3} className="mb-3">
@@ -300,8 +322,11 @@ export const TimetableForm: React.FC = () => {
                               type="time"
                               value={entry.endTime || ''}
                               onChange={(e) => handleEntryChange(idx, 'endTime', e.target.value)}
+                              min="05:00"
+                              max="20:00"
                               required
                             />
+                            <Form.Text className="text-muted">Auto: Start + 1hr</Form.Text>
                           </Form.Group>
                         </Col>
                       </Row>
@@ -310,23 +335,39 @@ export const TimetableForm: React.FC = () => {
                         <Col md={4} className="mb-3">
                           <Form.Group>
                             <Form.Label>Subject</Form.Label>
-                            <Form.Control
-                              type="text"
-                              value={entry.subjectName || ''}
-                              onChange={(e) => handleEntryChange(idx, 'subjectName', e.target.value)}
-                              placeholder="e.g., Mathematics"
-                            />
+                            <Form.Select
+                              value={entry.subjectId || ''}
+                              onChange={(e) => {
+                                const subjectId = e.target.value;
+                                const subject = subjects.find(s => s.id === subjectId);
+                                handleEntryChange(idx, 'subjectId', subjectId);
+                                handleEntryChange(idx, 'subjectName', subject?.name || '');
+                              }}
+                            >
+                              <option value="">Select Subject</option>
+                              {subjects.map((s) => (
+                                <option key={s.id} value={s.id}>{s.name} ({s.code})</option>
+                              ))}
+                            </Form.Select>
                           </Form.Group>
                         </Col>
                         <Col md={4} className="mb-3">
                           <Form.Group>
                             <Form.Label>Teacher</Form.Label>
-                            <Form.Control
-                              type="text"
-                              value={entry.teacherName || ''}
-                              onChange={(e) => handleEntryChange(idx, 'teacherName', e.target.value)}
-                              placeholder="e.g., Mr. Smith"
-                            />
+                            <Form.Select
+                              value={entry.teacherId || ''}
+                              onChange={(e) => {
+                                const teacherId = e.target.value;
+                                const teacher = teachers.find(t => t.id === teacherId);
+                                handleEntryChange(idx, 'teacherId', teacherId);
+                                handleEntryChange(idx, 'teacherName', teacher ? `${teacher.firstName} ${teacher.lastName}` : '');
+                              }}
+                            >
+                              <option value="">Select Teacher</option>
+                              {teachers.map((t) => (
+                                <option key={t.id} value={t.id}>{t.firstName} {t.lastName} ({t.employeeId})</option>
+                              ))}
+                            </Form.Select>
                           </Form.Group>
                         </Col>
                         <Col md={2} className="mb-3">
