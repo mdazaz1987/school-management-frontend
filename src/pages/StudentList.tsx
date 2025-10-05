@@ -25,8 +25,8 @@ export const StudentList: React.FC = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
   const [deleting, setDeleting] = useState(false);
-  // Classes map for ID -> display name
-  const [classMap, setClassMap] = useState<Record<string, string>>({});
+  // Classes map for ID -> class object
+  const [classMap, setClassMap] = useState<Record<string, any>>({});
 
   useEffect(() => {
     loadStudents();
@@ -34,14 +34,13 @@ export const StudentList: React.FC = () => {
   }, [currentPage, filterStatus]);
 
   useEffect(() => {
-    // Load classes once to map IDs to names for display
+    // Load classes once to map IDs to class objects for display
     const loadClasses = async () => {
       try {
         const classes = await classService.getAllClasses();
-        const map: Record<string, string> = {};
+        const map: Record<string, any> = {};
         for (const c of classes) {
-          const derived = c.className || c.name || `${c.grade ?? ''}`.trim();
-          map[c.id] = c.section ? `${derived} - ${c.section}` : derived;
+          map[c.id] = c;
         }
         setClassMap(map);
       } catch (e) {
@@ -143,9 +142,17 @@ export const StudentList: React.FC = () => {
   };
 
   const getClassName = (student: Student) => {
-    console.log(student);
-    // Prefer backend-provided className, otherwise map via classId, finally fallback to id
-    return student.className || classMap[student.classId] || student.classId || 'N/A';
+    // Prefer backend-provided className
+    if (student.className) return student.className;
+    
+    // Otherwise construct from class object
+    const cls = classMap[student.classId];
+    if (cls) {
+      return `${cls.name || cls.className} - ${cls.section} (${cls.academicYear})`;
+    }
+    
+    // Final fallback
+    return student.classId || 'N/A';
   };
 
   return (
