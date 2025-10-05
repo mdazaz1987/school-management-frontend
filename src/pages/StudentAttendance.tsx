@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, Table, Badge, Form, ProgressBar, Alert, Spinner } from 'react-bootstrap';
+import { Row, Col, Card, Table, Badge, Form, ProgressBar, Alert, Spinner, Button, Modal } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
@@ -29,6 +29,11 @@ export const StudentAttendance: React.FC = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showCorrectionModal, setShowCorrectionModal] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState<any>(null);
+  const [correctionPeriod, setCorrectionPeriod] = useState('');
+  const [correctionReason, setCorrectionReason] = useState('');
+  const [success, setSuccess] = useState('');
 
   useEffect(() => {
     loadAttendance();
@@ -95,6 +100,35 @@ export const StudentAttendance: React.FC = () => {
     }
   };
 
+  const handleRequestCorrection = (record: any) => {
+    setSelectedRecord(record);
+    setCorrectionPeriod('');
+    setCorrectionReason('');
+    setShowCorrectionModal(true);
+  };
+
+  const submitCorrectionRequest = async () => {
+    if (!correctionPeriod || !correctionReason.trim()) {
+      setError('Please select period and provide a valid reason');
+      return;
+    }
+
+    try {
+      // Mock API call - replace with actual endpoint
+      console.log('Correction request:', {
+        date: selectedRecord.date,
+        period: correctionPeriod,
+        reason: correctionReason
+      });
+      
+      setSuccess('Attendance correction request submitted successfully!');
+      setShowCorrectionModal(false);
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (e: any) {
+      setError('Failed to submit correction request');
+    }
+  };
+
   const months = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
@@ -117,6 +151,12 @@ export const StudentAttendance: React.FC = () => {
           {error && (
             <Alert variant="danger" dismissible onClose={() => setError('')}>
               {error}
+            </Alert>
+          )}
+
+          {success && (
+            <Alert variant="success" dismissible onClose={() => setSuccess('')}>
+              {success}
             </Alert>
           )}
 
@@ -222,6 +262,7 @@ export const StudentAttendance: React.FC = () => {
                         <th>Day</th>
                         <th>Status</th>
                         <th>Remarks</th>
+                        <th>Action</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -234,6 +275,18 @@ export const StudentAttendance: React.FC = () => {
                             <td>{dayNames[date.getDay()]}</td>
                             <td>{getStatusBadge(record.status)}</td>
                             <td><small className="text-muted">{record.remarks || '—'}</small></td>
+                            <td>
+                              {(record.status === 'ABSENT' || record.status === 'LATE') && (
+                                <Button
+                                  size="sm"
+                                  variant="outline-warning"
+                                  onClick={() => handleRequestCorrection(record)}
+                                >
+                                  <i className="bi bi-exclamation-circle me-1"></i>
+                                  Request Correction
+                                </Button>
+                              )}
+                            </td>
                           </tr>
                         );
                       })}
@@ -245,6 +298,78 @@ export const StudentAttendance: React.FC = () => {
           )}
         </Col>
       </Row>
+
+      {/* Attendance Correction Request Modal */}
+      <Modal show={showCorrectionModal} onHide={() => setShowCorrectionModal(false)} size="lg">
+        <Modal.Header closeButton>
+          <Modal.Title>Request Attendance Correction</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {selectedRecord && (
+            <>
+              <Alert variant="info">
+                <i className="bi bi-info-circle me-2"></i>
+                <strong>Date:</strong> {new Date(selectedRecord.date).toLocaleDateString()} | 
+                <strong className="ms-2">Current Status:</strong> {selectedRecord.status}
+              </Alert>
+
+              <Form.Group className="mb-3">
+                <Form.Label>Select Period *</Form.Label>
+                <Form.Select
+                  value={correctionPeriod}
+                  onChange={(e) => setCorrectionPeriod(e.target.value)}
+                  required
+                >
+                  <option value="">Choose period...</option>
+                  <option value="Period 1">Period 1 (9:00 AM - 10:00 AM)</option>
+                  <option value="Period 2">Period 2 (10:00 AM - 11:00 AM)</option>
+                  <option value="Period 3">Period 3 (11:00 AM - 12:00 PM)</option>
+                  <option value="Period 4">Period 4 (12:00 PM - 1:00 PM)</option>
+                  <option value="Period 5">Period 5 (2:00 PM - 3:00 PM)</option>
+                  <option value="Period 6">Period 6 (3:00 PM - 4:00 PM)</option>
+                  <option value="Full Day">Full Day</option>
+                </Form.Select>
+              </Form.Group>
+
+              <Form.Group className="mb-3">
+                <Form.Label>Reason for Correction *</Form.Label>
+                <Form.Control
+                  as="textarea"
+                  rows={4}
+                  placeholder="Please provide a detailed reason for the attendance correction request..."
+                  value={correctionReason}
+                  onChange={(e) => setCorrectionReason(e.target.value)}
+                  required
+                />
+                <Form.Text className="text-muted">
+                  Be specific and provide valid documentation if required.
+                </Form.Text>
+              </Form.Group>
+
+              <Alert variant="warning" className="mb-0">
+                <small>
+                  <i className="bi bi-exclamation-triangle me-2"></i>
+                  <strong>Note:</strong> Your request will be reviewed by your teacher or admin. 
+                  You may be required to provide supporting documents.
+                </small>
+              </Alert>
+            </>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowCorrectionModal(false)}>
+            Cancel
+          </Button>
+          <Button 
+            variant="primary" 
+            onClick={submitCorrectionRequest}
+            disabled={!correctionPeriod || !correctionReason.trim()}
+          >
+            <i className="bi bi-send me-2"></i>
+            Submit Request
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </Layout>
   );
 };

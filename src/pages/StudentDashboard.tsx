@@ -7,12 +7,12 @@ import { studentService } from '../services/studentService';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
-  { path: '/assignments', label: 'Assignments', icon: 'bi-file-text' },
-  { path: '/exams', label: 'Exams & Results', icon: 'bi-clipboard-check' },
-  { path: '/attendance', label: 'My Attendance', icon: 'bi-calendar-check' },
-  { path: '/timetable', label: 'Timetable', icon: 'bi-calendar3' },
-  { path: '/fees', label: 'Fee Payment', icon: 'bi-cash-coin' },
-  { path: '/notifications', label: 'Notifications', icon: 'bi-bell' },
+  { path: '/student/assignments', label: 'Assignments', icon: 'bi-file-text' },
+  { path: '/student/exams', label: 'Exams & Results', icon: 'bi-clipboard-check' },
+  { path: '/student/attendance', label: 'My Attendance', icon: 'bi-calendar-check' },
+  { path: '/student/timetable', label: 'Timetable', icon: 'bi-calendar3' },
+  { path: '/student/fees', label: 'Fee Payment', icon: 'bi-cash-coin' },
+  { path: '/student/notifications', label: 'Notifications', icon: 'bi-bell' },
 ];
 
 export const StudentDashboard: React.FC = () => {
