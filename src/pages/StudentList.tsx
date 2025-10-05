@@ -5,9 +5,11 @@ import { studentService } from '../services/studentService';
 import { Student, PageResponse } from '../types';
 import { useNavigate } from 'react-router-dom';
 import { classService } from '../services/classService';
+import { useAuth } from '../contexts/AuthContext';
 
 export const StudentList: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,7 +39,7 @@ export const StudentList: React.FC = () => {
     // Load classes once to map IDs to names for display
     const loadClasses = async () => {
       try {
-        const classes = await classService.getAllClasses();
+        const classes = await classService.getAllClasses({ schoolId: user?.schoolId });
         const map: Record<string, string> = {};
         for (const c of classes) {
           const derived = c.className || c.name || `${c.grade ?? ''}`.trim();
@@ -46,12 +48,16 @@ export const StudentList: React.FC = () => {
           map[c.id] = displayName;
         }
         setClassMap(map);
+        console.log('Loaded classes map:', map);
       } catch (e) {
+        console.error('Failed to load classes:', e);
         // Non-blocking if classes fail to load
       }
     };
-    loadClasses();
-  }, []);
+    if (user?.schoolId) {
+      loadClasses();
+    }
+  }, [user?.schoolId]);
 
   const loadStudents = async () => {
     try {
