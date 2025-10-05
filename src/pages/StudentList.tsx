@@ -4,12 +4,9 @@ import { Layout } from '../components/Layout';
 import { studentService } from '../services/studentService';
 import { Student, PageResponse } from '../types';
 import { useNavigate } from 'react-router-dom';
-import { classService } from '../services/classService';
-import { useAuth } from '../contexts/AuthContext';
 
 export const StudentList: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
   
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,37 +24,11 @@ export const StudentList: React.FC = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
   const [deleting, setDeleting] = useState(false);
-  // Classes map for ID -> display name with academic year
-  const [classMap, setClassMap] = useState<Record<string, string>>({});
 
   useEffect(() => {
     loadStudents();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, filterStatus]);
-
-  useEffect(() => {
-    // Load classes once to map IDs to names for display
-    const loadClasses = async () => {
-      try {
-        const classes = await classService.getAllClasses({ schoolId: user?.schoolId });
-        const map: Record<string, string> = {};
-        for (const c of classes) {
-          const derived = c.className || c.name || `${c.grade ?? ''}`.trim();
-          // Format: "Grade 10 - A (2024-2025)"
-          const displayName = `${derived} - ${c.section} (${c.academicYear})`;
-          map[c.id] = displayName;
-        }
-        setClassMap(map);
-        console.log('Loaded classes map:', map);
-      } catch (e) {
-        console.error('Failed to load classes:', e);
-        // Non-blocking if classes fail to load
-      }
-    };
-    if (user?.schoolId) {
-      loadClasses();
-    }
-  }, [user?.schoolId]);
 
   const loadStudents = async () => {
     try {
@@ -151,8 +122,8 @@ export const StudentList: React.FC = () => {
   };
 
   const getClassName = (student: Student) => {
-    // Prefer backend-provided className, otherwise map via classId, finally fallback to id
-    return student.className || classMap[student.classId] || student.classId || 'N/A';
+    // Use className field populated by backend, fallback to classId if not available
+    return student.className || student.classId || 'N/A';
   };
 
   return (
