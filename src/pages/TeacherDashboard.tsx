@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Row, Col, Card, Button, Table, Badge, ListGroup } from 'react-bootstrap';
+import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
@@ -17,6 +18,7 @@ const sidebarItems = [
 
 export const TeacherDashboard: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [stats, setStats] = useState({
     myClasses: 0,
     totalStudents: 0,
@@ -148,7 +150,11 @@ export const TeacherDashboard: React.FC = () => {
                               {schedule.time}
                             </small>
                           </div>
-                          <Button variant="outline-primary" size="sm">
+                          <Button 
+                            variant="outline-primary" 
+                            size="sm"
+                            onClick={() => navigate('/teacher/attendance')}
+                          >
                             Start Class
                           </Button>
                         </div>
@@ -167,19 +173,35 @@ export const TeacherDashboard: React.FC = () => {
                 </Card.Header>
                 <Card.Body>
                   <div className="d-grid gap-2">
-                    <Button variant="primary" size="lg">
+                    <Button 
+                      variant="primary" 
+                      size="lg"
+                      onClick={() => navigate('/teacher/attendance')}
+                    >
                       <i className="bi bi-calendar-check me-2"></i>
                       Mark Attendance
                     </Button>
-                    <Button variant="success" size="lg">
+                    <Button 
+                      variant="success" 
+                      size="lg"
+                      onClick={() => navigate('/teacher/assignments')}
+                    >
                       <i className="bi bi-file-plus me-2"></i>
                       Create Assignment
                     </Button>
-                    <Button variant="info" size="lg">
+                    <Button 
+                      variant="info" 
+                      size="lg"
+                      onClick={() => navigate('/teacher/grading')}
+                    >
                       <i className="bi bi-star me-2"></i>
                       Grade Submissions
                     </Button>
-                    <Button variant="warning" size="lg">
+                    <Button 
+                      variant="warning" 
+                      size="lg"
+                      onClick={() => navigate('/notifications')}
+                    >
                       <i className="bi bi-megaphone me-2"></i>
                       Send Announcement
                     </Button>
@@ -195,7 +217,13 @@ export const TeacherDashboard: React.FC = () => {
               <Card className="border-0 shadow-sm">
                 <Card.Header className="bg-white d-flex justify-content-between align-items-center">
                   <h5 className="mb-0">Recent Submissions</h5>
-                  <Button variant="link" size="sm">View All</Button>
+                  <Button 
+                    variant="link" 
+                    size="sm"
+                    onClick={() => navigate('/teacher/grading')}
+                  >
+                    View All
+                  </Button>
                 </Card.Header>
                 <Card.Body className="p-0">
                   <Table hover className="mb-0">
@@ -223,9 +251,21 @@ export const TeacherDashboard: React.FC = () => {
                           </td>
                           <td>
                             {submission.status === 'pending' ? (
-                              <Button variant="primary" size="sm">Grade</Button>
+                              <Button 
+                                variant="primary" 
+                                size="sm"
+                                onClick={() => navigate('/teacher/grading')}
+                              >
+                                Grade
+                              </Button>
                             ) : (
-                              <Button variant="outline-secondary" size="sm">View</Button>
+                              <Button 
+                                variant="outline-secondary" 
+                                size="sm"
+                                onClick={() => navigate('/teacher/grading')}
+                              >
+                                View
+                              </Button>
                             )}
                           </td>
                         </tr>
