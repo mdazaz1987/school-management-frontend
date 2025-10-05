@@ -3,6 +3,8 @@ import { Row, Col, Card, Table, Badge, Tabs, Tab, ProgressBar, Alert, Spinner } 
 import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
+import apiService from '../services/api';
+import { studentService } from '../services/studentService';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -32,99 +34,40 @@ export const StudentExams: React.FC = () => {
     setLoading(true);
     setError('');
     try {
-      // Mock data (replace with actual API call)
-      const mockExams = [
-        {
-          id: '1',
-          name: 'Mid-Term Examination',
-          subject: 'Mathematics',
-          date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-          time: '09:00 AM - 12:00 PM',
-          duration: '3 hours',
-          totalMarks: 100,
-          syllabus: 'Chapters 1-5',
-          room: 'Room 101',
-          status: 'upcoming'
-        },
-        {
-          id: '2',
-          name: 'Mid-Term Examination',
-          subject: 'Physics',
-          date: new Date(Date.now() + 9 * 24 * 60 * 60 * 1000).toISOString(),
-          time: '09:00 AM - 12:00 PM',
-          duration: '3 hours',
-          totalMarks: 100,
-          syllabus: 'Mechanics, Thermodynamics',
-          room: 'Room 102',
-          status: 'upcoming'
-        },
-        {
-          id: '3',
-          name: 'Unit Test',
-          subject: 'Chemistry',
-          date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
-          time: '02:00 PM - 03:00 PM',
-          duration: '1 hour',
-          totalMarks: 25,
-          syllabus: 'Chemical Bonding',
-          room: 'Lab 1',
-          status: 'upcoming'
-        }
-      ];
+      const student = await studentService.getStudentByEmail(user.email);
+      const studentId = (student as any).id;
+      // Upcoming exams (next 30 days)
+      const upcoming = await apiService.get<any[]>(`/students/${studentId}/exams/upcoming`, { days: 30 });
+      const normalizedExams = (upcoming || []).map((e: any) => ({
+        id: e.id,
+        name: e.name,
+        subject: e.subjectName,
+        date: e.examDate,
+        time: `${e.startTime || ''} - ${e.endTime || ''}`,
+        duration: '',
+        totalMarks: e.totalMarks,
+        syllabus: e.instructions,
+        room: e.venue,
+        status: 'upcoming',
+      }));
 
-      const mockResults = [
-        {
-          id: '1',
-          examName: 'First Term Examination',
-          subject: 'Mathematics',
-          date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-          totalMarks: 100,
-          marksObtained: 85,
-          grade: 'A',
-          percentage: 85,
-          rank: 5,
-          remarks: 'Excellent performance'
-        },
-        {
-          id: '2',
-          examName: 'First Term Examination',
-          subject: 'Physics',
-          date: new Date(Date.now() - 28 * 24 * 60 * 60 * 1000).toISOString(),
-          totalMarks: 100,
-          marksObtained: 78,
-          grade: 'B+',
-          percentage: 78,
-          rank: 8,
-          remarks: 'Good effort'
-        },
-        {
-          id: '3',
-          examName: 'First Term Examination',
-          subject: 'Chemistry',
-          date: new Date(Date.now() - 26 * 24 * 60 * 60 * 1000).toISOString(),
-          totalMarks: 100,
-          marksObtained: 92,
-          grade: 'A+',
-          percentage: 92,
-          rank: 2,
-          remarks: 'Outstanding'
-        },
-        {
-          id: '4',
-          examName: 'First Term Examination',
-          subject: 'English',
-          date: new Date(Date.now() - 24 * 24 * 60 * 60 * 1000).toISOString(),
-          totalMarks: 100,
-          marksObtained: 80,
-          grade: 'A',
-          percentage: 80,
-          rank: 6,
-          remarks: 'Well done'
-        }
-      ];
+      // Results history
+      const resultsData = await apiService.get<any[]>(`/exams/students/${studentId}/results`);
+      const normalizedResults = (resultsData || []).map((r: any) => ({
+        id: r.id,
+        examName: r.examName || r.subjectName,
+        subject: r.subjectName,
+        date: r.createdAt || r.gradedAt,
+        totalMarks: r.totalMarks,
+        marksObtained: r.marksObtained,
+        grade: r.grade,
+        percentage: r.percentage,
+        rank: r.rank,
+        remarks: r.remarks,
+      }));
 
-      setExams(mockExams);
-      setResults(mockResults);
+      setExams(normalizedExams);
+      setResults(normalizedResults);
     } catch (e: any) {
       setError(e.response?.data?.message || 'Failed to load exams and results');
     } finally {

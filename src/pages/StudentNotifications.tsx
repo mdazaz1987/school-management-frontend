@@ -3,6 +3,7 @@ import { Row, Col, Card, ListGroup, Badge, Button, Alert, Spinner } from 'react-
 import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
+import { notificationService } from '../services/notificationService';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -27,73 +28,19 @@ export const StudentNotifications: React.FC = () => {
   const loadNotifications = async () => {
     setLoading(true);
     try {
-      // Mock notifications
-      const mockNotifications = [
-        {
-          id: '1',
-          type: 'assignment',
-          title: 'New Assignment Posted',
-          message: 'Mathematics Chapter 5 Exercise has been posted. Due date: ' + new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-          timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
-          read: false,
-          priority: 'high'
-        },
-        {
-          id: '2',
-          type: 'exam',
-          title: 'Upcoming Exam Reminder',
-          message: 'Mid-Term examination for Physics is scheduled on ' + new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString() + ' at 09:00 AM',
-          timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-          read: false,
-          priority: 'high'
-        },
-        {
-          id: '3',
-          type: 'grade',
-          title: 'Grade Posted',
-          message: 'Your grade for English Essay has been posted. Grade: A (45/50)',
-          timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-          read: false,
-          priority: 'medium'
-        },
-        {
-          id: '4',
-          type: 'fee',
-          title: 'Fee Payment Reminder',
-          message: 'Your tuition fee payment is due on ' + new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toLocaleDateString() + '. Amount: ₹50,000',
-          timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-          read: true,
-          priority: 'high'
-        },
-        {
-          id: '5',
-          type: 'announcement',
-          title: 'School Holiday Notice',
-          message: 'School will remain closed on ' + new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toLocaleDateString() + ' due to public holiday',
-          timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-          read: true,
-          priority: 'low'
-        },
-        {
-          id: '6',
-          type: 'attendance',
-          title: 'Attendance Alert',
-          message: 'Your attendance has dropped below 85%. Current attendance: 82%',
-          timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-          read: true,
-          priority: 'high'
-        },
-        {
-          id: '7',
-          type: 'timetable',
-          title: 'Timetable Update',
-          message: 'Chemistry lab session on Friday has been moved to Lab 3',
-          timestamp: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-          read: true,
-          priority: 'medium'
-        }
-      ];
-      setNotifications(mockNotifications);
+      const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+      const list = await notificationService.getByUser(storedUser.id);
+      // Normalize for UI
+      const normalized = (list || []).map((n: any) => ({
+        id: n.id,
+        type: (n.type || 'system').toString().toLowerCase(),
+        title: n.title,
+        message: n.message,
+        timestamp: n.createdAt,
+        read: !!n.read,
+        priority: 'medium',
+      }));
+      setNotifications(normalized);
     } catch (e: any) {
       setError('Failed to load notifications');
     } finally {
@@ -101,10 +48,14 @@ export const StudentNotifications: React.FC = () => {
     }
   };
 
-  const markAsRead = (id: string) => {
-    setNotifications(notifications.map(n => 
-      n.id === id ? { ...n, read: true } : n
-    ));
+  const markAsRead = async (id: string) => {
+    try {
+      await notificationService.markAsRead(id);
+      setNotifications(notifications.map(n => n.id === id ? { ...n, read: true } : n));
+    } catch (e) {
+      // Fallback to local state update
+      setNotifications(notifications.map(n => n.id === id ? { ...n, read: true } : n));
+    }
   };
 
   const markAllAsRead = () => {

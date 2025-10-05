@@ -103,4 +103,26 @@ export const feeService = {
   async studentSummary(studentId: string): Promise<any> {
     return apiService.get(`/fees/student/${studentId}/summary`);
   },
+
+  // Admin tools: create admission fee
+  async createAdmissionFee(data: {
+    studentId: string;
+    schoolId: string;
+    classId: string;
+    academicYear: string;
+    term: string;
+  }): Promise<any> {
+    return apiService.post('/fees/admission', data);
+  },
+
+  // Admin tools: seed sample fees for a student
+  async seedForStudent(data: {
+    studentId: string;
+    schoolId: string;
+    classId: string;
+    academicYear: string;
+    term: string;
+  }): Promise<{ success: boolean; created: number }> {
+    return apiService.post('/fees/seed', data);
+  },
 };

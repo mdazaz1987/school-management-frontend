@@ -16,6 +16,11 @@ export const notificationService = {
     return apiService.get('/notifications/my-notifications');
   },
 
+  // New: get notifications by userId (backend implementation)
+  async getByUser(userId: string): Promise<Notification[]> {
+    return apiService.get(`/notifications`, { userId });
+  },
+
   // Get unread count
   async getUnreadCount(): Promise<number> {
     const response: { count: number } = await apiService.get('/notifications/unread-count');
@@ -39,7 +44,12 @@ export const notificationService = {
 
   // Mark notification as read
   async markAsRead(id: string): Promise<void> {
-    return apiService.put(`/notifications/${id}/mark-read`, {});
+    // Legacy endpoint (may not exist). Use backend-compatible endpoint
+    try {
+      await apiService.put(`/notifications/${id}/mark-read`, {});
+    } catch {
+      await apiService.put(`/notifications/${id}/read`, {});
+    }
   },
 
   // Mark all notifications as read
@@ -85,6 +95,11 @@ export const notificationService = {
     link?: string;
   }): Promise<Notification> {
     return apiService.post('/notifications/send-to-role', data);
+  },
+
+  // Admin: seed notifications for a user/role
+  async seed(data: { userId?: string; schoolId: string; role?: string; count?: number }): Promise<{ success: boolean; created: number }> {
+    return apiService.post('/notifications/seed', data);
   },
 
   // Get scheduled notifications

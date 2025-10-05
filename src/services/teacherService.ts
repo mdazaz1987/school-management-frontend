@@ -193,7 +193,18 @@ export const teacherService = {
 
   // Teacher Portal - Assignments
   async getMyAssignments(): Promise<any[]> {
+    // Legacy (if exists)
     return apiService.get('/teacher/assignments');
+  },
+
+  // New backend-compatible teacher endpoints
+  async listTeacherAssignments(teacherId: string): Promise<any[]> {
+    try {
+      return await apiService.get(`/teachers/${teacherId}/assignments`);
+    } catch (e) {
+      // Fallback to legacy endpoint
+      return apiService.get('/teacher/assignments');
+    }
   },
 
   async getClassAssignments(classId: string): Promise<any[]> {
@@ -213,11 +224,25 @@ export const teacherService = {
   },
 
   async getAssignmentSubmissions(assignmentId: string): Promise<any[]> {
+    // Legacy endpoint if exists
     return apiService.get(`/teacher/assignments/${assignmentId}/submissions`);
+  },
+
+  async listSubmissions(teacherId: string, assignmentId: string): Promise<any[]> {
+    try {
+      return await apiService.get(`/teachers/${teacherId}/assignments/${assignmentId}/submissions`);
+    } catch (e) {
+      // Fallback
+      return apiService.get(`/teacher/assignments/${assignmentId}/submissions`);
+    }
   },
 
   async gradeSubmission(submissionId: string, marks: number, feedback: string): Promise<any> {
     return apiService.put(`/teacher/submissions/${submissionId}/grade`, { marks, feedback });
+  },
+
+  async gradeSubmissionV2(teacherId: string, assignmentId: string, submissionId: string, marks: number, feedback: string): Promise<any> {
+    return apiService.put(`/teachers/${teacherId}/assignments/${assignmentId}/submissions/${submissionId}/grade`, { marks, feedback });
   },
 
   // Teacher Portal - Attendance

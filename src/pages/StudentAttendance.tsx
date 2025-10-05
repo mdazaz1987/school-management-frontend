@@ -3,6 +3,9 @@ import { Row, Col, Card, Table, Badge, Form, ProgressBar, Alert, Spinner, Button
 import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
+import { attendanceService } from '../services/attendanceService';
+import { studentService } from '../services/studentService';
+import apiService from '../services/api';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -45,49 +48,30 @@ export const StudentAttendance: React.FC = () => {
     setLoading(true);
     setError('');
     try {
-      // Mock data (replace with actual API call)
-      const mockRecords = generateMockAttendance(selectedMonth, selectedYear);
-      
-      const present = mockRecords.filter(r => r.status === 'PRESENT').length;
-      const absent = mockRecords.filter(r => r.status === 'ABSENT').length;
-      const late = mockRecords.filter(r => r.status === 'LATE').length;
-      const excused = mockRecords.filter(r => r.status === 'EXCUSED').length;
-      const total = mockRecords.length;
+      const student = await studentService.getStudentByEmail(user.email);
+      const studentId = (student as any).id;
+      const schoolId = (student as any).schoolId;
+      const classId = (student as any).classId;
+
+      // Backend month is 1-indexed
+      const records = await attendanceService.getMonthly(studentId, selectedYear, selectedMonth + 1);
+
+      const present = records.filter((r: any) => r.status === 'PRESENT').length;
+      const absent = records.filter((r: any) => r.status === 'ABSENT').length;
+      const late = records.filter((r: any) => r.status === 'LATE').length;
+      const excused = records.filter((r: any) => r.status === 'EXCUSED').length;
+      const total = records.length;
       const percentage = total > 0 ? Math.round(((present + late + excused) / total) * 100) : 0;
 
-      setAttendanceRecords(mockRecords);
-      setStats({
-        totalDays: total,
-        present,
-        absent,
-        late,
-        excused,
-        percentage
-      });
+      setAttendanceRecords(records);
+      setStats({ totalDays: total, present, absent, late, excused, percentage });
+      // Cache school/class for corrections
+      (window as any).__studentMeta = { studentId, schoolId, classId };
     } catch (e: any) {
       setError(e.response?.data?.message || 'Failed to load attendance');
     } finally {
       setLoading(false);
     }
-  };
-
-  const generateMockAttendance = (month: number, year: number) => {
-    const records = [];
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const statuses = ['PRESENT', 'PRESENT', 'PRESENT', 'PRESENT', 'LATE', 'ABSENT'];
-    
-    for (let day = 1; day <= daysInMonth; day++) {
-      const date = new Date(year, month, day);
-      // Skip weekends
-      if (date.getDay() !== 0 && date.getDay() !== 6 && date <= new Date()) {
-        records.push({
-          date: date.toISOString(),
-          status: statuses[Math.floor(Math.random() * statuses.length)],
-          remarks: ''
-        });
-      }
-    }
-    return records;
   };
 
   const getStatusBadge = (status: string) => {
@@ -114,13 +98,19 @@ export const StudentAttendance: React.FC = () => {
     }
 
     try {
-      // Mock API call - replace with actual endpoint
-      console.log('Correction request:', {
-        date: selectedRecord.date,
-        period: correctionPeriod,
-        reason: correctionReason
+      const meta = (window as any).__studentMeta || {};
+      await apiService.post('/attendance/corrections', {
+        studentId: meta.studentId,
+        classId: meta.classId,
+        schoolId: meta.schoolId,
+        date: new Date(selectedRecord.date).toISOString().slice(0, 10),
+        period: correctionPeriod === 'Full Day' ? null : correctionPeriod,
+        reason: correctionReason,
+        requestedBy: (JSON.parse(localStorage.getItem('user') || '{}') as any).id,
+        requestedByRole: 'STUDENT',
+        desiredStatus: 'PRESENT',
       });
-      
+
       setSuccess('Attendance correction request submitted successfully!');
       setShowCorrectionModal(false);
       setTimeout(() => setSuccess(''), 3000);

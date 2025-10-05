@@ -3,6 +3,8 @@ import { Row, Col, Card, Table, Badge, Button, Modal, Form, Alert, Spinner } fro
 import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
+import { studentService } from '../services/studentService';
+import { feeService } from '../services/feeService';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -30,48 +32,21 @@ export const StudentFeePayment: React.FC = () => {
   const loadFees = async () => {
     setLoading(true);
     try {
-      // Mock fee data
-      const mockFees = [
-        {
-          id: '1',
-          feeType: 'Tuition Fee',
-          term: 'First Term 2024-2025',
-          amount: 50000,
-          dueDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
-          status: 'pending',
-          description: 'Tuition fee for first term'
-        },
-        {
-          id: '2',
-          feeType: 'Library Fee',
-          term: 'Annual 2024-2025',
-          amount: 2000,
-          dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
-          status: 'pending',
-          description: 'Annual library membership'
-        },
-        {
-          id: '3',
-          feeType: 'Examination Fee',
-          term: 'Mid-Term 2024',
-          amount: 3000,
-          dueDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-          status: 'paid',
-          paidDate: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-          transactionId: 'TXN123456789',
-          description: 'Mid-term examination fee'
-        },
-        {
-          id: '4',
-          feeType: 'Sports Fee',
-          term: 'Annual 2024-2025',
-          amount: 5000,
-          dueDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-          status: 'overdue',
-          description: 'Annual sports activity fee'
-        }
-      ];
-      setFees(mockFees);
+      const me = await studentService.getStudentByEmail(user?.email || '');
+      const studentId = (me as any).id;
+      const items = await feeService.listByStudent(studentId);
+      const normalized = (items || []).map((f: any) => ({
+        id: f.id,
+        feeType: f.feeType,
+        term: f.term || f.academicYear,
+        amount: f.amount,
+        dueDate: f.dueDate,
+        status: (f.status || 'PENDING').toString().toLowerCase(),
+        description: f.feeDescription || '',
+        paidDate: f.paidDate,
+        transactionId: f.transactionId,
+      }));
+      setFees(normalized);
     } catch (e: any) {
       setError('Failed to load fee information');
     } finally {
@@ -193,17 +168,9 @@ export const StudentFeePayment: React.FC = () => {
                               Receipt
                             </Button>
                           ) : (
-                            <Button
-                              size="sm"
-                              variant={fee.status === 'overdue' ? 'danger' : 'primary'}
-                              onClick={() => {
-                                setSelectedFee(fee);
-                                setShowPaymentModal(true);
-                              }}
-                            >
-                              <i className="bi bi-credit-card me-1"></i>
-                              Pay Now
-                            </Button>
+                            <Badge bg={fee.status === 'overdue' ? 'danger' : 'secondary'}>
+                              {fee.status === 'overdue' ? 'Overdue' : 'Pending'}
+                            </Badge>
                           )}
                         </td>
                       </tr>

@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Row, Col, Card, Table, Button, Form, Modal, Badge, Alert } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
+import { useAuth } from '../contexts/AuthContext';
+import { teacherService } from '../services/teacherService';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -14,12 +16,14 @@ const sidebarItems = [
 ];
 
 export const TeacherGrading: React.FC = () => {
+  const { user } = useAuth();
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedType, setSelectedType] = useState('');
   const [selectedItem, setSelectedItem] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [gradingStudent, setGradingStudent] = useState<any>(null);
   const [success, setSuccess] = useState('');
+  const [error, setError] = useState('');
 
   const [gradeData, setGradeData] = useState({
     marksObtained: '',
@@ -27,11 +31,43 @@ export const TeacherGrading: React.FC = () => {
     feedback: ''
   });
 
-  const [submissions, setSubmissions] = useState([
-    { id: '1', studentName: 'John Doe', rollNo: '101', status: 'pending', marks: null, grade: null },
-    { id: '2', studentName: 'Jane Smith', rollNo: '102', status: 'pending', marks: null, grade: null },
-    { id: '3', studentName: 'Mike Johnson', rollNo: '103', status: 'graded', marks: 85, grade: 'A' },
-  ]);
+  const [assignments, setAssignments] = useState<any[]>([]);
+  const [submissions, setSubmissions] = useState<any[]>([]);
+
+  useEffect(() => {
+    loadAssignments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  const loadAssignments = async () => {
+    if (!user?.id) return;
+    setError('');
+    try {
+      const list = await teacherService.listTeacherAssignments(user.id);
+      setAssignments(list || []);
+    } catch (e: any) {
+      setError(e?.response?.data?.message || 'Failed to load assignments');
+    }
+  };
+
+  const loadSubmissions = async (assignmentId: string) => {
+    if (!user?.id || !assignmentId) return;
+    setError('');
+    try {
+      const list = await teacherService.listSubmissions(user.id, assignmentId);
+      const normalized = (list || []).map((s: any) => ({
+        id: s.id,
+        studentName: s.studentName || s.student?.name || s.studentId,
+        rollNo: s.rollNo || s.student?.rollNumber || '-',
+        status: s.status?.toLowerCase() === 'graded' ? 'graded' : (s.status || 'submitted'),
+        marks: s.marksObtained ?? s.marks ?? null,
+        grade: s.grade || null,
+      }));
+      setSubmissions(normalized);
+    } catch (e: any) {
+      setError(e?.response?.data?.message || 'Failed to load submissions');
+    }
+  };
 
   const handleGrade = (student: any) => {
     setGradingStudent(student);
@@ -43,15 +79,17 @@ export const TeacherGrading: React.FC = () => {
     setShowModal(true);
   };
 
-  const handleSubmitGrade = () => {
-    setSubmissions(submissions.map(s =>
-      s.id === gradingStudent.id
-        ? { ...s, status: 'graded', marks: Number(gradeData.marksObtained), grade: gradeData.grade }
-        : s
-    ));
-    setSuccess(`Grade submitted for ${gradingStudent.studentName}. Student and parents notified.`);
-    setShowModal(false);
-    setTimeout(() => setSuccess(''), 3000);
+  const handleSubmitGrade = async () => {
+    if (!user?.id || !selectedItem || !gradingStudent) return;
+    try {
+      await teacherService.gradeSubmissionV2(user.id, selectedItem, gradingStudent.id, Number(gradeData.marksObtained), gradeData.feedback);
+      await loadSubmissions(selectedItem);
+      setSuccess(`Grade submitted for ${gradingStudent.studentName}.`);
+      setShowModal(false);
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (e: any) {
+      setError(e?.response?.data?.message || 'Failed to submit grade');
+    }
   };
 
   const calculateGrade = (marks: number) => {
@@ -85,9 +123,12 @@ export const TeacherGrading: React.FC = () => {
                     <Form.Label><strong>Class/Section</strong></Form.Label>
                     <Form.Select value={selectedClass} onChange={(e) => setSelectedClass(e.target.value)}>
                       <option value="">All Classes</option>
-                      <option value="Grade 10-A">Grade 10-A</option>
-                      <option value="Grade 10-B">Grade 10-B</option>
-                      <option value="Grade 11-A">Grade 11-A</option>
+                      {(assignments || [])
+                        .map((a: any) => a.classId)
+                        .filter((v: any, i: number, arr: any[]) => v && arr.indexOf(v) === i)
+                        .map((cid: string) => (
+                          <option key={cid} value={cid}>{cid}</option>
+                        ))}
                     </Form.Select>
                   </Form.Group>
                 </Col>
@@ -104,11 +145,15 @@ export const TeacherGrading: React.FC = () => {
                 <Col md={6}>
                   <Form.Group className="mb-3">
                     <Form.Label><strong>Exam/Assignment</strong></Form.Label>
-                    <Form.Select value={selectedItem} onChange={(e) => setSelectedItem(e.target.value)}>
+                    <Form.Select value={selectedItem} onChange={async (e) => {
+                      const id = e.target.value; setSelectedItem(id); if (id) await loadSubmissions(id);
+                    }}>
                       <option value="">Select item...</option>
-                      <option value="1">Math Assignment 5</option>
-                      <option value="2">Mid-Term Exam - Mathematics</option>
-                      <option value="3">Physics Lab Report</option>
+                      {(assignments || [])
+                        .filter((a: any) => !selectedClass || a.classId === selectedClass)
+                        .map((a: any) => (
+                          <option key={a.id} value={a.id}>{a.title || a.name}</option>
+                        ))}
                     </Form.Select>
                   </Form.Group>
                 </Col>
@@ -119,8 +164,8 @@ export const TeacherGrading: React.FC = () => {
           {selectedItem && (
             <Card className="border-0 shadow-sm">
               <Card.Header className="bg-white">
-                <h5 className="mb-0">Submissions - Math Assignment 5</h5>
-                <small className="text-muted">Total Marks: 100</small>
+                <h5 className="mb-0">Submissions</h5>
+                <small className="text-muted">Grading</small>
               </Card.Header>
               <Card.Body>
                 <Table responsive hover>

@@ -3,6 +3,8 @@ import { Row, Col, Card, Table, Badge, Alert, Spinner } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
+import { timetableService } from '../services/timetableService';
+import { studentService } from '../services/studentService';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -27,45 +29,32 @@ export const StudentTimetable: React.FC = () => {
   const loadTimetable = async () => {
     setLoading(true);
     try {
-      // Mock timetable data
-      const mockTimetable = {
-        MONDAY: [
-          { period: '1', time: '09:00-10:00', subject: 'Mathematics', teacher: 'Mr. Smith', room: '101' },
-          { period: '2', time: '10:00-11:00', subject: 'Physics', teacher: 'Dr. Johnson', room: 'Lab 1' },
-          { period: 'BREAK', time: '11:00-11:30', subject: 'Break', teacher: '', room: '' },
-          { period: '3', time: '11:30-12:30', subject: 'Chemistry', teacher: 'Ms. Davis', room: 'Lab 2' },
-          { period: '4', time: '12:30-01:30', subject: 'English', teacher: 'Ms. Williams', room: '203' },
-        ],
-        TUESDAY: [
-          { period: '1', time: '09:00-10:00', subject: 'English', teacher: 'Ms. Williams', room: '203' },
-          { period: '2', time: '10:00-11:00', subject: 'Mathematics', teacher: 'Mr. Smith', room: '101' },
-          { period: 'BREAK', time: '11:00-11:30', subject: 'Break', teacher: '', room: '' },
-          { period: '3', time: '11:30-12:30', subject: 'Computer Science', teacher: 'Mr. Brown', room: 'Lab 3' },
-          { period: '4', time: '12:30-01:30', subject: 'History', teacher: 'Dr. Wilson', room: '205' },
-        ],
-        WEDNESDAY: [
-          { period: '1', time: '09:00-10:00', subject: 'Physics', teacher: 'Dr. Johnson', room: 'Lab 1' },
-          { period: '2', time: '10:00-11:00', subject: 'Chemistry', teacher: 'Ms. Davis', room: 'Lab 2' },
-          { period: 'BREAK', time: '11:00-11:30', subject: 'Break', teacher: '', room: '' },
-          { period: '3', time: '11:30-12:30', subject: 'Mathematics', teacher: 'Mr. Smith', room: '101' },
-          { period: '4', time: '12:30-01:30', subject: 'Physical Education', teacher: 'Coach Taylor', room: 'Ground' },
-        ],
-        THURSDAY: [
-          { period: '1', time: '09:00-10:00', subject: 'History', teacher: 'Dr. Wilson', room: '205' },
-          { period: '2', time: '10:00-11:00', subject: 'English', teacher: 'Ms. Williams', room: '203' },
-          { period: 'BREAK', time: '11:00-11:30', subject: 'Break', teacher: '', room: '' },
-          { period: '3', time: '11:30-12:30', subject: 'Computer Science', teacher: 'Mr. Brown', room: 'Lab 3' },
-          { period: '4', time: '12:30-01:30', subject: 'Physics', teacher: 'Dr. Johnson', room: 'Lab 1' },
-        ],
-        FRIDAY: [
-          { period: '1', time: '09:00-10:00', subject: 'Chemistry', teacher: 'Ms. Davis', room: 'Lab 2' },
-          { period: '2', time: '10:00-11:00', subject: 'Mathematics', teacher: 'Mr. Smith', room: '101' },
-          { period: 'BREAK', time: '11:00-11:30', subject: 'Break', teacher: '', room: '' },
-          { period: '3', time: '11:30-12:30', subject: 'English', teacher: 'Ms. Williams', room: '203' },
-          { period: '4', time: '12:30-01:30', subject: 'Library', teacher: 'Ms. Martin', room: 'Library' },
-        ],
-      };
-      setTimetable(mockTimetable);
+      const me = await studentService.getStudentByEmail(user?.email || '');
+      const classId = (me as any).classId;
+      const section = (me as any).section;
+      const tt = await timetableService.getByClass(classId, section);
+      // Transform to UI grid {DAY: [{period,time,subject,teacher,room}, ...]}
+      const byDay: any = {};
+      const order: Record<string, number> = {};
+      (tt.entries || []).forEach((e: any, idx: number) => {
+        const day = (e.day || '').toUpperCase();
+        if (!byDay[day]) byDay[day] = [];
+        const time = `${(e.startTime || '').slice(0,5)}-${(e.endTime || '').slice(0,5)}`;
+        byDay[day].push({
+          period: e.period || String(idx + 1),
+          time,
+          subject: e.subjectName,
+          teacher: e.teacherName,
+          room: e.room,
+          periodType: e.periodType,
+        });
+        if (!(time in order)) order[time] = Object.keys(order).length;
+      });
+      // Sort each day's entries by start time
+      Object.keys(byDay).forEach((d) => {
+        byDay[d].sort((a: any, b: any) => a.time.localeCompare(b.time));
+      });
+      setTimetable(byDay);
     } catch (e: any) {
       setError('Failed to load timetable');
     } finally {

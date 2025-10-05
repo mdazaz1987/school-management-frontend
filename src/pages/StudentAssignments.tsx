@@ -3,6 +3,7 @@ import { Row, Col, Card, Table, Badge, Button, Modal, Form, Alert, Spinner, Tabs
 import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
+import apiService from '../services/api';
 import { studentService } from '../services/studentService';
 
 const sidebarItems = [
@@ -36,65 +37,48 @@ export const StudentAssignments: React.FC = () => {
     setLoading(true);
     setError('');
     try {
-      // Fetch student data for future enhancements
-      // const student = await studentService.getStudentByEmail(user.email);
-      // const dashboard = await studentService.getStudentDashboard(student.id);
-      
-      // Mock assignments data (replace with actual API call)
-      const mockAssignments = [
-        {
-          id: '1',
-          title: 'Mathematics - Chapter 5 Exercise',
-          subject: 'Mathematics',
-          description: 'Complete all problems from Chapter 5',
-          dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
-          assignedDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-          totalMarks: 100,
-          status: 'pending',
-          attachments: []
-        },
-        {
-          id: '2',
-          title: 'Physics - Lab Report',
-          subject: 'Physics',
-          description: 'Submit lab report for the recent experiment',
-          dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
-          assignedDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-          totalMarks: 50,
-          status: 'pending',
-          attachments: []
-        },
-        {
-          id: '3',
-          title: 'English - Essay Writing',
-          subject: 'English',
-          description: 'Write an essay on "My Future Goals"',
-          dueDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-          assignedDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-          totalMarks: 50,
-          status: 'submitted',
-          submittedDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-          grade: 'A',
-          marksObtained: 45,
-          feedback: 'Excellent work! Well structured essay.'
-        },
-        {
-          id: '4',
-          title: 'Chemistry - Periodic Table Quiz',
-          subject: 'Chemistry',
-          description: 'Online quiz on periodic table elements',
-          dueDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-          assignedDate: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(),
-          totalMarks: 25,
-          status: 'graded',
-          submittedDate: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(),
-          grade: 'B+',
-          marksObtained: 21,
-          feedback: 'Good attempt. Review noble gases.'
+      // Resolve student by email to get studentId/class/section
+      const student = await studentService.getStudentByEmail(user.email);
+      const studentId = (student as any).id;
+      const classId = (student as any).classId;
+      const section = (student as any).section;
+
+      // Fetch assignments and submissions
+      const [assignmentsData, submissionsData] = await Promise.all([
+        apiService.get<any[]>(`/students/${studentId}/assignments`, { classId, section }),
+        apiService.get<any[]>(`/students/${studentId}/assignments/submissions`),
+      ]);
+
+      // Index submissions by assignmentId
+      const subMap: Record<string, any> = {};
+      (submissionsData || []).forEach((s: any) => {
+        subMap[s.assignmentId] = s;
+      });
+
+      const normalized = (assignmentsData || []).map((a: any) => {
+        const sub = subMap[a.id];
+        let status = 'pending';
+        if (sub) {
+          if (sub.status === 'GRADED') status = 'graded';
+          else status = 'submitted';
         }
-      ];
-      
-      setAssignments(mockAssignments);
+        return {
+          id: a.id,
+          title: a.title,
+          subject: a.subjectName || a.subject || 'Subject',
+          description: a.description,
+          dueDate: a.dueDate,
+          assignedDate: a.assignedDate,
+          totalMarks: a.maxMarks || a.totalMarks,
+          status,
+          submittedDate: sub?.submittedAt,
+          grade: sub?.grade,
+          marksObtained: sub?.marksObtained,
+          feedback: sub?.feedback,
+        };
+      });
+
+      setAssignments(normalized);
     } catch (e: any) {
       setError(e.response?.data?.message || 'Failed to load assignments');
     } finally {
@@ -103,12 +87,20 @@ export const StudentAssignments: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    if (!selectedAssignment) return;
-    
-    // Mock submission (replace with actual API call)
-    setShowSubmitModal(false);
-    alert('Assignment submitted successfully!');
-    loadAssignments();
+    if (!selectedAssignment || !user?.email) return;
+    try {
+      const student = await studentService.getStudentByEmail(user.email);
+      const studentId = (student as any).id;
+      await apiService.post(`/students/${studentId}/assignments/${selectedAssignment.id}/submit`, {
+        content: submissionText,
+        attachments: [] as string[],
+      });
+      setShowSubmitModal(false);
+      setSubmissionText('');
+      loadAssignments();
+    } catch (e: any) {
+      setError(e.response?.data?.message || 'Failed to submit assignment');
+    }
   };
 
   const filteredAssignments = assignments.filter(a => {

@@ -50,6 +50,8 @@ import { TeacherGrading } from './pages/TeacherGrading';
 import { TeacherTimetable } from './pages/TeacherTimetable';
 import { ContactSupport } from './pages/ContactSupport';
 import { TeacherStudents } from './pages/TeacherStudents';
+import { AdminFinanceTools } from './pages/AdminFinanceTools';
+import { AdminNotificationTools } from './pages/AdminNotificationTools';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactElement }> = ({ children }) => {
@@ -327,6 +329,24 @@ function App() {
             element={
               <ProtectedRoute>
                 <FeeForm />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Admin Tools */}
+          <Route
+            path="/admin/tools/finance"
+            element={
+              <ProtectedRoute>
+                <AdminFinanceTools />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/tools/notifications"
+            element={
+              <ProtectedRoute>
+                <AdminNotificationTools />
               </ProtectedRoute>
             }
           />
