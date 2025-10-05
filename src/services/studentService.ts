@@ -338,4 +338,118 @@ export const studentService = {
   async addPerformanceRecord(id: string, data: any): Promise<any> {
     return apiService.post<any>(`/students/${id}/performance`, data);
   },
+
+  // ===== LEAVE APPLICATION SYSTEM =====
+  
+  /**
+   * Apply for leave
+   */
+  async applyForLeave(data: {
+    startDate: string;
+    endDate: string;
+    reason: string;
+    leaveType: 'SICK' | 'PERSONAL' | 'FAMILY' | 'OTHER';
+  }): Promise<any> {
+    return apiService.post('/student/leave/apply', data);
+  },
+
+  /**
+   * Get my leave applications
+   */
+  async getMyLeaveApplications(): Promise<any[]> {
+    return apiService.get('/student/leave/my-applications');
+  },
+
+  /**
+   * Cancel leave application
+   */
+  async cancelLeaveApplication(leaveId: string): Promise<void> {
+    return apiService.delete(`/student/leave/${leaveId}`);
+  },
+
+  // ===== STUDENT PORTAL =====
+
+  /**
+   * Get student's own dashboard
+   */
+  async getMyDashboard(): Promise<any> {
+    return apiService.get('/student/dashboard');
+  },
+
+  /**
+   * Get my assignments
+   */
+  async getMyAssignments(): Promise<any[]> {
+    return apiService.get('/student/assignments');
+  },
+
+  /**
+   * Submit assignment
+   */
+  async submitAssignment(assignmentId: string, data: FormData): Promise<any> {
+    return apiService.post(`/student/assignments/${assignmentId}/submit`, data);
+  },
+
+  /**
+   * Get my attendance
+   */
+  async getMyAttendance(startDate?: string, endDate?: string): Promise<any[]> {
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    return apiService.get(`/student/attendance?${params.toString()}`);
+  },
+
+  /**
+   * Request attendance correction
+   */
+  async requestAttendanceCorrection(data: {
+    date: string;
+    period: string;
+    reason: string;
+  }): Promise<any> {
+    return apiService.post('/student/attendance/correction-request', data);
+  },
+
+  /**
+   * Get my exams
+   */
+  async getMyExams(): Promise<any[]> {
+    return apiService.get('/student/exams');
+  },
+
+  /**
+   * Get my results
+   */
+  async getMyResults(): Promise<any[]> {
+    return apiService.get('/student/results');
+  },
+
+  /**
+   * Get my fees
+   */
+  async getMyFees(): Promise<any[]> {
+    return apiService.get('/student/fees');
+  },
+
+  /**
+   * Get my timetable
+   */
+  async getMyTimetable(): Promise<any> {
+    return apiService.get('/student/timetable');
+  },
+
+  /**
+   * Get my notifications
+   */
+  async getMyNotifications(): Promise<any[]> {
+    return apiService.get('/student/notifications');
+  },
+
+  /**
+   * Mark notification as read
+   */
+  async markNotificationAsRead(notificationId: string): Promise<void> {
+    return apiService.put(`/student/notifications/${notificationId}/read`, {});
+  },
 };

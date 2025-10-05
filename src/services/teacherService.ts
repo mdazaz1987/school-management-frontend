@@ -235,4 +235,17 @@ export const teacherService = {
   async updateAttendance(attendanceId: string, attendance: any): Promise<any> {
     return apiService.put(`/teacher/attendance/${attendanceId}`, attendance);
   },
+
+  // Teacher Portal - Leave Approval
+  async getPendingLeaveApplications(): Promise<any[]> {
+    return apiService.get('/teacher/leave/pending');
+  },
+
+  async approveLeaveApplication(leaveId: string, comments?: string): Promise<any> {
+    return apiService.put(`/teacher/leave/${leaveId}/approve`, { comments });
+  },
+
+  async rejectLeaveApplication(leaveId: string, reason: string): Promise<any> {
+    return apiService.put(`/teacher/leave/${leaveId}/reject`, { reason });
+  },
 };
