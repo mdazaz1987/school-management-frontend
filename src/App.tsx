@@ -48,6 +48,7 @@ import { TeacherAssignments } from './pages/TeacherAssignments';
 import { TeacherAttendance } from './pages/TeacherAttendance';
 import { TeacherGrading } from './pages/TeacherGrading';
 import { TeacherTimetable } from './pages/TeacherTimetable';
+import { ContactSupport } from './pages/ContactSupport';
 import { TeacherStudents } from './pages/TeacherStudents';
 
 // Protected Route Component
@@ -129,6 +130,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Settings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/contact-support"
+            element={
+              <ProtectedRoute>
+                <ContactSupport />
               </ProtectedRoute>
             }
           />

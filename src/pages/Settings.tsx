@@ -6,10 +6,13 @@ import { useAuth } from '../contexts/AuthContext';
 import { School } from '../types';
 import { schoolService } from '../services/schoolService';
 import { useTheme } from '../contexts/ThemeContext';
+import { apiService } from '../services/api';
+import { useNavigate } from 'react-router-dom';
 
 export const Settings: React.FC = () => {
   const { user } = useAuth();
   const { theme, setTheme } = useTheme();
+  const navigate = useNavigate();
   const isAdmin = useMemo(() => (user?.roles || []).some(r => r === 'ADMIN' || r === 'ROLE_ADMIN'), [user?.roles]);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [activeTab, setActiveTab] = useState<'password' | 'notifications' | 'preferences' | 'school'>('password');
@@ -57,6 +60,24 @@ export const Settings: React.FC = () => {
   useEffect(() => {
     // keep Settings theme in sync with global ThemeContext
     setPreferences((prev) => ({ ...prev, theme }));
+    
+    // Load notification preferences from backend
+    const loadNotificationPreferences = async () => {
+      try {
+        const prefs: any = await apiService.get('/notifications/preferences');
+        setNotifications({
+          emailNotifications: prefs.emailNotifications ?? true,
+          assignmentReminders: prefs.assignmentReminders ?? true,
+          gradeUpdates: prefs.gradeUpdates ?? true,
+          attendanceAlerts: prefs.attendanceAlerts ?? true,
+          feeReminders: prefs.feeReminders ?? true,
+          systemAnnouncements: prefs.systemAnnouncements ?? true,
+        });
+      } catch (e: any) {
+        console.error('Failed to load notification preferences', e);
+      }
+    };
+    
     const maybeLoadSchool = async () => {
       if (!isAdmin || !user?.schoolId) return;
       try {
@@ -69,6 +90,8 @@ export const Settings: React.FC = () => {
         setSchoolLoading(false);
       }
     };
+    
+    loadNotificationPreferences();
     maybeLoadSchool();
   }, [isAdmin, user?.schoolId, theme]);
 
@@ -107,10 +130,21 @@ export const Settings: React.FC = () => {
     }
   };
 
-  const handleNotificationToggle = (key: keyof typeof notifications) => {
-    setNotifications({ ...notifications, [key]: !notifications[key] });
-    setSaveMessage('Notification preferences updated!');
-    setTimeout(() => setSaveMessage(''), 3000);
+  const handleNotificationToggle = async (key: keyof typeof notifications) => {
+    const updated = { ...notifications, [key]: !notifications[key] };
+    const previous = { ...notifications };
+    setNotifications(updated);
+    
+    try {
+      await apiService.put('/notifications/preferences', updated);
+      setSaveMessage('Notification preferences updated!');
+      setTimeout(() => setSaveMessage(''), 3000);
+    } catch (error: any) {
+      console.error('Failed to save notification preferences', error);
+      setNotifications(previous); // Rollback on error
+      setErrorMessage('Failed to save preferences. Please try again.');
+      setTimeout(() => setErrorMessage(''), 3000);
+    }
   };
 
   const handlePreferenceChange = (key: keyof typeof preferences, value: string) => {
@@ -195,7 +229,7 @@ export const Settings: React.FC = () => {
                 <p className="small text-muted mb-3">
                   Contact support for assistance with your account
                 </p>
-                <Button variant="outline-primary" size="sm">
+                <Button variant="outline-primary" size="sm" onClick={() => navigate('/contact-support')}>
                   <i className="bi bi-envelope me-2"></i>
                   Contact Support
                 </Button>
