@@ -53,10 +53,8 @@ export const TeacherAssignments: React.FC = () => {
       setClasses(cls);
       setSubjects(subs);
       
-      // Load assignments
-      const list = user?.id 
-        ? await teacherService.listTeacherAssignments(user.id)
-        : await teacherService.getMyAssignments();
+      // Load assignments via session-based endpoint
+      const list = await teacherService.getMyAssignments();
       const normalized = (list || []).map((a: any) => ({
         id: a.id,
         title: a.title,
@@ -79,7 +77,7 @@ export const TeacherAssignments: React.FC = () => {
   };
 
   const handleCreate = async () => {
-    if (!user?.id) return;
+    if (!user?.id || !user?.schoolId) return;
     try {
       setLoading(true); setError('');
       const payload: any = {
@@ -89,6 +87,8 @@ export const TeacherAssignments: React.FC = () => {
         subject: formData.subject,
         dueDate: formData.dueDate,
         maxMarks: formData.totalMarks,
+        schoolId: user.schoolId,
+        assignedDate: new Date().toISOString().split('T')[0],
       };
       const created = await teacherService.createAssignment(payload);
       setSuccess('Assignment created successfully.');
@@ -117,7 +117,7 @@ export const TeacherAssignments: React.FC = () => {
   };
 
   const handleUpdate = async () => {
-    if (!user?.id || !editingAssignment) return;
+    if (!user?.id || !editingAssignment || !user?.schoolId) return;
     try {
       setLoading(true); setError('');
       const payload: any = {
@@ -127,6 +127,7 @@ export const TeacherAssignments: React.FC = () => {
         subject: formData.subject,
         dueDate: formData.dueDate,
         maxMarks: formData.totalMarks,
+        schoolId: user.schoolId,
       };
       await teacherService.updateAssignment(editingAssignment.id, payload);
       setSuccess('Assignment updated successfully!');

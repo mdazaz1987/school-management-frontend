@@ -24,13 +24,34 @@ export const TeacherTimetable: React.FC = () => {
         const stored = localStorage.getItem('user');
         const me = stored ? JSON.parse(stored) : {};
         const schoolId = me?.schoolId;
-        const teacherId = me?.id;
+        
+        // Get teacher profile to find Teacher.id (not User.id)
+        const teacherList = await timetableService.list(schoolId ? { schoolId } : undefined);
         const all = await timetableService.list(schoolId ? { schoolId } : undefined);
         const day = new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
-        const entries = (all || [])
+        
+        // Flatten all timetable entries
+        let entries = (all || [])
           .flatMap((t: any) => (t.entries || []).map((e: any) => ({ ...e, classId: t.classId, className: t.className })))
-          .filter((e: any) => String(e.day).toUpperCase() === day)
-          .filter((e: any) => !teacherId || e.teacherId === teacherId)
+          .filter((e: any) => String(e.day).toUpperCase() === day);
+        
+        // Try to get Teacher.id from user record (some user records have teacherId field)
+        // Otherwise, fetch teacher's classes and filter by those
+        if (me?.teacherId) {
+          entries = entries.filter((e: any) => e.teacherId === me.teacherId);
+        } else {
+          // Fallback: include entries for teacher's assigned classes
+          try {
+            const { teacherService } = await import('../services/teacherService');
+            const myClasses = await teacherService.getMyClasses();
+            const classIds = new Set((myClasses || []).map((c: any) => c.id));
+            entries = entries.filter((e: any) => classIds.has(e.classId));
+          } catch {
+            // If can't get classes, show all entries for this school
+          }
+        }
+        
+        const mapped = entries
           .map((e: any) => ({
             time: String(e.startTime).slice(0,5),
             duration: e.endTime && e.startTime ? '1h' : '',
@@ -39,7 +60,7 @@ export const TeacherTimetable: React.FC = () => {
             room: e.room || '—',
           }))
           .sort((a: any, b: any) => a.time.localeCompare(b.time));
-        setSchedule(entries);
+        setSchedule(mapped);
       } catch {
         setSchedule([]);
       }

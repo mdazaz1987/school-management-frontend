@@ -40,10 +40,9 @@ export const TeacherGrading: React.FC = () => {
   }, [user?.id]);
 
   const loadAssignments = async () => {
-    if (!user?.id) return;
     setError('');
     try {
-      const list = await teacherService.listTeacherAssignments(user.id);
+      const list = await teacherService.getMyAssignments();
       setAssignments(list || []);
     } catch (e: any) {
       setError(e?.response?.data?.message || 'Failed to load assignments');
@@ -51,10 +50,10 @@ export const TeacherGrading: React.FC = () => {
   };
 
   const loadSubmissions = async (assignmentId: string) => {
-    if (!user?.id || !assignmentId) return;
+    if (!assignmentId) return;
     setError('');
     try {
-      const list = await teacherService.listSubmissions(user.id, assignmentId);
+      const list = await teacherService.getAssignmentSubmissions(assignmentId);
       const normalized = (list || []).map((s: any) => ({
         id: s.id,
         studentName: s.studentName || s.student?.name || s.studentId,
@@ -80,9 +79,9 @@ export const TeacherGrading: React.FC = () => {
   };
 
   const handleSubmitGrade = async () => {
-    if (!user?.id || !selectedItem || !gradingStudent) return;
+    if (!selectedItem || !gradingStudent) return;
     try {
-      await teacherService.gradeSubmissionV2(user.id, selectedItem, gradingStudent.id, Number(gradeData.marksObtained), gradeData.feedback);
+      await teacherService.gradeSubmission(gradingStudent.id, Number(gradeData.marksObtained), gradeData.feedback);
       await loadSubmissions(selectedItem);
       setSuccess(`Grade submitted for ${gradingStudent.studentName}.`);
       setShowModal(false);
