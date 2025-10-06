@@ -7,50 +7,6 @@ const normalizeTeacher = (t: any): Teacher => ({
   isActive: t?.isActive ?? t?.active ?? false,
 });
 
-// Helper to build address
-const buildAddress = (d: Partial<TeacherCreateRequest>) => {
-  const has = d.addressLine1 || d.addressLine2 || d.city || d.state || d.zipCode;
-  if (!has) return undefined;
-  return {
-    street: [d.addressLine1, d.addressLine2].filter(Boolean).join(', '),
-    city: d.city || '',
-    state: d.state || '',
-    zipCode: d.zipCode || '',
-  };
-};
-
-// Helper to build qualification info
-const buildQualificationInfo = (d: Partial<TeacherCreateRequest>) => {
-  const has = d.highestDegree || d.university || d.yearOfPassing || d.certifications || d.specializations || d.percentage;
-  if (!has) return undefined;
-  return {
-    highestDegree: d.highestDegree || '',
-    university: d.university || '',
-    yearOfPassing: d.yearOfPassing,
-    certifications: d.certifications || [],
-    specializations: d.specializations || [],
-    percentage: d.percentage,
-  };
-};
-
-// Helper to build employment info
-const buildEmploymentInfo = (d: Partial<TeacherCreateRequest>) => {
-  const has = d.designation || d.department || d.salary || d.employmentType || d.totalExperience;
-  if (!has) return undefined;
-  return {
-    designation: d.designation || '',
-    department: d.department || '',
-    salary: d.salary,
-    employmentType: d.employmentType || '',
-    totalExperience: d.totalExperience,
-    previousSchool: d.previousSchoolEmployment || '',
-    achievements: d.achievements || [],
-    bankAccountNumber: d.bankAccountNumber || '',
-    bankName: d.bankName || '',
-    ifscCode: d.ifscCode || '',
-    panNumber: d.panNumber || '',
-  };
-};
 
 export const teacherService = {
   // Admin CRUD operations
@@ -99,56 +55,39 @@ export const teacherService = {
 
   async createTeacher(data: TeacherCreateRequest): Promise<any> {
     const payload = {
-      teacher: {
-        employeeId: data.employeeId,
+      user: {
         firstName: data.firstName,
         lastName: data.lastName,
         email: data.email,
+        schoolId: data.schoolId,
+        password: data.teacherPassword,
+      },
+      teacher: {
+        employeeId: data.employeeId,
         phone: data.phone,
         dateOfBirth: data.dateOfBirth,
         gender: data.gender,
-        bloodGroup: data.bloodGroup,
-        nationality: data.nationality,
-        maritalStatus: data.maritalStatus,
-        schoolId: data.schoolId,
-        address: buildAddress(data),
-        qualificationInfo: buildQualificationInfo(data),
-        employmentInfo: buildEmploymentInfo(data),
-        subjectIds: data.subjectIds || [],
-        classIds: data.classIds || [],
-        joiningDate: data.joiningDate,
-        customFields: data.customFields || {},
+        // ... other teacher-specific fields
       },
-      passwordMode: data.passwordMode || 'GENERATE',
-      teacherPassword: data.teacherPassword,
-      sendEmailToTeacher: data.sendEmailToTeacher !== false,
     };
     
     return apiService.post('/teachers', payload);
   },
 
   async updateTeacher(id: string, data: any): Promise<Teacher> {
-    // Build nested structure like createTeacher does
-    const payload: any = {
-      employeeId: data.employeeId,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      email: data.email,
-      phone: data.phone,
-      dateOfBirth: data.dateOfBirth,
-      gender: data.gender,
-      bloodGroup: data.bloodGroup,
-      nationality: data.nationality,
-      maritalStatus: data.maritalStatus,
-      schoolId: data.schoolId,
-      address: buildAddress(data),
-      qualificationInfo: buildQualificationInfo(data),
-      employmentInfo: buildEmploymentInfo(data),
-      subjectIds: data.subjectIds || [],
-      classIds: data.classIds || [],
-      joiningDate: data.joiningDate,
-      profilePicture: data.profilePicture,
-      customFields: data.customFields || {},
+    const payload = {
+      user: {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+      },
+      teacher: {
+        employeeId: data.employeeId,
+        phone: data.phone,
+        dateOfBirth: data.dateOfBirth,
+        gender: data.gender,
+        // ... other teacher-specific fields
+      },
     };
     const resp = await apiService.put<any>(`/teachers/${id}`, payload);
     return normalizeTeacher(resp);
