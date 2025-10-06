@@ -28,38 +28,37 @@ export const ParentChildren: React.FC = () => {
   const loadChildren = async () => {
     setLoading(true);
     try {
-      // Mock data - replace with actual API call
-      const mockChildren = [
-        {
-          id: '1',
-          firstName: 'John',
-          lastName: 'Doe',
-          className: 'Class 10 - Section A',
-          rollNumber: '101',
-          email: 'john.doe@student.com',
-          phone: '9876543210',
-          attendance: 92,
-          averageGrade: 85,
-          pendingFees: 5000,
-          profilePicture: null
-        },
-        {
-          id: '2',
-          firstName: 'Jane',
-          lastName: 'Doe',
-          className: 'Class 8 - Section B',
-          rollNumber: '205',
-          email: 'jane.doe@student.com',
-          phone: '9876543211',
-          attendance: 95,
-          averageGrade: 90,
-          pendingFees: 0,
-          profilePicture: null
+      const response = await fetch('/api/parent/children', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
         }
-      ];
-      setChildren(mockChildren);
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to load children');
+      }
+      
+      const data = await response.json();
+      
+      // Transform StudentDTO to match UI expectations
+      const transformed = data.map((child: any) => ({
+        id: child.id,
+        firstName: child.firstName || '',
+        lastName: child.lastName || '',
+        className: child.className || 'Not assigned',
+        rollNumber: child.rollNumber || 'N/A',
+        email: child.email || '',
+        phone: child.phone || '',
+        attendance: 0, // Will need separate API call for attendance
+        averageGrade: 0, // Will need separate API call for grades
+        pendingFees: 0, // Will need separate API call for fees
+        profilePicture: child.profilePicture
+      }));
+      
+      setChildren(transformed);
     } catch (e: any) {
-      setError('Failed to load children');
+      setError('Failed to load children: ' + (e.message || 'Unknown error'));
     } finally {
       setLoading(false);
     }

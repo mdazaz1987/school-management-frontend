@@ -72,6 +72,8 @@ export const timetableService = {
 
   async update(id: string, data: Partial<Timetable>): Promise<Timetable> {
     const payload: any = {
+      schoolId: data.schoolId,
+      classId: data.classId,
       section: data.section,
       academicYear: data.academicYear,
       term: data.term,
