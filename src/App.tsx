@@ -26,7 +26,7 @@ import { ExamForm } from './pages/ExamForm';
 import { FeeList } from './pages/FeeList';
 import { FeeForm } from './pages/FeeForm';
 import { TimetableList } from './pages/TimetableList';
-import { TimetableForm } from './pages/TimetableForm';
+import { TimetableFormImproved as TimetableForm } from './pages/TimetableFormImproved';
 import { TeacherList } from './pages/TeacherList';
 import { TeacherForm } from './pages/TeacherForm';
 import { TeacherDetail } from './pages/TeacherDetail';
