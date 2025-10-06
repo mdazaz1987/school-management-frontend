@@ -108,6 +108,11 @@ export interface Student {
   performanceRecords?: PerformanceRecord[];
   aadhaarNumber?: string;
   apaarId?: string;
+  birthCertificateNumber?: string;
+  // Attachment IDs stored on server; downloadable via dedicated endpoints
+  aadhaarAttachmentId?: string;
+  apaarAttachmentId?: string;
+  birthCertificateAttachmentId?: string;
 }
 
 export interface StudentAddress {
@@ -196,6 +201,7 @@ export interface StudentCreateRequest {
   isActive?: boolean;
   aadhaarNumber?: string;
   apaarId?: string;
+  birthCertificateNumber?: string;
 }
 
 export interface StudentUpdateRequest {
@@ -238,6 +244,7 @@ export interface StudentUpdateRequest {
   profilePicture?: string;
   aadhaarNumber?: string;
   apaarId?: string;
+  birthCertificateNumber?: string;
 }
 
 // Teacher types

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner, Nav, Tab } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
+import { CredentialsModal } from '../components/CredentialsModal';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { teacherService } from '../services/teacherService';
@@ -19,6 +20,10 @@ export const TeacherForm: React.FC = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [activeTab, setActiveTab] = useState('personal');
+
+  // Credentials modal state
+  const [showCredentialsModal, setShowCredentialsModal] = useState(false);
+  const [createdCredentials, setCreatedCredentials] = useState<any[]>([]);
 
   // Prefer schoolId from auth context, fallback to localStorage if needed
   const { user } = useAuth();
@@ -198,19 +203,22 @@ export const TeacherForm: React.FC = () => {
         const response = await teacherService.createTeacher({ ...formData, schoolId: formData.schoolId || schoolId });
         setSuccess('Teacher created successfully!');
         
-        // Show credentials if generated
+        // Show credentials in modal if generated
         if (response.credentialsCreated && response.credentialsCreated.length > 0) {
-          const cred = response.credentialsCreated[0];
-          if (cred.password) {
-            alert(`Teacher login credentials:\nEmail: ${cred.email}\nPassword: ${cred.password}\n\nPlease save these credentials.`);
+          const credsWithPw = response.credentialsCreated.filter((c: any) => c.password);
+          if (credsWithPw.length > 0) {
+            setCreatedCredentials(response.credentialsCreated);
+            setShowCredentialsModal(true);
           }
         }
       }
       
-      // Navigate back to list after a short delay
-      setTimeout(() => {
-        navigate('/teachers');
-      }, 1500);
+      // Navigate back to list after a short delay if modal not shown
+      if (!showCredentialsModal) {
+        setTimeout(() => {
+          navigate('/teachers');
+        }, 1500);
+      }
     } catch (err: any) {
       console.error('Error saving teacher:', err);
       setError(err.response?.data?.message || 'Failed to save teacher');
@@ -840,6 +848,16 @@ export const TeacherForm: React.FC = () => {
             </Card>
           </Tab.Container>
         </Form>
+
+        {/* Credentials Modal */}
+        <CredentialsModal
+          show={showCredentialsModal}
+          onHide={() => {
+            setShowCredentialsModal(false);
+            navigate('/teachers');
+          }}
+          credentials={createdCredentials}
+        />
       </Container>
     </Layout>
   );

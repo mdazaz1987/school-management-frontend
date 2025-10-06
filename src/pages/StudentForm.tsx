@@ -31,6 +31,20 @@ export const StudentForm: React.FC = () => {
   const [sendEmailToParents, setSendEmailToParents] = useState(true);
   const [showCredentialsModal, setShowCredentialsModal] = useState(false);
   const [createdCredentials, setCreatedCredentials] = useState<any[]>([]);
+  // Document uploads
+  const [aadhaarFile, setAadhaarFile] = useState<File | null>(null);
+  const [apaarFile, setApaarFile] = useState<File | null>(null);
+  const [birthCertFile, setBirthCertFile] = useState<File | null>(null);
+  
+  const uploadSelectedDocuments = async (sid: string) => {
+    const uploads: Promise<any>[] = [];
+    if (aadhaarFile) uploads.push(studentService.uploadGovtIdDocument(sid, 'aadhaar', aadhaarFile));
+    if (apaarFile) uploads.push(studentService.uploadGovtIdDocument(sid, 'apaar', apaarFile));
+    if (birthCertFile) uploads.push(studentService.uploadGovtIdDocument(sid, 'birth-certificate', birthCertFile));
+    if (uploads.length > 0) {
+      try { await Promise.all(uploads); } catch (err) { console.error('Document upload failed', err); }
+    }
+  };
   
   // Parent account creation options
   const [createParentAccount, setCreateParentAccount] = useState(true);
@@ -80,6 +94,7 @@ export const StudentForm: React.FC = () => {
     isActive: true,
     aadhaarNumber: '',
     apaarId: '',
+    birthCertificateNumber: '',
   });
 
   const loadClasses = useCallback(async () => {
@@ -149,6 +164,7 @@ export const StudentForm: React.FC = () => {
         isActive: student.isActive,
         aadhaarNumber: student.aadhaarNumber || '',
         apaarId: student.apaarId || '',
+        birthCertificateNumber: student.birthCertificateNumber || '',
       });
     } catch (err: any) {
       console.error('Error loading student:', err);
@@ -207,6 +223,8 @@ export const StudentForm: React.FC = () => {
         if (typeof formData.isActive === 'boolean') {
           await studentService.updateStatus(id, !!formData.isActive);
         }
+        // Upload any newly selected documents
+        await uploadSelectedDocuments(id);
         setSuccess('Student updated successfully!');
         
         setTimeout(() => {
@@ -239,6 +257,11 @@ export const StudentForm: React.FC = () => {
         });
 
         setSuccess('Student created successfully!');
+
+        // Upload any selected documents for the newly created student
+        if (response?.student?.id) {
+          await uploadSelectedDocuments(response.student.id);
+        }
 
         // Show credentials modal if there are credentials to display
         if (response.credentialsCreated && response.credentialsCreated.length > 0) {
@@ -323,15 +346,19 @@ export const StudentForm: React.FC = () => {
                   <Row>
                     <Col md={6}>
                       <Form.Group className="mb-3">
-                        <Form.Label>Admission Number <span className="text-danger">*</span></Form.Label>
+                        <Form.Label>Admission Number</Form.Label>
                         <Form.Control
                           type="text"
                           name="admissionNumber"
                           value={formData.admissionNumber}
                           onChange={handleChange}
-                          required
                           disabled={isEditMode}
                         />
+                        {!isEditMode && (
+                          <Form.Text className="text-muted">
+                            Leave blank to auto-generate an Admission ID
+                          </Form.Text>
+                        )}
                       </Form.Group>
                     </Col>
                     <Col md={6}>
@@ -591,6 +618,54 @@ export const StudentForm: React.FC = () => {
                         <Form.Text className="text-muted">
                           12 alphanumeric characters (Automated Permanent Academic Account Registry)
                         </Form.Text>
+                      </Form.Group>
+                    </Col>
+                  </Row>
+
+                  <Row>
+                    <Col md={6}>
+                      <Form.Group className="mb-3">
+                        <Form.Label>Birth Certificate Number</Form.Label>
+                        <Form.Control
+                          type="text"
+                          name="birthCertificateNumber"
+                          value={(formData as any).birthCertificateNumber || ''}
+                          onChange={handleChange}
+                          placeholder="Optional birth certificate number"
+                        />
+                      </Form.Group>
+                    </Col>
+                  </Row>
+
+                  <Row>
+                    <Col md={4}>
+                      <Form.Group className="mb-3">
+                        <Form.Label>Aadhaar Attachment (image/PDF)</Form.Label>
+                        <Form.Control
+                          type="file"
+                          accept="image/*,application/pdf"
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAadhaarFile(e.target.files?.[0] || null)}
+                        />
+                      </Form.Group>
+                    </Col>
+                    <Col md={4}>
+                      <Form.Group className="mb-3">
+                        <Form.Label>APAAR Attachment (image/PDF)</Form.Label>
+                        <Form.Control
+                          type="file"
+                          accept="image/*,application/pdf"
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setApaarFile(e.target.files?.[0] || null)}
+                        />
+                      </Form.Group>
+                    </Col>
+                    <Col md={4}>
+                      <Form.Group className="mb-3">
+                        <Form.Label>Birth Certificate Attachment (image/PDF)</Form.Label>
+                        <Form.Control
+                          type="file"
+                          accept="image/*,application/pdf"
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setBirthCertFile(e.target.files?.[0] || null)}
+                        />
                       </Form.Group>
                     </Col>
                   </Row>

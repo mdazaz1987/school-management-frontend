@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Row, Col, Card, Table, Form, Badge, Button } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
+import { teacherService } from '../services/teacherService';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -14,19 +15,54 @@ const sidebarItems = [
 ];
 
 export const TeacherStudents: React.FC = () => {
-  const [selectedClass, setSelectedClass] = useState('');
+  const [selectedClassId, setSelectedClassId] = useState('');
   const [selectedSection, setSelectedSection] = useState('');
   const [searchName, setSearchName] = useState('');
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
-  const [students, setStudents] = useState([
-    { id: '1', name: 'John Doe', rollNo: '101', class: 'Grade 10', section: 'A', email: 'john@student.com', attendance: 92, avgGrade: 85 },
-    { id: '2', name: 'Jane Smith', rollNo: '102', class: 'Grade 10', section: 'A', email: 'jane@student.com', attendance: 95, avgGrade: 90 },
-    { id: '3', name: 'Mike Johnson', rollNo: '103', class: 'Grade 10', section: 'B', email: 'mike@student.com', attendance: 88, avgGrade: 78 },
-    { id: '4', name: 'Sarah Williams', rollNo: '201', class: 'Grade 11', section: 'A', email: 'sarah@student.com', attendance: 94, avgGrade: 88 },
-    { id: '5', name: 'Tom Brown', rollNo: '104', class: 'Grade 10', section: 'A', email: 'tom@student.com', attendance: 85, avgGrade: 82 },
-  ]);
+  const [myClasses, setMyClasses] = useState<any[]>([]);
+  const [students, setStudents] = useState<any[]>([]);
+
+  // Load teacher's classes on mount
+  useEffect(() => {
+    const loadClasses = async () => {
+      try {
+        const classes = await teacherService.getMyClasses();
+        setMyClasses(classes || []);
+        if ((classes || []).length > 0) {
+          setSelectedClassId(classes[0].id);
+        }
+      } catch (e) {
+        setMyClasses([]);
+      }
+    };
+    loadClasses();
+  }, []);
+
+  // Load students when class changes
+  useEffect(() => {
+    const loadStudents = async () => {
+      if (!selectedClassId) { setStudents([]); return; }
+      try {
+        const enriched = await teacherService.getEnrichedClassStudents(selectedClassId);
+        const mapped = (enriched || []).map((s: any) => ({
+          id: s.id,
+          name: s.name,
+          rollNo: s.rollNo,
+          class: s.studentClass,
+          section: s.section,
+          email: s.email,
+          attendance: s.attendance,
+          avgGrade: s.avgGrade,
+        }));
+        setStudents(mapped);
+      } catch (e) {
+        setStudents([]);
+      }
+    };
+    loadStudents();
+  }, [selectedClassId]);
 
   const handleSort = (column: string) => {
     if (sortBy === column) {
@@ -42,8 +78,14 @@ export const TeacherStudents: React.FC = () => {
     return sortOrder === 'asc' ? <i className="bi bi-chevron-up ms-1"></i> : <i className="bi bi-chevron-down ms-1"></i>;
   };
 
-  let filteredStudents = students.filter(s => {
-    const matchesClass = !selectedClass || s.class === selectedClass;
+  const sections = useMemo(() => {
+    const set = new Set<string>();
+    (students || []).forEach((s: any) => { if (s.section) set.add(s.section); });
+    return Array.from(set);
+  }, [students]);
+
+  let filteredStudents = students.filter((s: any) => {
+    const matchesClass = !selectedClassId || s.class === (myClasses.find(c => c.id === selectedClassId)?.name || s.class);
     const matchesSection = !selectedSection || s.section === selectedSection;
     const matchesName = !searchName || s.name.toLowerCase().includes(searchName.toLowerCase()) ||
                         s.rollNo.includes(searchName);
@@ -99,10 +141,11 @@ export const TeacherStudents: React.FC = () => {
                 <Col md={3}>
                   <Form.Group className="mb-3">
                     <Form.Label><strong>Class</strong></Form.Label>
-                    <Form.Select value={selectedClass} onChange={(e) => setSelectedClass(e.target.value)}>
-                      <option value="">All Classes</option>
-                      <option value="Grade 10">Grade 10</option>
-                      <option value="Grade 11">Grade 11</option>
+                    <Form.Select value={selectedClassId} onChange={(e) => setSelectedClassId(e.target.value)}>
+                      <option value="">Select Class</option>
+                      {myClasses.map((c) => (
+                        <option key={c.id} value={c.id}>{c.name || `${c.className} ${c.section || ''}`}</option>
+                      ))}
                     </Form.Select>
                   </Form.Group>
                 </Col>
@@ -111,8 +154,9 @@ export const TeacherStudents: React.FC = () => {
                     <Form.Label><strong>Section</strong></Form.Label>
                     <Form.Select value={selectedSection} onChange={(e) => setSelectedSection(e.target.value)}>
                       <option value="">All Sections</option>
-                      <option value="A">Section A</option>
-                      <option value="B">Section B</option>
+                      {sections.map((sec) => (
+                        <option key={sec} value={sec}>{`Section ${sec}`}</option>
+                      ))}
                     </Form.Select>
                   </Form.Group>
                 </Col>

@@ -89,11 +89,25 @@ export const TeacherDashboard: React.FC = () => {
     loadSchedule();
   }, []);
 
-  const recentSubmissions = [
-    { student: 'John Doe', assignment: 'Math Assignment 5', class: 'Grade 10-A', submittedAt: '2 hours ago', status: 'pending' },
-    { student: 'Jane Smith', assignment: 'Physics Lab Report', class: 'Grade 11-A', submittedAt: '4 hours ago', status: 'pending' },
-    { student: 'Mike Johnson', assignment: 'Math Assignment 4', class: 'Grade 10-B', submittedAt: '1 day ago', status: 'graded' },
-  ];
+  const [recentSubmissions, setRecentSubmissions] = useState<any[]>([]);
+  useEffect(() => {
+    const loadRecent = async () => {
+      try {
+        const data = await teacherService.getRecentSubmissions(5);
+        const rows = (data || []).map((d: any) => ({
+          student: d.studentName || d.studentId,
+          assignment: d.assignmentTitle || d.assignmentId,
+          class: d.className || d.classId,
+          submittedAt: d.submittedAt ? new Date(d.submittedAt).toLocaleString() : '',
+          status: (d.status || 'SUBMITTED').toLowerCase().replace('_', ' '),
+        }));
+        setRecentSubmissions(rows);
+      } catch (e) {
+        // Keep empty if backend not available
+      }
+    };
+    loadRecent();
+  }, []);
 
   return (
     <Layout>
@@ -274,19 +288,24 @@ export const TeacherDashboard: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {recentSubmissions.map((submission, index) => (
+                      {recentSubmissions.map((submission, index) => {
+                        const status = String(submission.status || '').toLowerCase();
+                        const isGraded = status.includes('graded');
+                        const isPendingLike = !isGraded; // submitted, resubmitted, late submission treated as pending
+                        const variant = isGraded ? 'success' : 'warning';
+                        return (
                         <tr key={index}>
                           <td>{submission.student}</td>
                           <td>{submission.assignment}</td>
                           <td>{submission.class}</td>
                           <td>{submission.submittedAt}</td>
                           <td>
-                            <Badge bg={submission.status === 'pending' ? 'warning' : 'success'}>
+                            <Badge bg={variant}>
                               {submission.status}
                             </Badge>
                           </td>
                           <td>
-                            {submission.status === 'pending' ? (
+                            {isPendingLike ? (
                               <Button 
                                 variant="primary" 
                                 size="sm"
@@ -305,7 +324,7 @@ export const TeacherDashboard: React.FC = () => {
                             )}
                           </td>
                         </tr>
-                      ))}
+                      );})}
                     </tbody>
                   </Table>
                 </Card.Body>

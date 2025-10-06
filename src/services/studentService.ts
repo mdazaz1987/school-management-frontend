@@ -156,6 +156,7 @@ export const studentService = {
       admissionDate: data.admissionDate,
       aadhaarNumber: data.aadhaarNumber,
       apaarId: data.apaarId,
+      birthCertificateNumber: (data as any).birthCertificateNumber,
     };
     
     // Wrap in new API format
@@ -216,6 +217,7 @@ export const studentService = {
       admissionDate: options.student.admissionDate,
       aadhaarNumber: options.student.aadhaarNumber,
       apaarId: options.student.apaarId,
+      birthCertificateNumber: (options.student as any).birthCertificateNumber,
     };
 
     const payload = {
@@ -271,6 +273,7 @@ export const studentService = {
       profilePicture: data.profilePicture,
       aadhaarNumber: data.aadhaarNumber,
       apaarId: data.apaarId,
+      birthCertificateNumber: (data as any).birthCertificateNumber,
     };
     const resp = await apiService.patch<Student>(`/students/${id}`, payload);
     return normalizeStudent(resp as any);
@@ -460,5 +463,25 @@ export const studentService = {
    */
   async markNotificationAsRead(notificationId: string): Promise<void> {
     return apiService.put(`/student/notifications/${notificationId}/read`, {});
+  },
+
+  /**
+   * Upload an attachment for a government ID for a student
+   * type: 'aadhaar' | 'apaar' | 'birth-certificate'
+   */
+  async uploadGovtIdDocument(studentId: string, type: 'aadhaar' | 'apaar' | 'birth-certificate', file: File): Promise<{
+    success: boolean;
+    message: string;
+    fileId?: string;
+    url?: string;
+  }> {
+    const form = new FormData();
+    form.append('file', file);
+    // use raw axios instance for multipart
+    const axios = apiService.getAxiosInstance();
+    const response = await axios.post(`/students/${studentId}/documents/${type}` as any, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
   },
 };

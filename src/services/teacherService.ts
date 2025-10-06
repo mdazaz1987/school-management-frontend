@@ -178,6 +178,21 @@ export const teacherService = {
     return apiService.get('/teacher/dashboard/stats');
   },
 
+  async getRecentSubmissions(limit = 5): Promise<Array<{
+    submissionId: string;
+    assignmentId: string;
+    assignmentTitle: string;
+    studentId: string;
+    studentName: string;
+    classId: string;
+    className: string;
+    section: string;
+    submittedAt: string;
+    status: string;
+  }>> {
+    return apiService.get(`/teacher/recent-submissions`, { limit });
+  },
+
   // Teacher Portal - Classes
   async getMyClasses(): Promise<any[]> {
     // Fetch all classes (allowed for TEACHER) and filter by teacherId === current user id
@@ -200,6 +215,20 @@ export const teacherService = {
   // Prefer this for detailed student info (rollNumber, section, etc.)
   async getClassStudentsV2(classId: string): Promise<any[]> {
     return apiService.get(`/classes/${classId}/students`);
+  },
+
+  // Enriched students with attendance% and average grade%
+  async getEnrichedClassStudents(classId: string): Promise<Array<{
+    id: string;
+    name: string;
+    rollNo: string;
+    studentClass: string;
+    section: string;
+    email: string;
+    attendance: number;
+    avgGrade: number;
+  }>> {
+    return apiService.get(`/teacher/classes/${classId}/students/enriched`);
   },
 
   // Teacher Portal - Assignments
