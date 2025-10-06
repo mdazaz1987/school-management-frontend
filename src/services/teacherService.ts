@@ -134,13 +134,77 @@ export const teacherService = {
 
   // Teacher Portal - Classes
   async getMyClasses(): Promise<any[]> {
-    // Fetch all classes (allowed for TEACHER) and filter by teacherId === current user id
+    // Get teacher's assigned classes from their Teacher record
     const stored = localStorage.getItem('user');
     const me = stored ? JSON.parse(stored) : {};
     const userId = me?.id;
-    const schoolId = me?.schoolId;
-    const all = await apiService.get<any[]>('/classes', schoolId ? { schoolId } : undefined);
-    return (all || []).filter((c: any) => !userId || c.teacherId === userId);
+    
+    if (!userId) {
+      console.warn('No user ID found');
+      return [];
+    }
+
+    try {
+      // First, get teacher record
+      const teachers = await apiService.get<any[]>(`/teachers/school/${me.schoolId}`);
+      const myTeacher = teachers.find((t: any) => t.userId === userId);
+      
+      if (!myTeacher || !myTeacher.id) {
+        console.warn('Teacher record not found for user:', userId);
+        return [];
+      }
+
+      // Use new endpoint to get assigned classes
+      return await apiService.get(`/teachers/${myTeacher.id}/my-classes`);
+    } catch (error) {
+      console.error('Error fetching teacher classes:', error);
+      return [];
+    }
+  },
+
+  // Get teacher's assigned subjects
+  async getMySubjects(): Promise<any[]> {
+    const stored = localStorage.getItem('user');
+    const me = stored ? JSON.parse(stored) : {};
+    const userId = me?.id;
+    
+    if (!userId) return [];
+
+    try {
+      const teachers = await apiService.get<any[]>(`/teachers/school/${me.schoolId}`);
+      const myTeacher = teachers.find((t: any) => t.userId === userId);
+      
+      if (!myTeacher || !myTeacher.id) {
+        console.warn('Teacher record not found for user:', userId);
+        return [];
+      }
+
+      return await apiService.get(`/teachers/${myTeacher.id}/my-subjects`);
+    } catch (error) {
+      console.error('Error fetching teacher subjects:', error);
+      return [];
+    }
+  },
+
+  // Get teacher's assigned students
+  async getMyStudents(): Promise<any[]> {
+    const stored = localStorage.getItem('user');
+    const me = stored ? JSON.parse(stored) : {};
+    const userId = me?.id;
+    
+    if (!userId) return [];
+
+    try {
+      const teachers = await apiService.get<any[]>(`/teachers/school/${me.schoolId}`);
+      const myTeacher = teachers.find((t: any) => t.userId === userId);
+      
+      if (!myTeacher || !myTeacher.id) return [];
+
+      return await apiService.get(`/teachers/${myTeacher.id}/my-students`);
+    } catch (error) {
+      console.error('Error fetching teacher students:', error);
+      return [];
+    }
   },
 
   async getClassDetails(classId: string): Promise<any> {

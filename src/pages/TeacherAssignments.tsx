@@ -23,6 +23,7 @@ export const TeacherAssignments: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [classes, setClasses] = useState<any[]>([]);
+  const [subjects, setSubjects] = useState<any[]>([]);
   
   const [formData, setFormData] = useState({
     title: '',
@@ -43,8 +44,16 @@ export const TeacherAssignments: React.FC = () => {
   const loadClassesAndAssignments = async () => {
     setLoading(true); setError('');
     try {
-      const cls = await teacherService.getMyClasses();
+      // Load teacher's assigned classes and subjects
+      const [cls, subs] = await Promise.all([
+        teacherService.getMyClasses(),
+        teacherService.getMySubjects()
+      ]);
+      
       setClasses(cls);
+      setSubjects(subs);
+      
+      // Load assignments
       const list = user?.id 
         ? await teacherService.listTeacherAssignments(user.id)
         : await teacherService.getMyAssignments();
@@ -62,7 +71,8 @@ export const TeacherAssignments: React.FC = () => {
       }));
       setAssignments(normalized);
     } catch (e: any) {
-      setError(e?.response?.data?.message || 'Failed to load assignments');
+      setError(e?.response?.data?.message || 'Failed to load data');
+      console.error('Load error:', e);
     } finally {
       setLoading(false);
     }
@@ -274,9 +284,11 @@ export const TeacherAssignments: React.FC = () => {
                         onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
                       >
                         <option value="">Select subject...</option>
-                        <option value="Mathematics">Mathematics</option>
-                        <option value="Physics">Physics</option>
-                        <option value="Chemistry">Chemistry</option>
+                        {subjects.map((s) => (
+                          <option key={s.id} value={s.name}>
+                            {s.name} ({s.code})
+                          </option>
+                        ))}
                       </Form.Select>
                     </Form.Group>
                   </Col>
