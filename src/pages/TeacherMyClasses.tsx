@@ -40,21 +40,21 @@ export const TeacherMyClasses: React.FC = () => {
       setClasses({
         current: current.map((c: any) => ({
           id: c.id,
-          name: `${c.grade || 'Class'} ${c.section || ''}`.trim(),
-          subject: c.subject || 'N/A',
-          students: c.studentIds?.length || 0,
+          name: c.className || c.name || `${c.grade || 'Class'} ${c.section || ''}`.trim(),
+          subject: c.subject || 'Multiple Subjects',
+          students: c.studentIds?.length || c.strength || 0,
           schedule: 'Check Timetable',
-          room: c.room || 'TBA',
+          room: c.room || c.roomNumber || 'TBA',
           academicYear: c.academicYear || `${currentYear}-${currentYear + 1}`,
           term: c.term || 'Current Term'
         })),
         past: past.map((c: any) => ({
           id: c.id,
-          name: `${c.grade || 'Class'} ${c.section || ''}`.trim(),
-          subject: c.subject || 'N/A',
-          students: c.studentIds?.length || 0,
+          name: c.className || c.name || `${c.grade || 'Class'} ${c.section || ''}`.trim(),
+          subject: c.subject || 'Multiple Subjects',
+          students: c.studentIds?.length || c.strength || 0,
           schedule: 'Check Timetable',
-          room: c.room || 'TBA',
+          room: c.room || c.roomNumber || 'TBA',
           academicYear: c.academicYear,
           term: c.term || 'Past Term'
         })),
