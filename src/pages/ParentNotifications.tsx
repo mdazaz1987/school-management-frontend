@@ -107,6 +107,7 @@ export const ParentNotifications: React.FC = () => {
             </div>
           </div>
 
+          <Card className="border-0 shadow-sm mb-4">
             <Card.Body>
               <Form.Group>
                 <Form.Label>Filter by Child</Form.Label>
@@ -124,6 +125,7 @@ export const ParentNotifications: React.FC = () => {
             <div className="alert alert-info d-flex align-items-center mb-4">
               <i className="bi bi-bell-fill me-2"></i>
               You have <strong className="mx-1">{unreadCount}</strong> unread notifications
+            </div>
           )}
 
           {error && <Alert variant="danger">{error}</Alert>}
