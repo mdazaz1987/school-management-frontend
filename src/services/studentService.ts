@@ -227,6 +227,10 @@ export const studentService = {
     const payload = {
       student: studentPayload,
       user: userPayload,
+      createParentAccount: options.createParentAccount ?? false,
+      parentAccountType: options.parentAccountType || 'father',
+      parentPassword: options.parentPassword,
+      sendEmailToParent: options.sendEmailToParents ?? false,
     };
 
     const resp = await apiService.post<any>('/students', payload);
