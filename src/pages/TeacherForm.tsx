@@ -97,18 +97,20 @@ export const TeacherForm: React.FC = () => {
       // If edit mode, load teacher data
       if (id) {
         const teacher = await teacherService.getTeacherById(id);
+        console.log('Loaded teacher data:', teacher); // Debug log
+        
         setFormData({
-          employeeId: teacher.employeeId,
-          firstName: teacher.firstName,
-          lastName: teacher.lastName,
-          email: teacher.email,
+          employeeId: teacher.employeeId || '',
+          firstName: teacher.firstName || '',
+          lastName: teacher.lastName || '',
+          email: teacher.email || '',
           phone: teacher.phone || '',
           dateOfBirth: teacher.dateOfBirth || '',
           gender: teacher.gender || 'MALE',
           bloodGroup: teacher.bloodGroup || '',
           nationality: teacher.nationality || 'Indian',
           maritalStatus: teacher.maritalStatus || 'Single',
-          schoolId: teacher.schoolId,
+          schoolId: teacher.schoolId || schoolId,
           addressLine1: (teacher.address as any)?.addressLine1 || (teacher.address as any)?.street || '',
           addressLine2: (teacher.address as any)?.addressLine2 || '',
           city: teacher.address?.city || '',
@@ -133,7 +135,7 @@ export const TeacherForm: React.FC = () => {
           panNumber: teacher.employmentInfo?.panNumber || '',
           subjectIds: teacher.subjectIds || [],
           classIds: teacher.classIds || [],
-          joiningDate: teacher.joiningDate || '',
+          joiningDate: teacher.joiningDate || new Date().toISOString().split('T')[0],
           passwordMode: 'NONE',
           sendEmailToTeacher: false,
         });

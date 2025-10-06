@@ -41,6 +41,11 @@ export const notificationService = {
     return apiService.post('/notifications', data);
   },
 
+  // Alias for create
+  async create(data: any): Promise<Notification> {
+    return apiService.post('/notifications', data);
+  },
+
   // Update notification (Admin/Teacher)
   async updateNotification(id: string, data: Partial<Notification>): Promise<Notification> {
     return apiService.put(`/notifications/${id}`, data);

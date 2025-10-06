@@ -31,6 +31,7 @@ import { TeacherList } from './pages/TeacherList';
 import { TeacherForm } from './pages/TeacherForm';
 import { TeacherDetail } from './pages/TeacherDetail';
 import { Notifications } from './pages/Notifications';
+import { CreateNotification } from './pages/CreateNotification';
 import { AttendancePage } from './pages/Attendance';
 import { StudentAssignments } from './pages/StudentAssignments';
 import { StudentExams } from './pages/StudentExams';
@@ -148,6 +149,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Notifications />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/notifications/create"
+            element={
+              <ProtectedRoute>
+                <CreateNotification />
               </ProtectedRoute>
             }
           />
