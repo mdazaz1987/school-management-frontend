@@ -192,12 +192,9 @@ export const studentService = {
       name: string;
     }>;
   }> {
-    // Transform flat form into nested backend model
+    // Split data into student and user objects as per new backend model
     const studentPayload: any = {
       admissionNumber: options.student.admissionNumber,
-      firstName: options.student.firstName,
-      lastName: options.student.lastName,
-      email: options.student.email,
       phone: options.student.phone,
       dateOfBirth: options.student.dateOfBirth,
       gender: options.student.gender,
@@ -213,22 +210,23 @@ export const studentService = {
       parentInfo: buildParentInfo(options.student),
       academicInfo: buildAcademicInfo(options.student),
       isActive: options.student.isActive !== undefined ? options.student.isActive : true,
-      active: options.student.isActive !== undefined ? options.student.isActive : true,
       admissionDate: options.student.admissionDate,
       aadhaarNumber: options.student.aadhaarNumber,
       apaarId: options.student.apaarId,
       birthCertificateNumber: (options.student as any).birthCertificateNumber,
     };
 
+    const userPayload: any = {
+      firstName: options.student.firstName,
+      lastName: options.student.lastName,
+      email: options.student.email,
+      schoolId: options.student.schoolId,
+      password: options.studentPassword,
+    };
+
     const payload = {
       student: studentPayload,
-      passwordMode: options.passwordMode,
-      studentPassword: options.studentPassword,
-      parentPassword: options.parentPassword,
-      sendEmailToStudent: options.sendEmailToStudent,
-      sendEmailToParents: options.sendEmailToParents,
-      createParentAccount: options.createParentAccount ?? false,
-      parentAccountType: options.parentAccountType || 'father'
+      user: userPayload,
     };
 
     const resp = await apiService.post<any>('/students', payload);
