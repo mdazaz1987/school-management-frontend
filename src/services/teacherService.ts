@@ -67,7 +67,10 @@ export const teacherService = {
         phone: data.phone,
         dateOfBirth: data.dateOfBirth,
         gender: data.gender,
-        // ... other teacher-specific fields
+        subjectIds: (data as any).subjectIds,
+        classIds: (data as any).classIds,
+        qualificationInfo: (data as any).qualificationInfo,
+        employmentInfo: (data as any).employmentInfo,
       },
     };
     
@@ -86,7 +89,10 @@ export const teacherService = {
         phone: data.phone,
         dateOfBirth: data.dateOfBirth,
         gender: data.gender,
-        // ... other teacher-specific fields
+        subjectIds: data.subjectIds,
+        classIds: data.classIds,
+        qualificationInfo: data.qualificationInfo,
+        employmentInfo: data.employmentInfo,
       },
     };
     const resp = await apiService.put<any>(`/teachers/${id}`, payload);
@@ -134,28 +140,9 @@ export const teacherService = {
 
   // Teacher Portal - Classes
   async getMyClasses(): Promise<any[]> {
-    // Get teacher's assigned classes from their Teacher record
-    const stored = localStorage.getItem('user');
-    const me = stored ? JSON.parse(stored) : {};
-    const userId = me?.id;
-    
-    if (!userId) {
-      console.warn('No user ID found');
-      return [];
-    }
-
+    // Session-based endpoint; no admin calls
     try {
-      // First, get teacher record
-      const teachers = await apiService.get<any[]>(`/teachers/school/${me.schoolId}`);
-      const myTeacher = teachers.find((t: any) => t.userId === userId);
-      
-      if (!myTeacher || !myTeacher.id) {
-        console.warn('Teacher record not found for user:', userId);
-        return [];
-      }
-
-      // Use new endpoint to get assigned classes
-      return await apiService.get(`/teachers/${myTeacher.id}/my-classes`);
+      return await apiService.get(`/teacher/classes`);
     } catch (error) {
       console.error('Error fetching teacher classes:', error);
       return [];
@@ -164,22 +151,8 @@ export const teacherService = {
 
   // Get teacher's assigned subjects
   async getMySubjects(): Promise<any[]> {
-    const stored = localStorage.getItem('user');
-    const me = stored ? JSON.parse(stored) : {};
-    const userId = me?.id;
-    
-    if (!userId) return [];
-
     try {
-      const teachers = await apiService.get<any[]>(`/teachers/school/${me.schoolId}`);
-      const myTeacher = teachers.find((t: any) => t.userId === userId);
-      
-      if (!myTeacher || !myTeacher.id) {
-        console.warn('Teacher record not found for user:', userId);
-        return [];
-      }
-
-      return await apiService.get(`/teachers/${myTeacher.id}/my-subjects`);
+      return await apiService.get(`/teacher/my-subjects`);
     } catch (error) {
       console.error('Error fetching teacher subjects:', error);
       return [];
@@ -188,19 +161,8 @@ export const teacherService = {
 
   // Get teacher's assigned students
   async getMyStudents(): Promise<any[]> {
-    const stored = localStorage.getItem('user');
-    const me = stored ? JSON.parse(stored) : {};
-    const userId = me?.id;
-    
-    if (!userId) return [];
-
     try {
-      const teachers = await apiService.get<any[]>(`/teachers/school/${me.schoolId}`);
-      const myTeacher = teachers.find((t: any) => t.userId === userId);
-      
-      if (!myTeacher || !myTeacher.id) return [];
-
-      return await apiService.get(`/teachers/${myTeacher.id}/my-students`);
+      return await apiService.get(`/teacher/my-students`);
     } catch (error) {
       console.error('Error fetching teacher students:', error);
       return [];
@@ -241,13 +203,9 @@ export const teacherService = {
   },
 
   // New backend-compatible teacher endpoints
-  async listTeacherAssignments(teacherId: string): Promise<any[]> {
-    try {
-      return await apiService.get(`/teachers/${teacherId}/assignments`);
-    } catch (e) {
-      // Fallback to legacy endpoint
-      return apiService.get('/teacher/assignments');
-    }
+  async listTeacherAssignments(_teacherId?: string): Promise<any[]> {
+    // Session-based list; do not hit admin-only endpoints
+    return apiService.get('/teacher/assignments');
   },
 
   async getClassAssignments(classId: string): Promise<any[]> {
@@ -280,12 +238,13 @@ export const teacherService = {
     return apiService.get(`/teacher/assignments/${assignmentId}/submissions`);
   },
 
-  async listSubmissions(teacherId: string, assignmentId: string): Promise<any[]> {
+  async listSubmissions(_teacherId: string, assignmentId: string): Promise<any[]> {
+    // Prefer session-based endpoint first to avoid 403
     try {
-      return await apiService.get(`/teachers/${teacherId}/assignments/${assignmentId}/submissions`);
+      return await apiService.get(`/teacher/assignments/${assignmentId}/submissions`);
     } catch (e) {
-      // Fallback
-      return apiService.get(`/teacher/assignments/${assignmentId}/submissions`);
+      // Fallback to teacher-scoped path if available (may require ADMIN)
+      return apiService.get(`/teachers/${_teacherId}/assignments/${assignmentId}/submissions`);
     }
   },
 
@@ -294,7 +253,12 @@ export const teacherService = {
   },
 
   async gradeSubmissionV2(teacherId: string, assignmentId: string, submissionId: string, marks: number, feedback: string): Promise<any> {
-    return apiService.put(`/teachers/${teacherId}/assignments/${assignmentId}/submissions/${submissionId}/grade`, { marks, feedback });
+    // Prefer session-based grading endpoint
+    try {
+      return await apiService.put(`/teacher/submissions/${submissionId}/grade`, { marks, feedback });
+    } catch (e) {
+      return apiService.put(`/teachers/${teacherId}/assignments/${assignmentId}/submissions/${submissionId}/grade`, { marks, feedback });
+    }
   },
 
   // Teacher Portal - Attendance

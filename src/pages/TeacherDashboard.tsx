@@ -72,11 +72,17 @@ export const TeacherDashboard: React.FC = () => {
         const teacherId = me?.id;
         const all = await timetableService.list(schoolId ? { schoolId } : undefined);
         const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
-        const entries = (all || [])
-          .flatMap((t: any) => (t.entries || []).map((e: any) => ({ ...e, classId: t.classId, className: t.className })))
-          .filter((e: any) => String(e.day).toUpperCase() === dayName)
-          .filter((e: any) => !teacherId || e.teacherId === teacherId)
-          .map((e: any) => ({
+        const flattened = (all || [])
+          .flatMap((t: any) => (t.entries || []).map((e: any) => ({ ...e, classId: t.classId, className: t.className })));
+        // Primary filter by teacherId
+        let todays = flattened.filter((e: any) => String(e.day).toUpperCase() === dayName && (!teacherId || e.teacherId === teacherId));
+        // Fallback: include entries for classes assigned to this teacher
+        if (todays.length === 0) {
+          const myClasses = await teacherService.getMyClasses().catch(() => [] as any[]);
+          const classIds = new Set((myClasses || []).map((c: any) => c.id));
+          todays = flattened.filter((e: any) => String(e.day).toUpperCase() === dayName && classIds.has(e.classId));
+        }
+        const entries = todays.map((e: any) => ({
             time: String(e.startTime).slice(0,5),
             class: e.className || e.classId,
             subject: e.subjectName || '—',

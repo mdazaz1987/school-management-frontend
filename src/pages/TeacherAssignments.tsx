@@ -90,7 +90,7 @@ export const TeacherAssignments: React.FC = () => {
         dueDate: formData.dueDate,
         maxMarks: formData.totalMarks,
       };
-      const created = await teacherService.createAssignmentV2(user.id, payload);
+      const created = await teacherService.createAssignment(payload);
       setSuccess('Assignment created successfully.');
       setShowModal(false);
       resetForm();
@@ -128,7 +128,7 @@ export const TeacherAssignments: React.FC = () => {
         dueDate: formData.dueDate,
         maxMarks: formData.totalMarks,
       };
-      await teacherService.updateAssignmentV2(user.id, editingAssignment.id, payload);
+      await teacherService.updateAssignment(editingAssignment.id, payload);
       setSuccess('Assignment updated successfully!');
       setShowModal(false);
       setEditingAssignment(null);
