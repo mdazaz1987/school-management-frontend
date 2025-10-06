@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, Button, Badge, ProgressBar, ListGroup } from 'react-bootstrap';
+import { Row, Col, Card, Button, Badge, ProgressBar, ListGroup, Alert, Spinner } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
@@ -25,12 +25,16 @@ export const ParentDashboard: React.FC = () => {
     pendingFees: number;
     upcomingExams: number;
   }>>([]);
+  const [recentActivities, setRecentActivities] = useState<Array<{ child: string; activity: string; type: string; time: string; color: string }>>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const load = async () => {
       try {
+        setLoading(true); setError('');
         const resp = await parentService.getDashboard();
-        const mapped = (resp.children || []).map((c) => ({
+        const baseChildren = (resp.children || []).map((c) => ({
           id: c.studentId,
           name: c.studentName,
           class: c.className,
@@ -39,26 +43,73 @@ export const ParentDashboard: React.FC = () => {
           pendingFees: 0,
           upcomingExams: 0,
         }));
-        setChildren(mapped);
-      } catch (e) {
-        // keep defaults if backend not available
+
+        // Fetch per-child performance and fee summary, and notifications
+        const withDetails = await Promise.all(baseChildren.map(async (child) => {
+          try {
+            const [grades, feeSummary] = await Promise.all([
+              parentService.getChildPerformance(child.id).catch(() => null),
+              parentService.getChildFeeSummary(child.id).catch(() => null),
+            ]);
+            return {
+              ...child,
+              averageGrade: grades?.averageMarks ? Math.round(grades.averageMarks) : 0,
+              pendingFees: feeSummary?.totalDue ? Math.round(feeSummary.totalDue) : 0,
+            };
+          } catch {
+            return child;
+          }
+        }));
+        setChildren(withDetails);
+
+        // Load notifications for recent activities (combine across children)
+        const notificationsPerChild = await Promise.all(baseChildren.map(async (child) => {
+          const list = await parentService.getChildNotifications(child.id).catch(() => []);
+          return list.map((n: any) => ({
+            child: child.name,
+            type: n.type || 'GENERAL',
+            title: n.title,
+            message: n.message,
+            createdAt: n.createdAt,
+          }));
+        }));
+
+        const flat = notificationsPerChild.flat().sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 10);
+        const colorByType: Record<string, string> = {
+          ASSIGNMENT: 'primary',
+          EXAM: 'info',
+          FEE: 'warning',
+          ATTENDANCE: 'danger',
+          RESULT: 'success',
+          ANNOUNCEMENT: 'secondary',
+          EVENT: 'secondary',
+          HOLIDAY: 'secondary',
+          EMERGENCY: 'danger',
+          GENERAL: 'secondary',
+        };
+        const toAgo = (iso: string) => {
+          const d = new Date(iso); const now = new Date(); const diffMs = now.getTime() - d.getTime();
+          const mins = Math.floor(diffMs / 60000); const hours = Math.floor(diffMs / 3600000); const days = Math.floor(diffMs / 86400000);
+          if (mins < 1) return 'Just now'; if (mins < 60) return `${mins} mins ago`; if (hours < 24) return `${hours} hours ago`; if (days < 7) return `${days} days ago`;
+          return d.toLocaleDateString();
+        };
+        setRecentActivities(flat.map((n: any) => ({
+          child: n.child,
+          activity: n.title ? `${n.title}: ${n.message}` : n.message,
+          type: n.type,
+          time: toAgo(n.createdAt),
+          color: colorByType[n.type] || 'secondary',
+        })));
+      } catch (e: any) {
+        setError(e?.response?.data?.message || 'Failed to load dashboard');
+      } finally {
+        setLoading(false);
       }
     };
     load();
   }, []);
 
-  const recentActivities = [
-    { child: 'John Doe', activity: 'Submitted Math Assignment', type: 'assignment', time: '2 hours ago', color: 'success' },
-    { child: 'Jane Doe', activity: 'Present in school', type: 'attendance', time: '3 hours ago', color: 'success' },
-    { child: 'John Doe', activity: 'Received grade: A in Physics', type: 'grade', time: '1 day ago', color: 'primary' },
-    { child: 'Jane Doe', activity: 'Fee payment reminder', type: 'fee', time: '2 days ago', color: 'warning' },
-  ];
-
-  const upcomingEvents = [
-    { title: 'Parent-Teacher Meeting', date: 'Tomorrow', time: '10:00 AM' },
-    { title: 'Mid-term Exams Start', date: 'Next Week', time: 'All Day' },
-    { title: 'Sports Day', date: 'Mar 15, 2025', time: '9:00 AM' },
-  ];
+  const upcomingEvents: Array<{ title: string; date: string; time: string }> = [];
 
   return (
     <Layout>
@@ -71,6 +122,14 @@ export const ParentDashboard: React.FC = () => {
             <h2>Parent Dashboard</h2>
             <p className="text-muted">Welcome, {user?.firstName}! Track your children's progress.</p>
           </div>
+
+          {error && (
+            <Alert variant="danger" dismissible onClose={() => setError('')}>{error}</Alert>
+          )}
+
+          {loading && (
+            <div className="text-center py-3"><Spinner animation="border" /></div>
+          )}
 
           {/* Children Overview Cards */}
           <Row className="mb-4">
@@ -141,24 +200,28 @@ export const ParentDashboard: React.FC = () => {
                   <Button variant="link" size="sm">View All</Button>
                 </Card.Header>
                 <Card.Body className="p-0">
-                  <ListGroup variant="flush">
-                    {recentActivities.map((activity, index) => (
-                      <ListGroup.Item key={index}>
-                        <div className="d-flex align-items-start">
-                          <Badge bg={activity.color} className="p-2 me-3">
-                            <i className="bi bi-bell"></i>
-                          </Badge>
-                          <div className="flex-grow-1">
-                            <div className="d-flex justify-content-between">
-                              <strong>{activity.child}</strong>
-                              <small className="text-muted">{activity.time}</small>
+                  {recentActivities.length === 0 ? (
+                    <div className="text-center text-muted py-4">No recent activities</div>
+                  ) : (
+                    <ListGroup variant="flush">
+                      {recentActivities.map((activity, index) => (
+                        <ListGroup.Item key={index}>
+                          <div className="d-flex align-items-start">
+                            <Badge bg={activity.color} className="p-2 me-3">
+                              <i className="bi bi-bell"></i>
+                            </Badge>
+                            <div className="flex-grow-1">
+                              <div className="d-flex justify-content-between">
+                                <strong>{activity.child}</strong>
+                                <small className="text-muted">{activity.time}</small>
+                              </div>
+                              <p className="mb-0 text-muted">{activity.activity}</p>
                             </div>
-                            <p className="mb-0 text-muted">{activity.activity}</p>
                           </div>
-                        </div>
-                      </ListGroup.Item>
-                    ))}
-                  </ListGroup>
+                        </ListGroup.Item>
+                      ))}
+                    </ListGroup>
+                  )}
                 </Card.Body>
               </Card>
             </Col>
@@ -170,24 +233,28 @@ export const ParentDashboard: React.FC = () => {
                   <h5 className="mb-0">Upcoming Events</h5>
                 </Card.Header>
                 <Card.Body className="p-0">
-                  <ListGroup variant="flush">
-                    {upcomingEvents.map((event, index) => (
-                      <ListGroup.Item key={index}>
-                        <div className="d-flex align-items-start">
-                          <div className="bg-primary bg-opacity-10 p-2 rounded me-3">
-                            <i className="bi bi-calendar-event text-primary"></i>
+                  {upcomingEvents.length === 0 ? (
+                    <div className="text-center text-muted py-4">No upcoming events</div>
+                  ) : (
+                    <ListGroup variant="flush">
+                      {upcomingEvents.map((event, index) => (
+                        <ListGroup.Item key={index}>
+                          <div className="d-flex align-items-start">
+                            <div className="bg-primary bg-opacity-10 p-2 rounded me-3">
+                              <i className="bi bi-calendar-event text-primary"></i>
+                            </div>
+                            <div>
+                              <h6 className="mb-1">{event.title}</h6>
+                              <small className="text-muted">
+                                <i className="bi bi-clock me-1"></i>
+                                {event.date} • {event.time}
+                              </small>
+                            </div>
                           </div>
-                          <div>
-                            <h6 className="mb-1">{event.title}</h6>
-                            <small className="text-muted">
-                              <i className="bi bi-clock me-1"></i>
-                              {event.date} • {event.time}
-                            </small>
-                          </div>
-                        </div>
-                      </ListGroup.Item>
-                    ))}
-                  </ListGroup>
+                        </ListGroup.Item>
+                      ))}
+                    </ListGroup>
+                  )}
                 </Card.Body>
               </Card>
             </Col>

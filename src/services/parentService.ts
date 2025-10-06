@@ -43,11 +43,22 @@ export const parentService = {
   },
 
   async getChildPerformance(childId: string): Promise<any> {
-    return apiService.get(`/parent/children/${childId}/performance`);
+    // Backend exposes /parent/children/{id}/grades for performance summary
+    return apiService.get(`/parent/children/${childId}/grades`);
   },
 
   async getChildFees(childId: string): Promise<any[]> {
     return apiService.get(`/parent/children/${childId}/fees`);
+  },
+
+  async getChildFeeSummary(childId: string): Promise<{
+    studentId: string;
+    totalDue: number;
+    totalPaid: number;
+    pendingCount: number;
+    totalFees: number;
+  }> {
+    return apiService.get(`/fees/student/${childId}/summary`);
   },
 
   async getChildNotifications(childId: string): Promise<any[]> {
