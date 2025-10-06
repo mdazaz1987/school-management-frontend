@@ -26,6 +26,21 @@ export interface ChildDetail {
   fees: any[];
 }
 
+export interface AttendanceRecord {
+  id?: string;
+  date: string;
+  status: 'PRESENT' | 'ABSENT' | 'LATE' | string;
+}
+
+export interface AttendanceSummary {
+  totalDays: number;
+  presentDays: number;
+  absentDays: number;
+  lateDays: number;
+  attendancePercentage: number;
+  records: AttendanceRecord[];
+}
+
 export const parentService = {
   async getDashboard(): Promise<ParentDashboardResponse> {
     return apiService.get('/parent/dashboard');
@@ -35,7 +50,7 @@ export const parentService = {
     return apiService.get('/parent/children');
   },
 
-  async getChildAttendance(childId: string, startDate?: string, endDate?: string): Promise<any[]> {
+  async getChildAttendance(childId: string, startDate?: string, endDate?: string): Promise<AttendanceSummary> {
     const params = new URLSearchParams();
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
@@ -63,6 +78,10 @@ export const parentService = {
 
   async getChildNotifications(childId: string): Promise<any[]> {
     return apiService.get(`/parent/children/${childId}/notifications`);
+  },
+
+  async getChildAssignments(childId: string): Promise<any[]> {
+    return apiService.get(`/parent/children/${childId}/assignments`);
   },
 
   // ===== LEAVE APPLICATION APPROVAL =====

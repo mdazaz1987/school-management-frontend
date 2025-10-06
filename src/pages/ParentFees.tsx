@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
-import { Row, Col, Card, Table, Form, Badge, Button, Modal } from 'react-bootstrap';
+import React, { useEffect, useState } from 'react';
+import { Row, Col, Card, Table, Form, Badge, Button, Modal, Spinner, Alert } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
+import { parentService } from '../services/parentService';
+import { feeService } from '../services/feeService';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -13,54 +15,60 @@ const sidebarItems = [
 ];
 
 export const ParentFees: React.FC = () => {
-  const [selectedChild, setSelectedChild] = useState('1');
+  const [children, setChildren] = useState<Array<{ id: string; name: string; className?: string }>>([]);
+  const [selectedChild, setSelectedChild] = useState<string>('');
+  const [fees, setFees] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedFee, setSelectedFee] = useState<any>(null);
   const [paymentMethod, setPaymentMethod] = useState('');
 
-  const children = [
-    { id: '1', name: 'John Doe', class: 'Class 10 - A' },
-    { id: '2', name: 'Jane Doe', class: 'Class 8 - B' }
-  ];
+  useEffect(() => {
+    const loadChildren = async () => {
+      try {
+        setLoading(true); setError('');
+        const list = await parentService.getMyChildren();
+        const items = (list || []).map((c: any) => ({ id: c.id, name: `${c.firstName || ''} ${c.lastName || ''}`.trim(), className: c.className }));
+        setChildren(items);
+        if (!selectedChild && items.length) setSelectedChild(items[0].id);
+      } catch (e: any) {
+        setError(e?.response?.data?.message || 'Failed to load children');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadChildren();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const fees = [
-    {
-      id: '1',
-      type: 'Tuition Fee',
-      term: 'Second Term 2024-2025',
-      amount: 50000,
-      dueDate: '2025-03-31',
-      status: 'pending'
-    },
-    {
-      id: '2',
-      type: 'Examination Fee',
-      term: 'Mid-Term 2024',
-      amount: 3000,
-      dueDate: '2025-02-15',
-      status: 'pending'
-    },
-    {
-      id: '3',
-      type: 'Tuition Fee',
-      term: 'First Term 2024-2025',
-      amount: 50000,
-      dueDate: '2024-12-31',
-      status: 'paid',
-      paidDate: '2024-12-15',
-      transactionId: 'TXN123456'
-    },
-    {
-      id: '4',
-      type: 'Library Fee',
-      term: 'Annual 2024-2025',
-      amount: 2000,
-      dueDate: '2024-11-30',
-      status: 'paid',
-      paidDate: '2024-11-20',
-      transactionId: 'TXN789012'
-    }
-  ];
+  useEffect(() => {
+    const loadFees = async () => {
+      if (!selectedChild) return;
+      try {
+        setLoading(true); setError('');
+        const list = await feeService.listByStudent(selectedChild);
+        // Normalize to UI structure
+        const mapped = (list || []).map((f: any) => ({
+          id: f.id,
+          type: f.feeType,
+          term: f.term || f.academicYear,
+          amount: Number(f.netAmount ?? f.amount ?? 0),
+          dueDate: f.dueDate,
+          status: (f.status || '').toString().toLowerCase(),
+          paidDate: f.paidDate,
+          receiptNumber: f.receiptNumber,
+        }));
+        setFees(mapped);
+      } catch (e: any) {
+        setError(e?.response?.data?.message || 'Failed to load fees');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadFees();
+  }, [selectedChild]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -71,12 +79,34 @@ export const ParentFees: React.FC = () => {
     }
   };
 
-  const handlePayment = () => {
-    alert(`Payment processed successfully!\nAmount: ₹${selectedFee.amount}\nMethod: ${paymentMethod}`);
-    setShowPaymentModal(false);
+  const handlePayment = async () => {
+    if (!selectedFee || !paymentMethod) return;
+    try {
+      setLoading(true);
+      await feeService.pay(selectedFee.id, { paymentMethod, transactionId: undefined });
+      // Refresh fees
+      const list = await feeService.listByStudent(selectedChild);
+      const mapped = (list || []).map((f: any) => ({
+        id: f.id,
+        type: f.feeType,
+        term: f.term || f.academicYear,
+        amount: Number(f.netAmount ?? f.amount ?? 0),
+        dueDate: f.dueDate,
+        status: (f.status || '').toString().toLowerCase(),
+        paidDate: f.paidDate,
+        receiptNumber: f.receiptNumber,
+      }));
+      setFees(mapped);
+      setShowPaymentModal(false);
+      setPaymentMethod('');
+    } catch (e: any) {
+      setError(e?.response?.data?.message || 'Payment failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const totalPending = fees.filter(f => f.status === 'pending').reduce((sum, f) => sum + f.amount, 0);
+  const totalPending = fees.filter(f => f.status === 'pending' || f.status === 'overdue').reduce((sum, f) => sum + f.amount, 0);
   const totalPaid = fees.filter(f => f.status === 'paid').reduce((sum, f) => sum + f.amount, 0);
 
   return (
@@ -97,12 +127,20 @@ export const ParentFees: React.FC = () => {
                 <Form.Label>Select Child</Form.Label>
                 <Form.Select value={selectedChild} onChange={(e) => setSelectedChild(e.target.value)}>
                   {children.map(child => (
-                    <option key={child.id} value={child.id}>{child.name} - {child.class}</option>
+                    <option key={child.id} value={child.id}>{child.name}{child.className ? ` - ${child.className}` : ''}</option>
                   ))}
                 </Form.Select>
               </Form.Group>
             </Card.Body>
           </Card>
+
+          {error && (
+            <Alert variant="danger">{error}</Alert>
+          )}
+
+          {loading && (
+            <div className="text-center py-2"><Spinner animation="border" /></div>
+          )}
 
           <Row className="mb-4">
             <Col md={4}>
@@ -125,7 +163,7 @@ export const ParentFees: React.FC = () => {
               <Card className="border-0 shadow-sm">
                 <Card.Body>
                   <h6 className="text-muted mb-2">Pending Items</h6>
-                  <h3 className="mb-0 text-danger">{fees.filter(f => f.status === 'pending').length}</h3>
+                  <h3 className="mb-0 text-danger">{fees.filter(f => f.status === 'pending' || f.status === 'overdue').length}</h3>
                 </Card.Body>
               </Card>
             </Col>

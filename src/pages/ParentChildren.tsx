@@ -4,6 +4,8 @@ import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { parentService } from '../services/parentService';
+import { feeService } from '../services/feeService';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -26,23 +28,11 @@ export const ParentChildren: React.FC = () => {
   }, []);
 
   const loadChildren = async () => {
-    setLoading(true);
+    setLoading(true); setError('');
     try {
-      const response = await fetch('/api/parent/children', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to load children');
-      }
-      
-      const data = await response.json();
-      
-      // Transform StudentDTO to match UI expectations
-      const transformed = data.map((child: any) => ({
+      const data = await parentService.getMyChildren();
+
+      const base = (data || []).map((child: any) => ({
         id: child.id,
         firstName: child.firstName || '',
         lastName: child.lastName || '',
@@ -50,15 +40,35 @@ export const ParentChildren: React.FC = () => {
         rollNumber: child.rollNumber || 'N/A',
         email: child.email || '',
         phone: child.phone || '',
-        attendance: 0, // Will need separate API call for attendance
-        averageGrade: 0, // Will need separate API call for grades
-        pendingFees: 0, // Will need separate API call for fees
+        attendance: 0,
+        averageGrade: 0,
+        pendingFees: 0,
         profilePicture: child.profilePicture
       }));
-      
-      setChildren(transformed);
+
+      // Enrich each child with attendance %, average grade, and fee due (best-effort)
+      const enriched = await Promise.all(base.map(async (c) => {
+        try {
+          const [attendance, grades, feeSummary] = await Promise.all([
+            parentService.getChildAttendance(c.id).catch(() => null),
+            parentService.getChildPerformance(c.id).catch(() => null),
+            feeService.studentSummary(c.id).catch(() => null),
+          ]);
+
+          return {
+            ...c,
+            attendance: Math.round(attendance?.attendancePercentage || 0),
+            averageGrade: Math.round(grades?.averageMarks || 0),
+            pendingFees: Math.round(feeSummary?.totalDue || 0),
+          };
+        } catch {
+          return c;
+        }
+      }));
+
+      setChildren(enriched);
     } catch (e: any) {
-      setError('Failed to load children: ' + (e.message || 'Unknown error'));
+      setError('Failed to load children: ' + (e?.response?.data?.message || e?.message || 'Unknown error'));
     } finally {
       setLoading(false);
     }
