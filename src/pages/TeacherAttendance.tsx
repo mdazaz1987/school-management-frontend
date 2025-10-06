@@ -139,7 +139,7 @@ export const TeacherAttendance: React.FC = () => {
                       <option value="">Select class...</option>
                       {classes.map((c) => (
                         <option key={c.id} value={c.id}>
-                          {c.className || `${c.grade || 'Class'}${c.section ? ' - ' + c.section : ''}`}
+                          {c.className || c.name || `${c.grade || 'Class'}${c.section ? ' - ' + c.section : ''}`}
                         </option>
                       ))}
                     </Form.Select>
