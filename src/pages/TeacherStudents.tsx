@@ -88,12 +88,10 @@ export const TeacherStudents: React.FC = () => {
   }, [students]);
 
   let filteredStudents = students.filter((s: any) => {
-    const selClassName = myClasses.find(c => c.id === selectedClassId)?.name || '';
-    const matchesClass = !selectedClassId || !selClassName || s.class === selClassName || !s.class;
     const matchesSection = !selectedSection || s.section === selectedSection;
-    const matchesName = !searchName || s.name.toLowerCase().includes(searchName.toLowerCase()) ||
-                        s.rollNo.includes(searchName);
-    return matchesClass && matchesSection && matchesName;
+    const matchesName = !searchName || (s.name || '').toLowerCase().includes(searchName.toLowerCase()) ||
+                        String(s.rollNo || '').includes(searchName);
+    return matchesSection && matchesName;
   });
 
   filteredStudents = filteredStudents.sort((a, b) => {
