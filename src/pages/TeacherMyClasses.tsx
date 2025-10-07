@@ -4,6 +4,7 @@ import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
 import { teacherService } from '../services/teacherService';
+import { useNavigate } from 'react-router-dom';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -17,6 +18,7 @@ const sidebarItems = [
 
 export const TeacherMyClasses: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('current');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [classes, setClasses] = useState<any>({ current: [], past: [], upcoming: [] });
@@ -37,29 +39,33 @@ export const TeacherMyClasses: React.FC = () => {
       const current = data.filter((c: any) => c.academicYear?.includes(currentYear.toString()) || !c.academicYear);
       const past = data.filter((c: any) => c.academicYear && parseInt(c.academicYear.split('-')[0]) < currentYear);
       
-      setClasses({
-        current: current.map((c: any) => ({
-          id: c.id,
-          name: c.className || c.name || `${c.grade || 'Class'} ${c.section || ''}`.trim(),
-          subject: c.subject || 'Multiple Subjects',
-          students: c.studentIds?.length || c.strength || 0,
-          schedule: 'Check Timetable',
-          room: c.room || c.roomNumber || 'TBA',
-          academicYear: c.academicYear || `${currentYear}-${currentYear + 1}`,
-          term: c.term || 'Current Term'
-        })),
-        past: past.map((c: any) => ({
-          id: c.id,
-          name: c.className || c.name || `${c.grade || 'Class'} ${c.section || ''}`.trim(),
-          subject: c.subject || 'Multiple Subjects',
-          students: c.studentIds?.length || c.strength || 0,
-          schedule: 'Check Timetable',
-          room: c.room || c.roomNumber || 'TBA',
-          academicYear: c.academicYear,
-          term: c.term || 'Past Term'
-        })),
-        upcoming: []
+      // Build mapped classes first (without counts)
+      const mapClass = (c: any) => ({
+        id: c.id,
+        name: c.name || c.className || `${c.grade || 'Class'}${c.section ? ' - ' + c.section : ''}`,
+        subject: c.subject || 'Multiple Subjects',
+        students: 0, // will populate below
+        schedule: 'Check Timetable',
+        room: c.room || c.roomNumber || 'TBA',
+        academicYear: c.academicYear || `${currentYear}-${currentYear + 1}`,
+        term: c.term || 'Current Term'
       });
+
+      const cur = current.map(mapClass);
+      const pst = past.map((c: any) => ({ ...mapClass(c), term: c.term || 'Past Term' }));
+
+      // Populate student counts via enriched endpoint (per class)
+      const fillCounts = async (arr: any[]) => {
+        await Promise.all(arr.map(async (cl) => {
+          try {
+            const list = await teacherService.getEnrichedClassStudents(cl.id);
+            cl.students = (list || []).length;
+          } catch { cl.students = 0; }
+        }));
+      };
+      await Promise.all([fillCounts(cur), fillCounts(pst)]);
+
+      setClasses({ current: cur, past: pst, upcoming: [] });
     } catch (err: any) {
       console.error('Failed to load classes:', err);
       setError('Failed to load classes. Using demo data.');
@@ -154,10 +160,19 @@ export const TeacherMyClasses: React.FC = () => {
                           <td>{cls.room}</td>
                           <td><Badge bg="success">{cls.term}</Badge></td>
                           <td>
-                            <Button variant="outline-primary" size="sm" className="me-2">
-                              <i className="bi bi-eye"></i>
+                            <Button
+                              variant="outline-primary"
+                              size="sm"
+                              className="me-2"
+                              onClick={() => navigate(`/teacher/students?classId=${encodeURIComponent(cls.id)}`)}
+                            >
+                              <i className="bi bi-people"></i>
                             </Button>
-                            <Button variant="outline-success" size="sm">
+                            <Button
+                              variant="outline-success"
+                              size="sm"
+                              onClick={() => navigate(`/teacher/attendance?classId=${encodeURIComponent(cls.id)}`)}
+                            >
                               <i className="bi bi-calendar-check"></i>
                             </Button>
                           </td>

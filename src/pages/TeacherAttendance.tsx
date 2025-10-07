@@ -4,6 +4,7 @@ import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { teacherService } from '../services/teacherService';
 import apiService from '../services/api';
+import { useLocation } from 'react-router-dom';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -16,6 +17,7 @@ const sidebarItems = [
 ];
 
 export const TeacherAttendance: React.FC = () => {
+  const location = useLocation();
   const [classes, setClasses] = useState<any[]>([]);
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -32,6 +34,9 @@ export const TeacherAttendance: React.FC = () => {
         setLoading(true); setError('');
         const cls = await teacherService.getMyClasses();
         setClasses(cls);
+        const params = new URLSearchParams(location.search);
+        const preSel = params.get('classId');
+        if (preSel && (cls || []).some((c: any) => c.id === preSel)) setSelectedClass(preSel);
       } catch (e: any) {
         setError(e?.response?.data?.message || 'Failed to load classes');
       } finally {
@@ -39,7 +44,7 @@ export const TeacherAttendance: React.FC = () => {
       }
     };
     loadClasses();
-  }, []);
+  }, [location.search]);
 
   useEffect(() => {
     const loadStudents = async () => {

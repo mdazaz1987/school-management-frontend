@@ -3,6 +3,7 @@ import { Row, Col, Card, Table, Form, Badge, Button } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { teacherService } from '../services/teacherService';
+import { useLocation } from 'react-router-dom';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -15,6 +16,7 @@ const sidebarItems = [
 ];
 
 export const TeacherStudents: React.FC = () => {
+  const location = useLocation();
   const [selectedClassId, setSelectedClassId] = useState('');
   const [selectedSection, setSelectedSection] = useState('');
   const [searchName, setSearchName] = useState('');
@@ -30,15 +32,16 @@ export const TeacherStudents: React.FC = () => {
       try {
         const classes = await teacherService.getMyClasses();
         setMyClasses(classes || []);
-        if ((classes || []).length > 0) {
-          setSelectedClassId(classes[0].id);
-        }
+        const params = new URLSearchParams(location.search);
+        const preSel = params.get('classId');
+        if (preSel && (classes || []).some((c: any) => c.id === preSel)) setSelectedClassId(preSel);
+        else if ((classes || []).length > 0) setSelectedClassId(classes[0].id);
       } catch (e) {
         setMyClasses([]);
       }
     };
     loadClasses();
-  }, []);
+  }, [location.search]);
 
   // Load students when class changes
   useEffect(() => {
@@ -85,7 +88,8 @@ export const TeacherStudents: React.FC = () => {
   }, [students]);
 
   let filteredStudents = students.filter((s: any) => {
-    const matchesClass = !selectedClassId || s.class === (myClasses.find(c => c.id === selectedClassId)?.name || s.class);
+    const selClassName = myClasses.find(c => c.id === selectedClassId)?.name || '';
+    const matchesClass = !selectedClassId || !selClassName || s.class === selClassName || !s.class;
     const matchesSection = !selectedSection || s.section === selectedSection;
     const matchesName = !searchName || s.name.toLowerCase().includes(searchName.toLowerCase()) ||
                         s.rollNo.includes(searchName);

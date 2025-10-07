@@ -258,7 +258,20 @@ export const teacherService = {
     attendance: number;
     avgGrade: number;
   }>> {
-    return apiService.get(`/teacher/classes/${classId}/students/enriched`);
+    const enriched = await apiService.get<any[]>(`/teacher/classes/${classId}/students/enriched`).catch(() => [] as any[]);
+    if (Array.isArray(enriched) && enriched.length > 0) return enriched;
+    // Fallback: plain students and map minimal fields
+    const plain = await apiService.get<any[]>(`/teacher/classes/${classId}/students`).catch(() => [] as any[]);
+    return (plain || []).map((u: any) => ({
+      id: u.id,
+      name: `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email || 'Student',
+      rollNo: u.rollNumber || u.rollNo || '-',
+      studentClass: '',
+      section: '',
+      email: u.email,
+      attendance: 0,
+      avgGrade: 0,
+    }));
   },
 
   // Teacher Portal - Assignments
