@@ -75,6 +75,7 @@ export const StudentAssignments: React.FC = () => {
           grade: sub?.grade,
           marksObtained: sub?.marksObtained,
           feedback: sub?.feedback,
+          status, // include computed status so tabs filter works
         };
       });
 

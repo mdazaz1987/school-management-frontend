@@ -19,6 +19,7 @@ const sidebarItems = [
 export const StudentTimetable: React.FC = () => {
   const { user } = useAuth();
   const [timetable, setTimetable] = useState<any>({});
+  const [timeSlots, setTimeSlots] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [now, setNow] = useState(new Date());
@@ -40,9 +41,9 @@ export const StudentTimetable: React.FC = () => {
       const classId = (me as any).classId;
       const section = (me as any).section;
       const tt = await timetableService.getByClass(classId, section);
-      // Transform to UI grid {DAY: [{period,time,subject,teacher,room}, ...]}
+      // Transform to UI grid {DAY: [{period,time,start,end,subject,teacher,room,periodType}, ...]}
       const byDay: any = {};
-      const order: Record<string, number> = {};
+      const times = new Set<string>();
       (tt.entries || []).forEach((e: any, idx: number) => {
         const day = (e.day || '').toUpperCase();
         if (!byDay[day]) byDay[day] = [];
@@ -59,13 +60,15 @@ export const StudentTimetable: React.FC = () => {
           room: e.room,
           periodType: e.periodType,
         });
-        if (!(time in order)) order[time] = Object.keys(order).length;
+        if (startStr && endStr) times.add(time);
       });
-      // Sort each day's entries by start time
+      // Sort each day's entries by time and compute global times list
       Object.keys(byDay).forEach((d) => {
         byDay[d].sort((a: any, b: any) => a.time.localeCompare(b.time));
       });
+      const slots = Array.from(times).sort((a, b) => a.localeCompare(b));
       setTimetable(byDay);
+      setTimeSlots(slots);
     } catch (e: any) {
       setError('Failed to load timetable');
     } finally {
@@ -73,7 +76,7 @@ export const StudentTimetable: React.FC = () => {
     }
   };
 
-  const days = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
+  const days = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
   const currentDay = now.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
   const toMinutes = (hhmm: string) => {
     if (!hhmm || hhmm.length < 4) return -1;
@@ -122,16 +125,17 @@ export const StudentTimetable: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {timetable.MONDAY && timetable.MONDAY.map((_: any, periodIndex: number) => (
-                      <tr key={periodIndex}>
-                        <td className="fw-bold bg-light">{timetable.MONDAY[periodIndex].time}</td>
+                    {timeSlots.map((slot, rowIdx) => (
+                      <tr key={slot}>
+                        <td className="fw-bold bg-light">{slot}</td>
                         {days.map(day => {
-                          const period = timetable[day]?.[periodIndex];
+                          const period = (timetable[day] || []).find((p: any) => p.time === slot);
                           if (!period) return <td key={day}>—</td>;
-                          if (period.period === 'BREAK') {
+                          const isBreak = period.periodType === 'BREAK' || period.periodType === 'LUNCH';
+                          if (isBreak) {
                             return (
                               <td key={day} className="text-center bg-warning bg-opacity-10">
-                                <strong>BREAK</strong>
+                                <strong>{period.periodType}</strong>
                               </td>
                             );
                           }
@@ -142,11 +146,11 @@ export const StudentTimetable: React.FC = () => {
                           return (
                             <td key={day} className={inProgress ? 'bg-success bg-opacity-25' : ''}>
                               <div className="p-2">
-                                <Badge bg="primary" className="mb-1">{period.subject}</Badge>
+                                <Badge bg="primary" className="mb-1">{period.subject || '—'}</Badge>
                                 <br />
-                                <small className="text-muted">{period.teacher}</small>
+                                <small className="text-muted">{period.teacher || ''}</small>
                                 <br />
-                                <small className="text-muted"><i className="bi bi-geo-alt me-1"></i>{period.room}</small>
+                                <small className="text-muted"><i className="bi bi-geo-alt me-1"></i>{period.room || ''}</small>
                                 {inProgress && (
                                   <div className="mt-1">
                                     <Badge bg="success">In progress</Badge>
