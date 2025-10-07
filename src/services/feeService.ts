@@ -111,6 +111,9 @@ export const feeService = {
     classId: string;
     academicYear: string;
     term: string;
+    feeItems?: Array<{ itemName: string; itemAmount: number; description?: string }>;
+    discount?: number;
+    dueDate?: string;
   }): Promise<any> {
     return apiService.post('/fees/admission', data);
   },

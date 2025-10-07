@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, useParams } from 'react-router-dom';
 import { studentService } from '../services/studentService';
 import { classService } from '../services/classService';
+import { feeService } from '../services/feeService';
 import { StudentCreateRequest, StudentUpdateRequest, SchoolClass } from '../types';
 import { CredentialsModal } from '../components/CredentialsModal';
 
@@ -49,6 +50,18 @@ export const StudentForm: React.FC = () => {
   // Parent account creation options
   const [createParentAccount, setCreateParentAccount] = useState(true);
   const [parentAccountType, setParentAccountType] = useState<'father' | 'mother' | 'guardian'>('father');
+  
+  // Fee creation options
+  const [createAdmissionFee, setCreateAdmissionFee] = useState(false);
+  const [admissionAmount, setAdmissionAmount] = useState('2000');
+  const [registrationAmount, setRegistrationAmount] = useState('500');
+  const [idCardAmount, setIdCardAmount] = useState('100');
+  const [feeDiscount, setFeeDiscount] = useState('0');
+  const [feeDueDate, setFeeDueDate] = useState(() => {
+    const date = new Date();
+    date.setDate(date.getDate() + 7);
+    return date.toISOString().split('T')[0];
+  });
 
   // Form data
   const [formData, setFormData] = useState<StudentCreateRequest>({
@@ -261,6 +274,29 @@ export const StudentForm: React.FC = () => {
         // Upload any selected documents for the newly created student
         if (response?.student?.id) {
           await uploadSelectedDocuments(response.student.id);
+          
+          // Create admission fee if requested
+          if (createAdmissionFee) {
+            try {
+              await feeService.createAdmissionFee({
+                studentId: response.student.id,
+                schoolId: user?.schoolId || formData.schoolId,
+                classId: formData.classId,
+                academicYear: formData.academicYear || `${new Date().getFullYear()}-${new Date().getFullYear() + 1}`,
+                term: 'Admission',
+                feeItems: [
+                  { itemName: 'Admission Fee', itemAmount: parseFloat(admissionAmount) || 0 },
+                  { itemName: 'Registration Fee', itemAmount: parseFloat(registrationAmount) || 0 },
+                  { itemName: 'ID Card', itemAmount: parseFloat(idCardAmount) || 0 }
+                ].filter(item => item.itemAmount > 0),
+                discount: parseFloat(feeDiscount) || 0,
+                dueDate: feeDueDate
+              });
+            } catch (feeErr: any) {
+              console.error('Failed to create admission fee:', feeErr);
+              // Don't fail the whole operation if fee creation fails
+            }
+          }
         }
 
         // Show credentials modal if there are credentials to display
@@ -1058,6 +1094,233 @@ export const StudentForm: React.FC = () => {
                 </Card.Body>
               </Card>
             </Tab>
+
+            {/* Government IDs Tab */}
+            <Tab eventKey="govtIds" title="Government IDs">
+              <Card className="border-0 shadow-sm mb-4">
+                <Card.Body>
+                  <Alert variant="info" className="mb-4">
+                    <i className="bi bi-shield-check me-2"></i>
+                    <strong>Important:</strong> Government ID information is confidential and stored securely.
+                    Aadhaar numbers are masked and not displayed publicly.
+                  </Alert>
+
+                  <Row>
+                    <Col md={6}>
+                      <Form.Group className="mb-3">
+                        <Form.Label>Aadhaar Number</Form.Label>
+                        <Form.Control
+                          type="text"
+                          name="aadhaarNumber"
+                          value={formData.aadhaarNumber}
+                          onChange={handleChange}
+                          placeholder="12-digit Aadhaar number"
+                          maxLength={12}
+                          pattern="\d{12}"
+                        />
+                        <Form.Text className="text-muted">
+                          Enter 12-digit Aadhaar number (will be stored securely and masked)
+                        </Form.Text>
+                      </Form.Group>
+                    </Col>
+                    <Col md={6}>
+                      <Form.Group className="mb-3">
+                        <Form.Label>Birth Certificate Number</Form.Label>
+                        <Form.Control
+                          type="text"
+                          name="birthCertificateNumber"
+                          value={formData.birthCertificateNumber}
+                          onChange={handleChange}
+                          placeholder="Birth certificate number"
+                        />
+                        <Form.Text className="text-muted">
+                          Official birth certificate registration number
+                        </Form.Text>
+                      </Form.Group>
+                    </Col>
+                  </Row>
+
+                  <Row>
+                    <Col md={6}>
+                      <Form.Group className="mb-3">
+                        <Form.Label>APAAR ID</Form.Label>
+                        <Form.Control
+                          type="text"
+                          name="apaarId"
+                          value={formData.apaarId}
+                          onChange={handleChange}
+                          placeholder="12-character APAAR ID"
+                          maxLength={12}
+                        />
+                        <Form.Text className="text-muted">
+                          Automated Permanent Academic Account Registry ID (if available)
+                        </Form.Text>
+                      </Form.Group>
+                    </Col>
+                  </Row>
+
+                  <hr className="my-4" />
+                  <h6 className="mb-3">Document Uploads</h6>
+                  <Alert variant="secondary" className="mb-3">
+                    <i className="bi bi-paperclip me-2"></i>
+                    Upload scanned copies of government-issued ID documents for verification
+                  </Alert>
+
+                  <Row>
+                    <Col md={4}>
+                      <Form.Group className="mb-3">
+                        <Form.Label>Aadhaar Document</Form.Label>
+                        <Form.Control
+                          type="file"
+                          accept="image/*,.pdf"
+                          onChange={(e: any) => setAadhaarFile(e.target.files?.[0] || null)}
+                        />
+                        <Form.Text className="text-muted">Image or PDF</Form.Text>
+                      </Form.Group>
+                    </Col>
+                    <Col md={4}>
+                      <Form.Group className="mb-3">
+                        <Form.Label>Birth Certificate</Form.Label>
+                        <Form.Control
+                          type="file"
+                          accept="image/*,.pdf"
+                          onChange={(e: any) => setBirthCertFile(e.target.files?.[0] || null)}
+                        />
+                        <Form.Text className="text-muted">Image or PDF</Form.Text>
+                      </Form.Group>
+                    </Col>
+                    <Col md={4}>
+                      <Form.Group className="mb-3">
+                        <Form.Label>APAAR Document</Form.Label>
+                        <Form.Control
+                          type="file"
+                          accept="image/*,.pdf"
+                          onChange={(e: any) => setApaarFile(e.target.files?.[0] || null)}
+                        />
+                        <Form.Text className="text-muted">Image or PDF</Form.Text>
+                      </Form.Group>
+                    </Col>
+                  </Row>
+                </Card.Body>
+              </Card>
+            </Tab>
+
+            {/* Fee Details Tab - Only for new students */}
+            {!isEditMode && (
+              <Tab eventKey="fees" title="Fee Details (Optional)">
+                <Card className="border-0 shadow-sm mb-4">
+                  <Card.Body>
+                    <Alert variant="info" className="mb-4">
+                      <i className="bi bi-cash-coin me-2"></i>
+                      <strong>Optional:</strong> Create admission fee during student enrollment.
+                      You can also create fees later from the Fees management page.
+                    </Alert>
+
+                    <Form.Group className="mb-4">
+                      <Form.Check
+                        type="checkbox"
+                        id="create-admission-fee"
+                        label="Create Admission Fee for this student"
+                        checked={createAdmissionFee}
+                        onChange={(e) => setCreateAdmissionFee(e.target.checked)}
+                      />
+                      <Form.Text className="text-muted d-block ms-4">
+                        This will automatically create a fee record with admission-related charges
+                      </Form.Text>
+                    </Form.Group>
+
+                    {createAdmissionFee && (
+                      <>
+                        <hr className="my-4" />
+                        <h6 className="mb-3">Fee Components</h6>
+                        <Row>
+                          <Col md={4}>
+                            <Form.Group className="mb-3">
+                              <Form.Label>Admission Fee (₹)</Form.Label>
+                              <Form.Control
+                                type="number"
+                                value={admissionAmount}
+                                onChange={(e) => setAdmissionAmount(e.target.value)}
+                                placeholder="2000"
+                                min="0"
+                                step="100"
+                              />
+                            </Form.Group>
+                          </Col>
+                          <Col md={4}>
+                            <Form.Group className="mb-3">
+                              <Form.Label>Registration Fee (₹)</Form.Label>
+                              <Form.Control
+                                type="number"
+                                value={registrationAmount}
+                                onChange={(e) => setRegistrationAmount(e.target.value)}
+                                placeholder="500"
+                                min="0"
+                                step="50"
+                              />
+                            </Form.Group>
+                          </Col>
+                          <Col md={4}>
+                            <Form.Group className="mb-3">
+                              <Form.Label>ID Card Fee (₹)</Form.Label>
+                              <Form.Control
+                                type="number"
+                                value={idCardAmount}
+                                onChange={(e) => setIdCardAmount(e.target.value)}
+                                placeholder="100"
+                                min="0"
+                                step="10"
+                              />
+                            </Form.Group>
+                          </Col>
+                        </Row>
+
+                        <Row>
+                          <Col md={6}>
+                            <Form.Group className="mb-3">
+                              <Form.Label>Discount (₹)</Form.Label>
+                              <Form.Control
+                                type="number"
+                                value={feeDiscount}
+                                onChange={(e) => setFeeDiscount(e.target.value)}
+                                placeholder="0"
+                                min="0"
+                                step="50"
+                              />
+                              <Form.Text className="text-muted">
+                                Optional discount amount to apply
+                              </Form.Text>
+                            </Form.Group>
+                          </Col>
+                          <Col md={6}>
+                            <Form.Group className="mb-3">
+                              <Form.Label>Due Date</Form.Label>
+                              <Form.Control
+                                type="date"
+                                value={feeDueDate}
+                                onChange={(e) => setFeeDueDate(e.target.value)}
+                                min={new Date().toISOString().split('T')[0]}
+                              />
+                              <Form.Text className="text-muted">
+                                Payment deadline for this fee
+                              </Form.Text>
+                            </Form.Group>
+                          </Col>
+                        </Row>
+
+                        <Alert variant="secondary" className="mt-3">
+                          <strong>Total Amount:</strong> ₹
+                          {(parseFloat(admissionAmount || '0') + 
+                            parseFloat(registrationAmount || '0') + 
+                            parseFloat(idCardAmount || '0') - 
+                            parseFloat(feeDiscount || '0')).toLocaleString()}
+                        </Alert>
+                      </>
+                    )}
+                  </Card.Body>
+                </Card>
+              </Tab>
+            )}
 
             {/* User Account Creation Tab - Only for new students */}
             {!isEditMode && (
