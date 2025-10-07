@@ -26,6 +26,7 @@ export const TimetableForm: React.FC = () => {
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [existingTimetables, setExistingTimetables] = useState<any[]>([]);
 
   const currentYear = useMemo(() => {
     const y = new Date().getFullYear();
@@ -53,6 +54,48 @@ export const TimetableForm: React.FC = () => {
     isActive: true,
   });
 
+  // ---- Availability helpers (component scope) ----
+  const toMinutes = (hhmm?: string): number => {
+    if (!hhmm) return -1;
+    const t = hhmm.slice(0,5);
+    const [h, m] = t.split(':').map((n) => parseInt(n, 10));
+    return h * 60 + m;
+  };
+
+  const overlaps = (aStart?: string, aEnd?: string, bStart?: string, bEnd?: string): boolean => {
+    const as = toMinutes(aStart), ae = toMinutes(aEnd), bs = toMinutes(bStart), be = toMinutes(bEnd);
+    if (as < 0 || ae < 0 || bs < 0 || be < 0) return false;
+    return as < be && ae > bs;
+  };
+
+  const isTeacherFree = (teacherId: string, day: DayOfWeek, start?: string, end?: string, idx?: number, periodType?: string): boolean => {
+    // Only restrict for teaching periods
+    const restricted = periodType === 'LECTURE' || periodType === 'PRACTICAL';
+    if (!restricted) return true;
+
+    // Against existing school timetables
+    for (const tt of existingTimetables) {
+      for (const e of (tt.entries || [])) {
+        if (String(e.day).toUpperCase() !== String(day).toUpperCase()) continue;
+        if (e.teacherId !== teacherId) continue;
+        if (overlaps(e.startTime, e.endTime, start, end)) return false;
+      }
+    }
+
+    // Against current form entries
+    const entries = form.entries || [];
+    for (let i = 0; i < entries.length; i++) {
+      if (i === (idx ?? -1)) continue;
+      const e = entries[i];
+      if (!e) continue;
+      if (String(e.day).toUpperCase() !== String(day).toUpperCase()) continue;
+      if (e.teacherId !== teacherId) continue;
+      if (!((e.periodType === 'LECTURE' || e.periodType === 'PRACTICAL'))) continue;
+      if (overlaps(e.startTime, e.endTime, start, end)) return false;
+    }
+    return true;
+  };
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -66,6 +109,12 @@ export const TimetableForm: React.FC = () => {
         setClasses(cls);
         setSubjects(subj.filter(s => s.isActive));
         setTeachers(tchr.filter(t => t.isActive));
+        if (user?.schoolId) {
+          try {
+            const list = await timetableService.list({ schoolId: user.schoolId });
+            setExistingTimetables(list || []);
+          } catch {}
+        }
         if (isEdit && id) {
           const tt = await timetableService.getById(id);
           setForm(tt);
@@ -364,9 +413,11 @@ export const TimetableForm: React.FC = () => {
                               }}
                             >
                               <option value="">Select Teacher</option>
-                              {teachers.map((t) => (
-                                <option key={t.id} value={t.id}>{t.firstName} {t.lastName} ({t.employeeId})</option>
-                              ))}
+                              {teachers
+                                .filter((t) => isTeacherFree(t.id, entry.day as DayOfWeek, entry.startTime, entry.endTime, idx, entry.periodType))
+                                .map((t) => (
+                                  <option key={t.id} value={t.id}>{t.firstName} {t.lastName} ({t.employeeId})</option>
+                                ))}
                             </Form.Select>
                           </Form.Group>
                         </Col>

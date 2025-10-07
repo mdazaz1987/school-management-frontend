@@ -56,6 +56,48 @@ export const TimetableFormImproved: React.FC = () => {
   // Timetable grid: [day][slotIndex] = { subjectId, teacherId }
   const [timetableGrid, setTimetableGrid] = useState<Record<string, Record<number, { subjectId: string; teacherId: string; room: string }>>>({});
 
+  // ---- Availability helpers (component scope) ----
+  const toMinutes = (t?: string): number => {
+    if (!t) return -1;
+    const hhmm = t.slice(0,5);
+    const [h, m] = hhmm.split(':').map(Number);
+    return (h * 60) + m;
+  };
+
+  const overlaps = (aStart: string, aEnd: string, bStart: string, bEnd: string): boolean => {
+    const as = toMinutes(aStart), ae = toMinutes(aEnd), bs = toMinutes(bStart), be = toMinutes(bEnd);
+    if (as < 0 || ae < 0 || bs < 0 || be < 0) return false;
+    return as < be && ae > bs;
+  };
+
+  const isTeacherFree = (teacherId: string, day: DayOfWeek, slotIndex: number): boolean => {
+    const slot = timeSlots[slotIndex];
+    if (!slot || slot.type !== 'LECTURE') return true; // only lectures restrict
+
+    // Check against existing school timetables
+    for (const tt of existingTimetables) {
+      const entries = (tt.entries || []);
+      for (const e of entries) {
+        if (e.teacherId !== teacherId) continue;
+        if ((e.day || '').toUpperCase() !== day) continue;
+        if (overlaps(e.startTime, e.endTime, slot.startTime, slot.endTime)) return false;
+      }
+    }
+
+    // Check against current grid selections for this timetable in progress
+    const gridDay = timetableGrid[day] || {};
+    for (const [idxStr, cell] of Object.entries(gridDay)) {
+      const idx = Number(idxStr);
+      if (idx === slotIndex) continue; // same cell
+      if (!cell?.teacherId) continue;
+      if (cell.teacherId !== teacherId) continue;
+      const other = timeSlots[idx];
+      if (other && overlaps(other.startTime, other.endTime, slot.startTime, slot.endTime)) return false;
+    }
+
+    return true;
+  };
+
   useEffect(() => {
     loadData();
   }, [user?.schoolId]);
@@ -104,48 +146,6 @@ export const TimetableFormImproved: React.FC = () => {
               teacherId: entry.teacherId || '',
               room: entry.room || '',
             };
-
-  // ---- Availability helpers ----
-  const toMinutes = (t?: string): number => {
-    if (!t) return -1;
-    const hhmm = t.slice(0,5);
-    const [h, m] = hhmm.split(':').map(Number);
-    return (h * 60) + m;
-  };
-
-  const overlaps = (aStart: string, aEnd: string, bStart: string, bEnd: string): boolean => {
-    const as = toMinutes(aStart), ae = toMinutes(aEnd), bs = toMinutes(bStart), be = toMinutes(bEnd);
-    if (as < 0 || ae < 0 || bs < 0 || be < 0) return false;
-    return as < be && ae > bs;
-  };
-
-  const isTeacherFree = (teacherId: string, day: DayOfWeek, slotIndex: number): boolean => {
-    const slot = timeSlots[slotIndex];
-    if (!slot || slot.type !== 'LECTURE') return true; // only lectures restrict
-
-    // Check against existing school timetables
-    for (const tt of existingTimetables) {
-      const entries = (tt.entries || []);
-      for (const e of entries) {
-        if (e.teacherId !== teacherId) continue;
-        if ((e.day || '').toUpperCase() !== day) continue;
-        if (overlaps(e.startTime, e.endTime, slot.startTime, slot.endTime)) return false;
-      }
-    }
-
-    // Check against current grid selections for this timetable in progress
-    const gridDay = timetableGrid[day] || {};
-    for (const [idxStr, cell] of Object.entries(gridDay)) {
-      const idx = Number(idxStr);
-      if (idx === slotIndex) continue; // same cell
-      if (!cell?.teacherId) continue;
-      if (cell.teacherId !== teacherId) continue;
-      const other = timeSlots[idx];
-      if (other && overlaps(other.startTime, other.endTime, slot.startTime, slot.endTime)) return false;
-    }
-
-    return true;
-  };
           }
         });
         setTimetableGrid(grid);
