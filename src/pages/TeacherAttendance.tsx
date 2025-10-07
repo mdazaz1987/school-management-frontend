@@ -149,7 +149,7 @@ export const TeacherAttendance: React.FC = () => {
                       <option value="">Select class...</option>
                       {classes.map((c) => (
                         <option key={c.id} value={c.id}>
-                          {c.className || c.name || `${c.grade || 'Class'}${c.section ? ' - ' + c.section : ''}`}
+                          {c.name || `${c.className || c.grade || 'Class'}${c.section ? ' - ' + c.section : ''}`}
                         </option>
                       ))}
                     </Form.Select>
@@ -229,7 +229,7 @@ export const TeacherAttendance: React.FC = () => {
                 <Card.Header className="bg-white d-flex justify-content-between align-items-center">
                   <h5 className="mb-0">Students - {(() => {
                     const c = classes.find(cc => cc.id === selectedClass);
-                    return c ? (c.name || c.className || `${c.grade || 'Class'}${c.section ? ' - ' + c.section : ''}`) : selectedClass;
+                    return c ? (c.name || `${c.className || c.grade || 'Class'}${c.section ? ' - ' + c.section : ''}`) : selectedClass;
                   })()}</h5>
                   <Badge bg="primary">{filteredStudents.length} students</Badge>
                 </Card.Header>

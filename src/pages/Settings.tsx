@@ -15,7 +15,7 @@ export const Settings: React.FC = () => {
   const navigate = useNavigate();
   const isAdmin = useMemo(() => (user?.roles || []).some(r => r === 'ADMIN' || r === 'ROLE_ADMIN'), [user?.roles]);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
-  const [activeTab, setActiveTab] = useState<'password' | 'notifications' | 'preferences' | 'school'>('password');
+  const [activeTab, setActiveTab] = useState<'password' | 'notifications' | 'preferences' | 'school' | 'email'>('password');
   const [saveMessage, setSaveMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -57,6 +57,21 @@ export const Settings: React.FC = () => {
     branding: { primaryColor: '#0d6efd', secondaryColor: '#6c757d', theme: 'light' },
   });
 
+  // Email configuration (admin-only)
+  const [emailConfig, setEmailConfig] = useState<{
+    smtpHost?: string;
+    smtpPort?: number;
+    smtpUsername?: string;
+    smtpPassword?: string;
+    fromEmail?: string;
+    fromName?: string;
+    enableSSL?: boolean;
+    enableTLS?: boolean;
+  }>({});
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [emailSaving, setEmailSaving] = useState(false);
+  const [testEmail, setTestEmail] = useState('');
+
   useEffect(() => {
     // keep Settings theme in sync with global ThemeContext
     setPreferences((prev) => ({ ...prev, theme }));
@@ -90,9 +105,22 @@ export const Settings: React.FC = () => {
         setSchoolLoading(false);
       }
     };
+    const maybeLoadEmail = async () => {
+      if (!isAdmin || !user?.schoolId) return;
+      try {
+        setEmailLoading(true);
+        const cfg = await apiService.get(`/admin/schools/${user.schoolId}/email-config`);
+        setEmailConfig(cfg || {});
+      } catch (e) {
+        // ignore if not configured yet
+      } finally {
+        setEmailLoading(false);
+      }
+    };
     
     loadNotificationPreferences();
     maybeLoadSchool();
+    maybeLoadEmail();
   }, [isAdmin, user?.schoolId, theme]);
 
   const handlePasswordChange = async (e: React.FormEvent) => {
@@ -217,6 +245,17 @@ export const Settings: React.FC = () => {
                   >
                     <i className="bi bi-building me-2"></i>
                     School
+                  </ListGroup.Item>
+                )}
+                {isAdmin && (
+                  <ListGroup.Item
+                    action
+                    active={activeTab === 'email'}
+                    onClick={() => setActiveTab('email')}
+                    className="d-flex align-items-center"
+                  >
+                    <i className="bi bi-envelope-paper me-2"></i>
+                    Email
                   </ListGroup.Item>
                 )}
               </ListGroup>
@@ -723,6 +762,37 @@ export const Settings: React.FC = () => {
                               configuration: { ...(prev.configuration || {}), timezone: e.target.value },
                             }))}
                             placeholder="e.g., Asia/Kolkata"
+                          />
+                        </Form.Group>
+                      </Col>
+                    </Row>
+
+                    <Row>
+                      <Col md={6} className="mb-3">
+                        <Form.Group>
+                          <Form.Label>Default Student ID Format</Form.Label>
+                          <Form.Control
+                            type="text"
+                            value={(school.configuration as any)?.studentIdFormat || ''}
+                            onChange={(e) => setSchool((prev) => ({
+                              ...prev,
+                              configuration: { ...(prev.configuration || {}), studentIdFormat: e.target.value },
+                            }))}
+                            placeholder="e.g., STU-{YYYY}-{SEQ}"
+                          />
+                        </Form.Group>
+                      </Col>
+                      <Col md={6} className="mb-3">
+                        <Form.Group>
+                          <Form.Label>Default Employee ID Format</Form.Label>
+                          <Form.Control
+                            type="text"
+                            value={(school.configuration as any)?.employeeIdFormat || ''}
+                            onChange={(e) => setSchool((prev) => ({
+                              ...prev,
+                              configuration: { ...(prev.configuration || {}), employeeIdFormat: e.target.value },
+                            }))}
+                            placeholder="e.g., EMP-{YYYY}-{SEQ}"
                           />
                         </Form.Group>
                       </Col>

@@ -501,6 +501,14 @@ export const TimetableFormImproved: React.FC = () => {
                               <option value="">Select Teacher</option>
                               {teachers
                                 .filter(t => isTeacherFree(t.id, day, slotIndex))
+                                .filter(t => {
+                                  // Subject-teacher constraint on UI as well
+                                  const subj = subjects.find(s => s.id === cell.subjectId);
+                                  if (!subj) return true; // if no subject selected, show all
+                                  const ids = (subj as any).teacherIds as string[] | undefined;
+                                  if (!ids || ids.length === 0) return true; // unrestricted subject
+                                  return ids.includes(t.id) || ids.includes((t as any).userId);
+                                })
                                 .map(t => (
                                   <option key={t.id} value={t.id}>
                                     {t.firstName} {t.lastName}

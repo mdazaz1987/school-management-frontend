@@ -4,6 +4,7 @@ import { Layout } from '../components/Layout';
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { useAuth } from '../contexts/AuthContext';
 import { Subject } from '../types';
+import { teacherService } from '../services/teacherService';
 import { subjectService } from '../services/subjectService';
 
 export const SubjectForm: React.FC = () => {
@@ -26,7 +27,10 @@ export const SubjectForm: React.FC = () => {
     credits: 0,
     totalHours: 0,
     isActive: true,
+    teacherIds: [],
   });
+
+  const [teachers, setTeachers] = useState<any[]>([]);
 
   const isEdit = Boolean(id);
 
@@ -49,6 +53,17 @@ export const SubjectForm: React.FC = () => {
     load();
   }, [id]);
 
+  useEffect(() => {
+    const loadTeachers = async () => {
+      if (!user?.schoolId) return;
+      try {
+        const list = await teacherService.getTeachersBySchool(user.schoolId);
+        setTeachers(list || []);
+      } catch {}
+    };
+    loadTeachers();
+  }, [user?.schoolId]);
+
   const handleChange = (key: keyof Subject, value: any) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
@@ -69,6 +84,7 @@ export const SubjectForm: React.FC = () => {
         credits: form.credits ?? 0,
         totalHours: form.totalHours ?? undefined,
         isActive: form.isActive ?? true,
+        teacherIds: form.teacherIds || [],
       };
       if (isEdit && id) {
         await subjectService.update(id, payload);
@@ -234,6 +250,29 @@ export const SubjectForm: React.FC = () => {
                         value={form.description || ''}
                         onChange={(e) => handleChange('description', e.target.value)}
                       />
+                    </Form.Group>
+                  </Col>
+                </Row>
+
+                <Row>
+                  <Col md={12} className="mb-3">
+                    <Form.Group>
+                      <Form.Label>Assign Teachers</Form.Label>
+                      <Form.Select
+                        multiple
+                        value={(form.teacherIds as any) || []}
+                        onChange={(e) => {
+                          const options = Array.from(e.target.selectedOptions).map(o => o.value);
+                          handleChange('teacherIds' as any, options);
+                        }}
+                      >
+                        {teachers.map((t: any) => (
+                          <option key={t.id} value={t.id}>
+                            {t.firstName} {t.lastName} ({t.employeeId})
+                          </option>
+                        ))}
+                      </Form.Select>
+                      <Form.Text className="text-muted">Hold Ctrl/Cmd to select multiple teachers</Form.Text>
                     </Form.Group>
                   </Col>
                 </Row>

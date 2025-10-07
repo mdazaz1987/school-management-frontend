@@ -4,6 +4,7 @@ import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
 import { teacherService } from '../services/teacherService';
+import { studentService } from '../services/studentService';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -34,6 +35,8 @@ export const TeacherGrading: React.FC = () => {
 
   const [assignments, setAssignments] = useState<any[]>([]);
   const [submissions, setSubmissions] = useState<any[]>([]);
+  const [teacherAttachments, setTeacherAttachments] = useState<string[]>([]);
+  const [submissionPreview, setSubmissionPreview] = useState<{ attachments: string[]; content?: string }>({ attachments: [], content: '' });
 
   useEffect(() => {
     const init = async () => {
@@ -66,11 +69,14 @@ export const TeacherGrading: React.FC = () => {
         id: s.id,
         studentName: s.studentName || s.student?.name || s.studentId,
         rollNo: s.rollNo || s.student?.rollNumber || '-',
-        status: s.status?.toLowerCase() === 'graded' ? 'graded' : (s.status || 'submitted'),
+        status: (s.status || '').toLowerCase() === 'graded' ? 'graded' : (s.status || 'submitted'),
         marks: s.marksObtained ?? s.marks ?? null,
         grade: s.grade || null,
+        attachments: s.attachments || [],
+        content: s.content,
       }));
       setSubmissions(normalized);
+      try { setTeacherAttachments(await studentService.listAssignmentAttachments(assignmentId)); } catch { setTeacherAttachments([]); }
     } catch (e: any) {
       setError(e?.response?.data?.message || 'Failed to load submissions');
     }
@@ -83,6 +89,7 @@ export const TeacherGrading: React.FC = () => {
       grade: student.grade || '',
       feedback: ''
     });
+    setSubmissionPreview({ attachments: student.attachments || [], content: student.content });
     setShowModal(true);
   };
 
@@ -229,6 +236,64 @@ export const TeacherGrading: React.FC = () => {
                   <Alert variant="info">
                     <strong>Student:</strong> {gradingStudent.studentName} ({gradingStudent.rollNo})
                   </Alert>
+
+                  {/* Submission preview */}
+                  {(submissionPreview.content || (submissionPreview.attachments || []).length > 0) && (
+                    <Card className="border-0 shadow-sm mb-3">
+                      <Card.Header className="bg-white"><strong>Submission</strong></Card.Header>
+                      <Card.Body>
+                        {submissionPreview.content && (
+                          <div className="mb-3">
+                            <div className="text-muted mb-1">Text</div>
+                            <div className="p-2 bg-light rounded" style={{ whiteSpace: 'pre-wrap' }}>{submissionPreview.content}</div>
+                          </div>
+                        )}
+                        {(submissionPreview.attachments || []).length > 0 && (
+                          <div>
+                            <div className="text-muted mb-1">Attachments</div>
+                            <ul className="mb-0">
+                              {submissionPreview.attachments.map((f, idx) => (
+                                <li key={idx}>
+                                  {/^https?:\/\//i.test(String(f)) ? (
+                                    <a href={String(f)} target="_blank" rel="noreferrer">
+                                      <i className="bi bi-paperclip me-1"></i>{String(f)}
+                                    </a>
+                                  ) : (
+                                    <span><i className="bi bi-paperclip me-1"></i>{String(f)}</span>
+                                  )}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </Card.Body>
+                    </Card>
+                  )}
+
+                  {/* Teacher attachments */}
+                  {(teacherAttachments || []).length > 0 && (
+                    <Card className="border-0 shadow-sm mb-3">
+                      <Card.Header className="bg-white"><strong>Assignment Attachments</strong></Card.Header>
+                      <Card.Body>
+                        <ul className="mb-0">
+                          {teacherAttachments.map((f) => (
+                            <li key={f}>
+                              <Button variant="link" className="p-0" onClick={async () => {
+                                try {
+                                  const blob = await studentService.getAssignmentAttachmentBlob(selectedItem, f);
+                                  const url = window.URL.createObjectURL(blob);
+                                  window.open(url, '_blank');
+                                  setTimeout(() => window.URL.revokeObjectURL(url), 10000);
+                                } catch {}
+                              }}>
+                                <i className="bi bi-paperclip me-1"></i>{f}
+                              </Button>
+                            </li>
+                          ))}
+                        </ul>
+                      </Card.Body>
+                    </Card>
+                  )}
 
                   <Form>
                     <Form.Group className="mb-3">
