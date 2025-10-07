@@ -219,7 +219,10 @@ export const TeacherAttendance: React.FC = () => {
 
               <Card className="border-0 shadow-sm">
                 <Card.Header className="bg-white d-flex justify-content-between align-items-center">
-                  <h5 className="mb-0">Students - {selectedClass}</h5>
+                  <h5 className="mb-0">Students - {(() => {
+                    const c = classes.find(cc => cc.id === selectedClass);
+                    return c ? (c.name || c.className || `${c.grade || 'Class'}${c.section ? ' - ' + c.section : ''}`) : selectedClass;
+                  })()}</h5>
                   <Badge bg="primary">{filteredStudents.length} students</Badge>
                 </Card.Header>
                 <Card.Body>

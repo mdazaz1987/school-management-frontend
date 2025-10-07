@@ -398,6 +398,24 @@ export const studentService = {
   },
 
   /**
+   * List attachments provided by teacher for an assignment
+   */
+  async listAssignmentAttachments(assignmentId: string): Promise<string[]> {
+    return apiService.get(`/assignments/${assignmentId}/attachments`);
+  },
+
+  /**
+   * Download a teacher-provided attachment as Blob
+   */
+  async getAssignmentAttachmentBlob(assignmentId: string, filename: string): Promise<Blob> {
+    const axios = apiService.getAxiosInstance();
+    const resp = await axios.get(`/assignments/${assignmentId}/attachments/${encodeURIComponent(filename)}` as any, {
+      responseType: 'blob',
+    });
+    return resp.data as Blob;
+  },
+
+  /**
    * Submit assignment
    */
   async submitAssignment(assignmentId: string, data: FormData): Promise<any> {

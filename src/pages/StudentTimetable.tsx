@@ -21,10 +21,17 @@ export const StudentTimetable: React.FC = () => {
   const [timetable, setTimetable] = useState<any>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [now, setNow] = useState(new Date());
 
   useEffect(() => {
     loadTimetable();
   }, [user?.email]);
+
+  // Tick clock every minute for live highlighting
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60000);
+    return () => clearInterval(id);
+  }, []);
 
   const loadTimetable = async () => {
     setLoading(true);
@@ -39,10 +46,14 @@ export const StudentTimetable: React.FC = () => {
       (tt.entries || []).forEach((e: any, idx: number) => {
         const day = (e.day || '').toUpperCase();
         if (!byDay[day]) byDay[day] = [];
-        const time = `${(e.startTime || '').slice(0,5)}-${(e.endTime || '').slice(0,5)}`;
+        const startStr = (e.startTime || '').slice(0,5);
+        const endStr = (e.endTime || '').slice(0,5);
+        const time = `${startStr}-${endStr}`;
         byDay[day].push({
           period: e.period || String(idx + 1),
           time,
+          start: startStr,
+          end: endStr,
           subject: e.subjectName,
           teacher: e.teacherName,
           room: e.room,
@@ -63,6 +74,12 @@ export const StudentTimetable: React.FC = () => {
   };
 
   const days = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
+  const currentDay = now.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
+  const toMinutes = (hhmm: string) => {
+    if (!hhmm || hhmm.length < 4) return -1;
+    const [h, m] = hhmm.split(':').map(Number);
+    return (h * 60) + m;
+  };
 
   return (
     <Layout>
@@ -95,7 +112,12 @@ export const StudentTimetable: React.FC = () => {
                     <tr>
                       <th style={{ width: '120px' }}>Time</th>
                       {days.map(day => (
-                        <th key={day} className="text-center">{day}</th>
+                        <th
+                          key={day}
+                          className={`text-center ${day === currentDay ? 'bg-primary text-white' : ''}`}
+                        >
+                          {day}
+                        </th>
                       ))}
                     </tr>
                   </thead>
@@ -113,14 +135,23 @@ export const StudentTimetable: React.FC = () => {
                               </td>
                             );
                           }
+                          const nowMin = toMinutes(now.toTimeString().slice(0,5));
+                          const startMin = toMinutes(period.start);
+                          const endMin = toMinutes(period.end);
+                          const inProgress = (day === currentDay) && startMin !== -1 && endMin !== -1 && nowMin >= startMin && nowMin < endMin;
                           return (
-                            <td key={day}>
+                            <td key={day} className={inProgress ? 'bg-success bg-opacity-25' : ''}>
                               <div className="p-2">
                                 <Badge bg="primary" className="mb-1">{period.subject}</Badge>
                                 <br />
                                 <small className="text-muted">{period.teacher}</small>
                                 <br />
                                 <small className="text-muted"><i className="bi bi-geo-alt me-1"></i>{period.room}</small>
+                                {inProgress && (
+                                  <div className="mt-1">
+                                    <Badge bg="success">In progress</Badge>
+                                  </div>
+                                )}
                               </div>
                             </td>
                           );

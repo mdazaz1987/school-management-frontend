@@ -56,11 +56,12 @@ export const TeacherAssignments: React.FC = () => {
       
       // Load assignments via session-based endpoint
       const list = await teacherService.getMyAssignments();
+      const nameMap = new Map<string, string>((cls || []).map((c: any) => [c.id, (c.name || c.className || `${c.grade || 'Class'}${c.section ? ' - ' + c.section : ''}`)]));
       const normalized = (list || []).map((a: any) => ({
         id: a.id,
         title: a.title,
         classId: a.classId,
-        class: a.className || a.classId,
+        class: nameMap.get(a.classId) || a.className || a.classId,
         subject: a.subject || a.subjectName,
         dueDate: a.dueDate,
         totalMarks: a.maxMarks || a.totalMarks,

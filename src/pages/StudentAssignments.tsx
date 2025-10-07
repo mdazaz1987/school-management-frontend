@@ -26,6 +26,7 @@ export const StudentAssignments: React.FC = () => {
   const [submissionText, setSubmissionText] = useState('');
   const [, setSubmissionFile] = useState<File | null>(null);
   const [activeTab, setActiveTab] = useState('pending');
+  const [attachments, setAttachments] = useState<string[]>([]);
 
   useEffect(() => {
     loadAssignments();
@@ -70,7 +71,6 @@ export const StudentAssignments: React.FC = () => {
           dueDate: a.dueDate,
           assignedDate: a.assignedDate,
           totalMarks: a.maxMarks || a.totalMarks,
-          status,
           submittedDate: sub?.submittedAt,
           grade: sub?.grade,
           marksObtained: sub?.marksObtained,
@@ -83,6 +83,33 @@ export const StudentAssignments: React.FC = () => {
       setError(e.response?.data?.message || 'Failed to load assignments');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const openSubmitModal = async (assignment: any) => {
+    setSelectedAssignment(assignment);
+    setShowSubmitModal(true);
+    try {
+      const list = await studentService.listAssignmentAttachments(assignment.id);
+      setAttachments(list || []);
+    } catch {
+      setAttachments([]);
+    }
+  };
+
+  const downloadAttachment = async (assignmentId: string, filename: string) => {
+    try {
+      const blob = await studentService.getAssignmentAttachmentBlob(assignmentId, filename);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error('Failed to download attachment', e);
     }
   };
 
@@ -103,6 +130,7 @@ export const StudentAssignments: React.FC = () => {
     }
   };
 
+  // Tabs filtering
   const filteredAssignments = assignments.filter(a => {
     if (activeTab === 'pending') return a.status === 'pending';
     if (activeTab === 'submitted') return a.status === 'submitted';
@@ -188,14 +216,20 @@ export const StudentAssignments: React.FC = () => {
                             </td>
                             <td>{assignment.totalMarks}</td>
                             <td>{getStatusBadge(assignment.status)}</td>
-                            <td>
+                            <td className="d-flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline-secondary"
+                                onClick={() => openSubmitModal(assignment)}
+                                title="View attachments"
+                              >
+                                <i className="bi bi-paperclip me-1"></i>
+                                View attachments
+                              </Button>
                               <Button
                                 size="sm"
                                 variant="primary"
-                                onClick={() => {
-                                  setSelectedAssignment(assignment);
-                                  setShowSubmitModal(true);
-                                }}
+                                onClick={() => openSubmitModal(assignment)}
                               >
                                 <i className="bi bi-upload me-1"></i>
                                 Submit
@@ -221,7 +255,7 @@ export const StudentAssignments: React.FC = () => {
                           <tr key={assignment.id}>
                             <td><strong>{assignment.title}</strong></td>
                             <td><Badge bg="secondary">{assignment.subject}</Badge></td>
-                            <td>{new Date(assignment.submittedDate).toLocaleDateString()}</td>
+                            <td>{assignment.submittedDate ? new Date(assignment.submittedDate).toLocaleDateString() : '-'}</td>
                             <td>{getStatusBadge(assignment.status)}</td>
                           </tr>
                         ))}
@@ -245,9 +279,9 @@ export const StudentAssignments: React.FC = () => {
                           <tr key={assignment.id}>
                             <td><strong>{assignment.title}</strong></td>
                             <td><Badge bg="secondary">{assignment.subject}</Badge></td>
-                            <td>{new Date(assignment.submittedDate).toLocaleDateString()}</td>
+                            <td>{assignment.submittedDate ? new Date(assignment.submittedDate).toLocaleDateString() : '-'}</td>
                             <td>
-                              <strong>{assignment.marksObtained}</strong> / {assignment.totalMarks}
+                              <strong>{assignment.marksObtained ?? '-'}</strong> / {assignment.totalMarks}
                             </td>
                             <td>
                               {assignment.grade ? (
@@ -258,7 +292,7 @@ export const StudentAssignments: React.FC = () => {
                                 <Badge bg="secondary">Not Graded</Badge>
                               )}
                             </td>
-                            <td>{assignment.feedback}</td>
+                            <td>{assignment.feedback || '-'}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -281,8 +315,22 @@ export const StudentAssignments: React.FC = () => {
             <>
               <h5>{selectedAssignment.title}</h5>
               <p className="text-muted">{selectedAssignment.description}</p>
+              {attachments.length > 0 && (
+                <div className="mb-3">
+                  <strong>Attachments from teacher:</strong>
+                  <ul className="mt-2">
+                    {attachments.map((f) => (
+                      <li key={f}>
+                        <Button variant="link" className="p-0" onClick={() => downloadAttachment(selectedAssignment.id, f)}>
+                          <i className="bi bi-paperclip me-1"></i>{f}
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               <hr />
-              
+
               <Form>
                 <Form.Group className="mb-3">
                   <Form.Label>Submission Text</Form.Label>
@@ -294,7 +342,7 @@ export const StudentAssignments: React.FC = () => {
                     placeholder="Type your submission here..."
                   />
                 </Form.Group>
-                
+
                 <Form.Group className="mb-3">
                   <Form.Label>Upload File (Optional)</Form.Label>
                   <Form.Control

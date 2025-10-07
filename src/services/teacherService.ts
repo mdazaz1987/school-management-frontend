@@ -179,7 +179,8 @@ export const teacherService = {
 
   // Prefer this for detailed student info (rollNumber, section, etc.)
   async getClassStudentsV2(classId: string): Promise<any[]> {
-    return apiService.get(`/classes/${classId}/students`);
+    // Session-based teacher endpoint returns proper User info for names
+    return apiService.get(`/teacher/classes/${classId}/students`);
   },
 
   // Enriched students with attendance% and average grade%
