@@ -5,6 +5,7 @@ import { Sidebar } from '../components/Sidebar';
 import { teacherService } from '../services/teacherService';
 import apiService from '../services/api';
 import { useLocation } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -18,6 +19,7 @@ const sidebarItems = [
 
 export const TeacherAttendance: React.FC = () => {
   const location = useLocation();
+  const { user } = useAuth();
   const [classes, setClasses] = useState<any[]>([]);
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -27,6 +29,7 @@ export const TeacherAttendance: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   const [students, setStudents] = useState<any[]>([]);
+  const schoolId: string = (user as any)?.schoolId || JSON.parse(localStorage.getItem('userInfo') || '{}').schoolId || JSON.parse(localStorage.getItem('user') || '{}').schoolId || '';
 
   useEffect(() => {
     const loadClasses = async () => {
@@ -51,12 +54,12 @@ export const TeacherAttendance: React.FC = () => {
       if (!selectedClass) { setStudents([]); return; }
       try {
         setLoading(true); setError('');
-        const list = await teacherService.getClassStudentsV2(selectedClass);
+        const list = await teacherService.getEnrichedClassStudents(selectedClass);
         const mapped = (list || []).map((s: any, idx: number) => ({
-          id: s.id,
-          name: (`${s.firstName || ''} ${s.lastName || ''}`.trim()) || s.fullName || s.name || `Student ${idx + 1}`,
-          rollNo: String(s.rollNumber ?? idx + 1),
-          schoolId: s.schoolId,
+          id: s.id, // Student ID
+          name: s.name || `Student ${idx + 1}`,
+          rollNo: String(s.rollNo ?? idx + 1),
+          schoolId: undefined,
           status: 'PRESENT',
         }));
         setStudents(mapped);
@@ -83,7 +86,7 @@ export const TeacherAttendance: React.FC = () => {
       const date = selectedDate; // YYYY-MM-DD
       const payloads = students.map((s) => ({
         studentId: s.id,
-        schoolId: s.schoolId,
+        schoolId,
         date,
         status: s.status,
         remarks: undefined,
