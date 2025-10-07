@@ -49,8 +49,8 @@ export const TeacherAttendance: React.FC = () => {
         const list = await teacherService.getClassStudentsV2(selectedClass);
         const mapped = (list || []).map((s: any, idx: number) => ({
           id: s.id,
-          name: `${s.firstName || ''} ${s.lastName || ''}`.trim() || s.fullName || s.name,
-          rollNo: s.rollNumber || String(idx + 1),
+          name: (`${s.firstName || ''} ${s.lastName || ''}`.trim()) || s.fullName || s.name || `Student ${idx + 1}`,
+          rollNo: String(s.rollNumber ?? idx + 1),
           schoolId: s.schoolId,
           status: 'PRESENT',
         }));
@@ -100,10 +100,12 @@ export const TeacherAttendance: React.FC = () => {
     setStudents(students.map(s => ({ ...s, status })));
   };
 
-  const filteredStudents = students.filter(s =>
-    s.name.toLowerCase().includes(searchStudent.toLowerCase()) ||
-    s.rollNo.includes(searchStudent)
-  );
+  const filteredStudents = students.filter(s => {
+    const name = String(s.name || '').toLowerCase();
+    const roll = String(s.rollNo || '').toLowerCase();
+    const q = String(searchStudent || '').toLowerCase();
+    return name.includes(q) || roll.includes(q);
+  });
 
   const stats = {
     present: students.filter(s => s.status === 'PRESENT').length,

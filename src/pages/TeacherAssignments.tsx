@@ -24,6 +24,7 @@ export const TeacherAssignments: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [classes, setClasses] = useState<any[]>([]);
   const [subjects, setSubjects] = useState<any[]>([]);
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   
   const [formData, setFormData] = useState({
     title: '',
@@ -91,6 +92,10 @@ export const TeacherAssignments: React.FC = () => {
         assignedDate: new Date().toISOString().split('T')[0],
       };
       const created = await teacherService.createAssignment(payload);
+      // Optional attachment upload
+      if (attachmentFile && created?.id) {
+        await teacherService.uploadAssignmentAttachment(created.id, attachmentFile);
+      }
       setSuccess('Assignment created successfully.');
       setShowModal(false);
       resetForm();
@@ -129,7 +134,11 @@ export const TeacherAssignments: React.FC = () => {
         maxMarks: formData.totalMarks,
         schoolId: user.schoolId,
       };
-      await teacherService.updateAssignment(editingAssignment.id, payload);
+      const updated = await teacherService.updateAssignment(editingAssignment.id, payload);
+      if (attachmentFile && (editingAssignment?.id || updated?.id)) {
+        const id = editingAssignment?.id || updated?.id;
+        await teacherService.uploadAssignmentAttachment(id, attachmentFile);
+      }
       setSuccess('Assignment updated successfully!');
       setShowModal(false);
       setEditingAssignment(null);
@@ -167,6 +176,7 @@ export const TeacherAssignments: React.FC = () => {
       dueDate: '',
       totalMarks: 100
     });
+    setAttachmentFile(null);
   };
 
   return (
@@ -317,6 +327,19 @@ export const TeacherAssignments: React.FC = () => {
                     </Form.Group>
                   </Col>
                 </Row>
+
+                <Form.Group className="mb-3">
+                  <Form.Label>Attachment (optional)</Form.Label>
+                  <Form.Control
+                    type="file"
+                    accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.txt"
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                      const file = e.target.files && e.target.files[0];
+                      setAttachmentFile(file || null);
+                    }}
+                  />
+                  <Form.Text className="text-muted">Upload question sheet or related material. Max 5-10MB recommended.</Form.Text>
+                </Form.Group>
 
                 <Alert variant="info">
                   <i className="bi bi-info-circle me-2"></i>

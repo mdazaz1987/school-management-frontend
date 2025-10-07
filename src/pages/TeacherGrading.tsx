@@ -17,6 +17,7 @@ const sidebarItems = [
 
 export const TeacherGrading: React.FC = () => {
   const { user } = useAuth();
+  const [classes, setClasses] = useState<any[]>([]);
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedType, setSelectedType] = useState('');
   const [selectedItem, setSelectedItem] = useState('');
@@ -35,7 +36,14 @@ export const TeacherGrading: React.FC = () => {
   const [submissions, setSubmissions] = useState<any[]>([]);
 
   useEffect(() => {
-    loadAssignments();
+    const init = async () => {
+      try {
+        const cls = await teacherService.getMyClasses();
+        setClasses(cls || []);
+      } catch {}
+      await loadAssignments();
+    };
+    init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
@@ -122,12 +130,11 @@ export const TeacherGrading: React.FC = () => {
                     <Form.Label><strong>Class/Section</strong></Form.Label>
                     <Form.Select value={selectedClass} onChange={(e) => setSelectedClass(e.target.value)}>
                       <option value="">All Classes</option>
-                      {(assignments || [])
-                        .map((a: any) => a.classId)
-                        .filter((v: any, i: number, arr: any[]) => v && arr.indexOf(v) === i)
-                        .map((cid: string) => (
-                          <option key={cid} value={cid}>{cid}</option>
-                        ))}
+                      {classes.map((c: any) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name || c.className || `${c.grade || 'Class'}${c.section ? ' - ' + c.section : ''}`}
+                        </option>
+                      ))}
                     </Form.Select>
                   </Form.Group>
                 </Col>

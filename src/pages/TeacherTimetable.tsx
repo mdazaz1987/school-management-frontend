@@ -51,11 +51,15 @@ export const TeacherTimetable: React.FC = () => {
           }
         }
         
+        // Build friendly class name map
+        const myClasses = await (await import('../services/teacherService')).teacherService.getMyClasses().catch(() => [] as any[]);
+        const nameMap = new Map<string, string>((myClasses || []).map((c: any) => [c.id, (c.name || c.className || `${c.grade || 'Class'}${c.section ? ' - ' + c.section : ''}`)]));
+
         const mapped = entries
           .map((e: any) => ({
             time: String(e.startTime).slice(0,5),
             duration: e.endTime && e.startTime ? '1h' : '',
-            class: e.className || e.classId,
+            class: nameMap.get(e.classId) || e.className || e.classId,
             subject: e.subjectName || '—',
             room: e.room || '—',
           }))

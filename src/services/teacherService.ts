@@ -233,6 +233,14 @@ export const teacherService = {
     return apiService.delete(`/teacher/assignments/${assignmentId}`);
   },
 
+  async uploadAssignmentAttachment(assignmentId: string, file: File): Promise<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiService.post(`/teacher/assignments/${assignmentId}/attachments`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+
   async getAssignmentSubmissions(assignmentId: string): Promise<any[]> {
     // Legacy endpoint if exists
     return apiService.get(`/teacher/assignments/${assignmentId}/submissions`);

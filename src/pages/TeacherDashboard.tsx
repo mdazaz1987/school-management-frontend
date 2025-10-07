@@ -82,9 +82,13 @@ export const TeacherDashboard: React.FC = () => {
           const classIds = new Set((myClasses || []).map((c: any) => c.id));
           todays = flattened.filter((e: any) => String(e.day).toUpperCase() === dayName && classIds.has(e.classId));
         }
+        // Build a class name map for user-friendly display
+        const myClasses = await teacherService.getMyClasses().catch(() => [] as any[]);
+        const nameMap = new Map<string, string>((myClasses || []).map((c: any) => [c.id, (c.name || c.className || `${c.grade || 'Class'}${c.section ? ' - ' + c.section : ''}`)]));
+
         const entries = todays.map((e: any) => ({
             time: String(e.startTime).slice(0,5),
-            class: e.className || e.classId,
+            class: nameMap.get(e.classId) || e.className || e.classId,
             subject: e.subjectName || '—',
             room: e.room || '—',
             status: 'upcoming',
