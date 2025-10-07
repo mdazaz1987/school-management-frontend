@@ -87,6 +87,13 @@ export const TeacherStudents: React.FC = () => {
     return Array.from(set);
   }, [students]);
 
+  // Ensure selectedSection is valid for current students list
+  useEffect(() => {
+    if (selectedSection && !sections.includes(selectedSection)) {
+      setSelectedSection('');
+    }
+  }, [sections, selectedSection]);
+
   let filteredStudents = students.filter((s: any) => {
     const matchesSection = !selectedSection || s.section === selectedSection;
     const matchesName = !searchName || (s.name || '').toLowerCase().includes(searchName.toLowerCase()) ||
