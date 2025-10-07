@@ -9,6 +9,10 @@ const normalizeTeacher = (t: any): Teacher => ({
 
 
 export const teacherService = {
+  // Session-scoped teacher profile
+  async getMyProfile(): Promise<any> {
+    return apiService.get(`/teacher/profile`);
+  },
   // Admin CRUD operations
   async getAllTeachers(params?: PageRequest): Promise<PageResponse<Teacher>> {
     const queryParams = new URLSearchParams();
@@ -67,10 +71,40 @@ export const teacherService = {
         phone: data.phone,
         dateOfBirth: data.dateOfBirth,
         gender: data.gender,
+        bloodGroup: (data as any).bloodGroup,
+        nationality: (data as any).nationality,
+        maritalStatus: (data as any).maritalStatus,
+        address: {
+          street: [data.addressLine1, data.addressLine2].filter(Boolean).join(' ').trim() || undefined,
+          city: data.city || undefined,
+          state: data.state || undefined,
+          zipCode: data.zipCode || undefined,
+        },
+        qualificationInfo: {
+          highestDegree: (data as any).highestDegree,
+          university: (data as any).university,
+          yearOfPassing: (data as any).yearOfPassing,
+          certifications: (data as any).certifications,
+          specializations: (data as any).specializations,
+          percentage: (data as any).percentage,
+        },
+        employmentInfo: {
+          designation: (data as any).designation,
+          department: (data as any).department,
+          salary: (data as any).salary,
+          employmentType: (data as any).employmentType,
+          totalExperience: (data as any).totalExperience,
+          previousSchool: (data as any).previousSchoolEmployment,
+          achievements: (data as any).achievements,
+          bankAccountNumber: (data as any).bankAccountNumber,
+          bankName: (data as any).bankName,
+          ifscCode: (data as any).ifscCode,
+          panNumber: (data as any).panNumber,
+        },
         subjectIds: (data as any).subjectIds,
         classIds: (data as any).classIds,
-        qualificationInfo: (data as any).qualificationInfo,
-        employmentInfo: (data as any).employmentInfo,
+        joiningDate: (data as any).joiningDate,
+        customFields: (data as any).customFields,
       },
     };
     
@@ -89,10 +123,40 @@ export const teacherService = {
         phone: data.phone,
         dateOfBirth: data.dateOfBirth,
         gender: data.gender,
+        bloodGroup: data.bloodGroup,
+        nationality: data.nationality,
+        maritalStatus: data.maritalStatus,
+        address: {
+          street: [data.addressLine1, data.addressLine2].filter(Boolean).join(' ').trim() || undefined,
+          city: data.city || undefined,
+          state: data.state || undefined,
+          zipCode: data.zipCode || undefined,
+        },
+        qualificationInfo: {
+          highestDegree: data.highestDegree,
+          university: data.university,
+          yearOfPassing: data.yearOfPassing,
+          certifications: data.certifications,
+          specializations: data.specializations,
+          percentage: data.percentage,
+        },
+        employmentInfo: {
+          designation: data.designation,
+          department: data.department,
+          salary: data.salary,
+          employmentType: data.employmentType,
+          totalExperience: data.totalExperience,
+          previousSchool: data.previousSchoolEmployment,
+          achievements: data.achievements,
+          bankAccountNumber: data.bankAccountNumber,
+          bankName: data.bankName,
+          ifscCode: data.ifscCode,
+          panNumber: data.panNumber,
+        },
         subjectIds: data.subjectIds,
         classIds: data.classIds,
-        qualificationInfo: data.qualificationInfo,
-        employmentInfo: data.employmentInfo,
+        joiningDate: data.joiningDate,
+        customFields: data.customFields,
       },
     };
     const resp = await apiService.put<any>(`/teachers/${id}`, payload);

@@ -36,11 +36,33 @@ export const StudentTimetable: React.FC = () => {
 
   const loadTimetable = async () => {
     setLoading(true);
+    setError('');
     try {
       const me = await studentService.getStudentByEmail(user?.email || '');
       const classId = (me as any).classId;
       const section = (me as any).section;
-      const tt = await timetableService.getByClass(classId, section);
+      let tt: any;
+      try {
+        tt = await timetableService.getByClass(classId, section);
+      } catch (err: any) {
+        // If not found for class+section, try class-only
+        if (err?.response?.status === 404) {
+          try {
+            tt = await timetableService.getByClass(classId);
+          } catch (err2: any) {
+            if (err2?.response?.status === 404) {
+              setError('No timetable has been published for your class/section yet.');
+              setTimetable({});
+              setTimeSlots([]);
+              return;
+            }
+            throw err2;
+          }
+        } else {
+          throw err;
+        }
+      }
+
       // Transform to UI grid {DAY: [{period,time,start,end,subject,teacher,room,periodType}, ...]}
       const byDay: any = {};
       const times = new Set<string>();

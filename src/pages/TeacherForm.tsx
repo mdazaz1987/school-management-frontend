@@ -175,11 +175,6 @@ export const TeacherForm: React.FC = () => {
     e.preventDefault();
     
     // Validation
-    if (!formData.employeeId.trim()) {
-      setError('Employee ID is required');
-      setActiveTab('personal');
-      return;
-    }
     if (!formData.firstName.trim() || !formData.lastName.trim()) {
       setError('First name and last name are required');
       setActiveTab('personal');
@@ -301,15 +296,17 @@ export const TeacherForm: React.FC = () => {
                     <Row>
                       <Col md={6}>
                         <Form.Group className="mb-3">
-                          <Form.Label>Employee ID <span className="text-danger">*</span></Form.Label>
+                          <Form.Label>Employee ID <small className="text-muted">(leave blank to auto-generate)</small></Form.Label>
                           <Form.Control
                             type="text"
                             name="employeeId"
                             value={formData.employeeId}
                             onChange={handleChange}
-                            required
                             disabled={isEditMode}
                           />
+                          {!isEditMode && (
+                            <Form.Text className="text-muted">If left empty, an ID like EMP-2025-0001 will be generated.</Form.Text>
+                          )}
                         </Form.Group>
                       </Col>
                       <Col md={6}>

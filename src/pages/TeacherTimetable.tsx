@@ -3,6 +3,7 @@ import { Row, Col, Card, Table, Badge, Form } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { timetableService } from '../services/timetableService';
+import { teacherService } from '../services/teacherService';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -24,41 +25,44 @@ export const TeacherTimetable: React.FC = () => {
         const stored = localStorage.getItem('user');
         const me = stored ? JSON.parse(stored) : {};
         const schoolId = me?.schoolId;
-        
-        // Get teacher profile to find Teacher.id (not User.id)
-        const teacherList = await timetableService.list(schoolId ? { schoolId } : undefined);
+
+        // Resolve current Teacher entity ID (not the User ID)
+        const myProfile = await teacherService.getMyProfile().catch(() => null as any);
+        const teacherId = myProfile?.id; // Teacher entity id
+        const userId = me?.id; // User id (legacy may be stored in timetable)
+
         const all = await timetableService.list(schoolId ? { schoolId } : undefined);
         const day = new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
         
         // Flatten all timetable entries
         let entries = (all || [])
           .flatMap((t: any) => (t.entries || []).map((e: any) => ({ ...e, classId: t.classId, className: t.className })))
-          .filter((e: any) => String(e.day).toUpperCase() === day);
-        
-        // Try to get Teacher.id from user record (some user records have teacherId field)
-        // Otherwise, fetch teacher's classes and filter by those
-        if (me?.teacherId) {
-          entries = entries.filter((e: any) => e.teacherId === me.teacherId);
-        } else {
-          // Fallback: include entries for teacher's assigned classes
-          try {
-            const { teacherService } = await import('../services/teacherService');
-            const myClasses = await teacherService.getMyClasses();
-            const classIds = new Set((myClasses || []).map((c: any) => c.id));
-            entries = entries.filter((e: any) => classIds.has(e.classId));
-          } catch {
-            // If can't get classes, show all entries for this school
-          }
-        }
+          .filter((e: any) => String(e.day).toUpperCase() === day)
+          .filter((e: any) => {
+            if (teacherId && e.teacherId === teacherId) return true;
+            if (userId && e.teacherId === userId) return true;
+            return false;
+          });
         
         // Build friendly class name map
-        const myClasses = await (await import('../services/teacherService')).teacherService.getMyClasses().catch(() => [] as any[]);
+        const myClasses = await teacherService.getMyClasses().catch(() => [] as any[]);
         const nameMap = new Map<string, string>((myClasses || []).map((c: any) => [c.id, (c.name || c.className || `${c.grade || 'Class'}${c.section ? ' - ' + c.section : ''}`)]));
+
+        const toHHMM = (s: string) => String(s || '').slice(0,5);
+        const diffMinutes = (start?: string, end?: string) => {
+          if (!start || !end) return '';
+          const [sh, sm] = toHHMM(start).split(':').map(Number);
+          const [eh, em] = toHHMM(end).split(':').map(Number);
+          const mins = (eh*60+em) - (sh*60+sm);
+          if (mins <= 0) return '';
+          const h = Math.floor(mins/60); const m = mins%60;
+          return h > 0 ? `${h}h${m?` ${m}m`:''}` : `${m}m`;
+        };
 
         const mapped = entries
           .map((e: any) => ({
-            time: String(e.startTime).slice(0,5),
-            duration: e.endTime && e.startTime ? '1h' : '',
+            time: toHHMM(e.startTime),
+            duration: diffMinutes(e.startTime, e.endTime),
             class: nameMap.get(e.classId) || e.className || e.classId,
             subject: e.subjectName || '—',
             room: e.room || '—',

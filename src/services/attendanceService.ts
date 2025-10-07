@@ -21,4 +21,14 @@ export const attendanceService = {
   async getMonthly(studentId: string, year: number, month: number): Promise<Attendance[]> {
     return apiService.get<Attendance[]>(`/students/${studentId}/attendance/monthly/${year}/${month}`);
   },
+
+  // Admin: Get attendance for a class between dates
+  async getByClassAdmin(classId: string, params?: { startDate?: string; endDate?: string }): Promise<Attendance[]> {
+    const query = new URLSearchParams();
+    if (params?.startDate) query.append('startDate', params.startDate);
+    if (params?.endDate) query.append('endDate', params.endDate);
+    const qs = query.toString();
+    const url = `/admin/attendance/class/${classId}${qs ? `?${qs}` : ''}`;
+    return apiService.get<Attendance[]>(url);
+  },
 };

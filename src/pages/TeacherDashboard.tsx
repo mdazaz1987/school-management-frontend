@@ -45,13 +45,20 @@ export const TeacherDashboard: React.FC = () => {
           const stored = localStorage.getItem('user');
           const me = stored ? JSON.parse(stored) : {};
           const schoolId = me?.schoolId;
-          const teacherId = me?.id;
+          const userId = me?.id;
+          // Resolve Teacher entity id for accurate filtering
+          const myProfile = await teacherService.getMyProfile().catch(() => null as any);
+          const teacherId = myProfile?.id;
           const all = await timetableService.list(schoolId ? { schoolId } : undefined);
           const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
           const todays = (all || [])
             .flatMap((t: any) => (t.entries || []).map((e: any) => ({ ...e, classId: t.classId })))
             .filter((e: any) => String(e.day).toUpperCase() === dayName)
-            .filter((e: any) => !teacherId || e.teacherId === teacherId);
+            .filter((e: any) => {
+              if (teacherId && e.teacherId === teacherId) return true;
+              if (userId && e.teacherId === userId) return true; // legacy
+              return false;
+            });
           setStats((prev) => ({ ...prev, todayClasses: todays.length }));
         } catch {}
       } catch (err) {
@@ -69,25 +76,27 @@ export const TeacherDashboard: React.FC = () => {
         const stored = localStorage.getItem('user');
         const me = stored ? JSON.parse(stored) : {};
         const schoolId = me?.schoolId;
-        const teacherId = me?.id;
+        const userId = me?.id;
+        const myProfile = await teacherService.getMyProfile().catch(() => null as any);
+        const teacherId = myProfile?.id;
         const all = await timetableService.list(schoolId ? { schoolId } : undefined);
         const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
         const flattened = (all || [])
           .flatMap((t: any) => (t.entries || []).map((e: any) => ({ ...e, classId: t.classId, className: t.className })));
-        // Primary filter by teacherId
-        let todays = flattened.filter((e: any) => String(e.day).toUpperCase() === dayName && (!teacherId || e.teacherId === teacherId));
-        // Fallback: include entries for classes assigned to this teacher
-        if (todays.length === 0) {
-          const myClasses = await teacherService.getMyClasses().catch(() => [] as any[]);
-          const classIds = new Set((myClasses || []).map((c: any) => c.id));
-          todays = flattened.filter((e: any) => String(e.day).toUpperCase() === dayName && classIds.has(e.classId));
-        }
+        // Strict filter by current teacher (entity id or legacy user id)
+        const todays = flattened.filter((e: any) => {
+          if (String(e.day).toUpperCase() !== dayName) return false;
+          if (teacherId && e.teacherId === teacherId) return true;
+          if (userId && e.teacherId === userId) return true;
+          return false;
+        });
         // Build a class name map for user-friendly display
         const myClasses = await teacherService.getMyClasses().catch(() => [] as any[]);
         const nameMap = new Map<string, string>((myClasses || []).map((c: any) => [c.id, (c.name || c.className || `${c.grade || 'Class'}${c.section ? ' - ' + c.section : ''}`)]));
 
+        const toHHMM = (s: string) => String(s || '').slice(0,5);
         const entries = todays.map((e: any) => ({
-            time: String(e.startTime).slice(0,5),
+            time: toHHMM(e.startTime),
             class: nameMap.get(e.classId) || e.className || e.classId,
             subject: e.subjectName || '—',
             room: e.room || '—',
