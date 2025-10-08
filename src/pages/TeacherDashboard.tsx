@@ -94,14 +94,32 @@ export const TeacherDashboard: React.FC = () => {
         const myClasses = await teacherService.getMyClasses().catch(() => [] as any[]);
         const nameMap = new Map<string, string>((myClasses || []).map((c: any) => [c.id, (c.name || c.className || `${c.grade || 'Class'}${c.section ? ' - ' + c.section : ''}`)]));
 
+        const parseTimeToDate = (timeStr?: string) => {
+          if (!timeStr) return null;
+          const now = new Date();
+          // normalize HH:mm or HH:mm:ss
+          const [hh, mm, ss] = String(timeStr).split(':').map((x: string) => parseInt(x, 10));
+          const d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh || 0, mm || 0, ss || 0, 0);
+          return d;
+        };
         const toHHMM = (s: string) => String(s || '').slice(0,5);
-        const entries = todays.map((e: any) => ({
+        const now = new Date();
+        const entries = todays.map((e: any) => {
+          const start = parseTimeToDate(e.startTime);
+          const end = parseTimeToDate(e.endTime);
+          const isCurrent = !!(start && end && now >= start && now <= end);
+          return {
             time: toHHMM(e.startTime),
+            startTime: e.startTime,
+            endTime: e.endTime,
             class: nameMap.get(e.classId) || e.className || e.classId,
+            classId: e.classId,
             subject: e.subjectName || '—',
             room: e.room || '—',
-            status: 'upcoming',
-          }));
+            isCurrent,
+          };
+        })
+        .sort((a: any, b: any) => (a.time > b.time ? 1 : a.time < b.time ? -1 : 0));
         setTodaySchedule(entries);
       } catch {}
     };
@@ -207,6 +225,17 @@ export const TeacherDashboard: React.FC = () => {
                   <Badge bg="primary">{todaySchedule.length} Classes</Badge>
                 </Card.Header>
                 <Card.Body className="p-0">
+                  {/* Blink style for current class */}
+                  <style>{`
+                    @keyframes blink {
+                      0% { opacity: 1; }
+                      50% { opacity: 0.5; }
+                      100% { opacity: 1; }
+                    }
+                    .blink {
+                      animation: blink 1s linear infinite;
+                    }
+                  `}</style>
                   <ListGroup variant="flush">
                     {todaySchedule.map((schedule, index) => (
                       <ListGroup.Item key={index}>
@@ -220,9 +249,11 @@ export const TeacherDashboard: React.FC = () => {
                             </small>
                           </div>
                           <Button 
-                            variant="outline-primary" 
+                            variant={schedule.isCurrent ? 'primary' : 'outline-secondary'}
                             size="sm"
-                            onClick={() => navigate('/teacher/attendance')}
+                            className={schedule.isCurrent ? 'blink' : ''}
+                            disabled={!schedule.isCurrent}
+                            onClick={() => navigate(`/teacher/attendance?classId=${encodeURIComponent(schedule.classId)}`)}
                           >
                             Start Class
                           </Button>

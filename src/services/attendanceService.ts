@@ -31,4 +31,7 @@ export const attendanceService = {
     const url = `/admin/attendance/class/${classId}${qs ? `?${qs}` : ''}`;
     return apiService.get<Attendance[]>(url);
   },
+  async updateByAdmin(attendanceId: string, data: { status?: Attendance['status']; remarks?: string }): Promise<Attendance> {
+    return apiService.put<Attendance>(`/admin/attendance/attendance/${attendanceId}`, data as any);
+  },
 };

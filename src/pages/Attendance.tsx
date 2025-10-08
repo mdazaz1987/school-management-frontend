@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Container, Row, Col, Card, Form, Button, Table, Spinner, Alert, Badge, InputGroup, Nav } from 'react-bootstrap';
+import { Container, Row, Col, Card, Form, Button, Table, Spinner, Alert, Badge, InputGroup, Nav, Modal } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
 import { attendanceService } from '../services/attendanceService';
-import { studentService } from '../services/studentService';
 import { Attendance, Student, SchoolClass } from '../types';
 import { classService } from '../services/classService';
+import { studentService } from '../services/studentService';
 import { useAuth } from '../contexts/AuthContext';
 
 function getMonthRangeISO(d = new Date()) {
@@ -41,6 +41,9 @@ export const AttendancePage: React.FC = () => {
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [selectedClassId, setSelectedClassId] = useState('');
   const [classRecords, setClassRecords] = useState<Attendance[]>([]);
+  const [studentNameMap, setStudentNameMap] = useState<Record<string, string>>({});
+  const [editing, setEditing] = useState<{ id: string; status: Attendance['status'] | ''; remarks: string } | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
 
   useEffect(() => {
     // if a student is selected, load attendance for range
@@ -87,7 +90,15 @@ export const AttendancePage: React.FC = () => {
     setError('');
     try {
       setLoading(true);
-      const recs = await attendanceService.getByClassAdmin(classId, { startDate: s, endDate: e });
+      const [recs, studs] = await Promise.all([
+        attendanceService.getByClassAdmin(classId, { startDate: s, endDate: e }),
+        studentService.getStudentsByClass(classId).catch(() => []),
+      ]);
+      const map: Record<string, string> = {};
+      (studs || []).forEach((st: any) => {
+        if (st?.id) map[st.id] = `${st.firstName || ''} ${st.lastName || ''}`.trim() || st.admissionNumber || st.id;
+      });
+      setStudentNameMap(map);
       setClassRecords(recs as any);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load class attendance');
@@ -384,13 +395,14 @@ export const AttendancePage: React.FC = () => {
                       <th>Subject</th>
                       <th>Period</th>
                       <th>Remarks</th>
+                      <th className="text-end">Action</th>
                     </tr>
                   </thead>
                   <tbody>
                     {classRecords.map((r, idx) => (
                       <tr key={r.id || idx}>
                         <td>{new Date(r.date).toLocaleDateString('en-IN')}</td>
-                        <td><code>{r.studentId}</code></td>
+                        <td>{studentNameMap[r.studentId] || <code>{r.studentId}</code>}</td>
                         <td>
                           {r.status === 'PRESENT' && <Badge bg="success">Present</Badge>}
                           {r.status === 'ABSENT' && <Badge bg="danger">Absent</Badge>}
@@ -401,6 +413,11 @@ export const AttendancePage: React.FC = () => {
                         <td>{r.subject || '-'}</td>
                         <td>{r.period || '-'}</td>
                         <td>{r.remarks || '-'}</td>
+                        <td className="text-end">
+                          <Button size="sm" variant="outline-primary" onClick={() => setEditing({ id: r.id as string, status: r.status, remarks: r.remarks || '' })}>
+                            Edit
+                          </Button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -409,6 +426,57 @@ export const AttendancePage: React.FC = () => {
             )}
           </Card.Body>
         </Card>
+
+        {/* Edit Modal */}
+        <Modal show={!!editing} onHide={() => setEditing(null)} centered>
+          <Modal.Header closeButton>
+            <Modal.Title>Edit Attendance</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <Form>
+              <Form.Group className="mb-3">
+                <Form.Label>Status</Form.Label>
+                <Form.Select
+                  value={editing?.status || ''}
+                  onChange={(e) => setEditing((prev) => prev ? { ...prev, status: e.target.value as any } : prev)}
+                >
+                  <option value="PRESENT">Present</option>
+                  <option value="ABSENT">Absent</option>
+                  <option value="LATE">Late</option>
+                  <option value="EXCUSED">Excused</option>
+                  <option value="HALF_DAY">Half Day</option>
+                </Form.Select>
+              </Form.Group>
+              <Form.Group>
+                <Form.Label>Remarks</Form.Label>
+                <Form.Control
+                  as="textarea"
+                  rows={3}
+                  value={editing?.remarks || ''}
+                  onChange={(e) => setEditing((prev) => prev ? { ...prev, remarks: e.target.value } : prev)}
+                />
+              </Form.Group>
+            </Form>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="outline-secondary" onClick={() => setEditing(null)} disabled={savingEdit}>Cancel</Button>
+            <Button variant="primary" disabled={savingEdit || !editing} onClick={async () => {
+              if (!editing) return;
+              try {
+                setSavingEdit(true);
+                const updated = await attendanceService.updateByAdmin(editing.id, { status: editing.status as any, remarks: editing.remarks });
+                setClassRecords((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+                setEditing(null);
+              } catch (e: any) {
+                setError(e?.response?.data?.message || 'Failed to update attendance');
+              } finally {
+                setSavingEdit(false);
+              }
+            }}>
+              Save Changes
+            </Button>
+          </Modal.Footer>
+        </Modal>
       </Container>
     </Layout>
   );

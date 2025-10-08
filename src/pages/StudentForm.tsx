@@ -8,6 +8,7 @@ import { classService } from '../services/classService';
 import { feeService } from '../services/feeService';
 import { StudentCreateRequest, StudentUpdateRequest, SchoolClass } from '../types';
 import { CredentialsModal } from '../components/CredentialsModal';
+import { adminService } from '../services/adminService';
 
 export const StudentForm: React.FC = () => {
   const { user } = useAuth();
@@ -19,6 +20,7 @@ export const StudentForm: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [info, setInfo] = useState('');
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [loadingClasses, setLoadingClasses] = useState(false);
   
@@ -46,6 +48,20 @@ export const StudentForm: React.FC = () => {
       try { await Promise.all(uploads); } catch (err) { console.error('Document upload failed', err); }
     }
   };
+
+  // Detect existing parent email and inform linkage
+  const checkExistingParent = async (email?: string, relationLabel?: string) => {
+    try {
+      const e = (email || '').trim();
+      if (!e) return;
+      const user = await adminService.getUserByEmail(e);
+      if (user && user.id) {
+        setInfo(`${relationLabel || 'Parent'} account already exists. The system will link to the existing user and use their credentials.`);
+      }
+    } catch {
+      // ignore
+    }
+  };
   
   // Parent account creation options
   const [createParentAccount, setCreateParentAccount] = useState(true);
@@ -57,6 +73,7 @@ export const StudentForm: React.FC = () => {
   const [registrationAmount, setRegistrationAmount] = useState('500');
   const [idCardAmount, setIdCardAmount] = useState('100');
   const [feeDiscount, setFeeDiscount] = useState('0');
+  const [applySiblingDiscount, setApplySiblingDiscount] = useState(false);
   const [feeDueDate, setFeeDueDate] = useState(() => {
     const date = new Date();
     date.setDate(date.getDate() + 7);
@@ -136,7 +153,27 @@ export const StudentForm: React.FC = () => {
     if (cls && cls.section && formData.section !== cls.section) {
       setFormData(prev => ({ ...prev, section: cls.section }));
     }
+    // Prefill roll number preview for new admission using class configuration
+    if (!isEditMode && cls) {
+      const next = (cls as any).nextRollNumber as number | undefined;
+      const width = (cls as any).rollNumberWidth as number | undefined;
+      const prefix = (cls as any).rollNumberPrefix as string | undefined;
+      if (next && !formData.rollNumber) {
+        const numberPart = width && width > 0 ? String(next).padStart(width, '0') : String(next);
+        const rn = `${prefix || ''}${numberPart}`;
+        setFormData(prev => ({ ...prev, rollNumber: rn }));
+      }
+    }
   }, [formData.classId, classes]);
+
+  // Auto-calc sibling discount
+  useEffect(() => {
+    if (applySiblingDiscount) {
+      const adm = parseFloat(admissionAmount || '0');
+      const tenPct = Math.round(adm * 0.10);
+      setFeeDiscount(String(tenPct));
+    }
+  }, [applySiblingDiscount, admissionAmount]);
 
   const loadStudent = async (studentId: string) => {
     try {
@@ -217,6 +254,7 @@ export const StudentForm: React.FC = () => {
     e.preventDefault();
     setError('');
     setSuccess('');
+    setInfo('');
 
     // Validate passwords if in CUSTOM mode
     if (!isEditMode && passwordMode === 'CUSTOM') {
@@ -230,6 +268,15 @@ export const StudentForm: React.FC = () => {
       }
       if (!studentPassword || studentPassword.length < 8) {
         setError('Student password must be at least 8 characters');
+        return;
+      }
+    }
+
+    // Aadhaar is mandatory for new admissions and must be 12 digits
+    if (!isEditMode) {
+      const aadhaar = (formData.aadhaarNumber || '').trim();
+      if (!/^\d{12}$/.test(aadhaar)) {
+        setError('Aadhaar number is required and must be 12 digits');
         return;
       }
     }
@@ -378,6 +425,13 @@ export const StudentForm: React.FC = () => {
           <Alert variant="success">
             <i className="bi bi-check-circle me-2"></i>
             {success}
+          </Alert>
+        )}
+
+        {info && (
+          <Alert variant="info" dismissible onClose={() => setInfo('')}>
+            <i className="bi bi-info-circle me-2"></i>
+            {info}
           </Alert>
         )}
 
@@ -635,7 +689,7 @@ export const StudentForm: React.FC = () => {
                   <Row>
                     <Col md={6}>
                       <Form.Group className="mb-3">
-                        <Form.Label>Aadhaar Number</Form.Label>
+                        <Form.Label>Aadhaar Number <span className="text-danger">*</span></Form.Label>
                         <Form.Control
                           type="text"
                           name="aadhaarNumber"
@@ -644,6 +698,7 @@ export const StudentForm: React.FC = () => {
                           placeholder="12 digit Aadhaar number"
                           maxLength={12}
                           pattern="\d{12}"
+                          required={!isEditMode}
                         />
                         <Form.Text className="text-muted">
                           Enter 12 digit Aadhaar number (stored securely)
@@ -839,6 +894,7 @@ export const StudentForm: React.FC = () => {
                           name="fatherEmail"
                           value={formData.fatherEmail}
                           onChange={handleChange}
+                          onBlur={(e) => checkExistingParent(e.currentTarget.value, 'Father')}
                         />
                       </Form.Group>
                     </Col>
@@ -891,6 +947,7 @@ export const StudentForm: React.FC = () => {
                           name="motherEmail"
                           value={formData.motherEmail}
                           onChange={handleChange}
+                          onBlur={(e) => checkExistingParent(e.currentTarget.value, 'Mother')}
                         />
                       </Form.Group>
                     </Col>
@@ -943,6 +1000,7 @@ export const StudentForm: React.FC = () => {
                           name="guardianEmail"
                           value={formData.guardianEmail}
                           onChange={handleChange}
+                          onBlur={(e) => checkExistingParent(e.currentTarget.value, 'Guardian')}
                         />
                       </Form.Group>
                     </Col>
@@ -1120,7 +1178,7 @@ export const StudentForm: React.FC = () => {
                   <Row>
                     <Col md={6}>
                       <Form.Group className="mb-3">
-                        <Form.Label>Aadhaar Number</Form.Label>
+                        <Form.Label>Aadhaar Number <span className="text-danger">*</span></Form.Label>
                         <Form.Control
                           type="text"
                           name="aadhaarNumber"
@@ -1129,6 +1187,7 @@ export const StudentForm: React.FC = () => {
                           placeholder="12-digit Aadhaar number"
                           maxLength={12}
                           pattern="\d{12}"
+                          required={!isEditMode}
                         />
                         <Form.Text className="text-muted">
                           Enter 12-digit Aadhaar number (will be stored securely and masked)
@@ -1283,6 +1342,23 @@ export const StudentForm: React.FC = () => {
                                 min="0"
                                 step="10"
                               />
+                            </Form.Group>
+                          </Col>
+                        </Row>
+
+                        <Row>
+                          <Col md={12}>
+                            <Form.Group className="mb-3">
+                              <Form.Check
+                                type="checkbox"
+                                id="apply-sibling-discount"
+                                label="Apply Sibling Discount (10% of Admission Fee)"
+                                checked={applySiblingDiscount}
+                                onChange={(e) => setApplySiblingDiscount(e.target.checked)}
+                              />
+                              <Form.Text className="text-muted ms-4 d-block">
+                                When enabled, the Discount field will auto-fill to 10% of Admission Fee.
+                              </Form.Text>
                             </Form.Group>
                           </Col>
                         </Row>

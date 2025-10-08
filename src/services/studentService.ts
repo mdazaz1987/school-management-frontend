@@ -297,8 +297,15 @@ export const studentService = {
   },
 
   async updateStatus(id: string, isActive: boolean): Promise<Student> {
-    const resp = await apiService.put<Student>(`/students/${id}/status`, { isActive, active: isActive });
-    return normalizeStudent(resp as any);
+    if (isActive) {
+      const resp = await apiService.put<Student>(`/students/${id}/activate`, {});
+      return normalizeStudent(resp as any);
+    } else {
+      await apiService.delete<void>(`/students/${id}`);
+      // After deactivation, backend returns no content; construct minimal updated state
+      const refreshed = await this.getStudentById(id).catch(() => ({ id, isActive: false } as any));
+      return normalizeStudent({ ...refreshed, isActive: false } as any);
+    }
   },
 
   /**

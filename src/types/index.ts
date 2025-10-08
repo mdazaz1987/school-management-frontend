@@ -361,6 +361,10 @@ export interface SchoolClass {
   durationMonths?: number;
   startDate?: string;
   endDate?: string;
+  // Roll number configuration (optional)
+  rollNumberPrefix?: string;
+  rollNumberWidth?: number;
+  nextRollNumber?: number;
 }
 
 // Subject types
