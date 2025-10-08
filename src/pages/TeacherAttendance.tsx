@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Row, Col, Card, Table, Button, Form, Badge, Alert, Spinner } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { teacherService } from '../services/teacherService';
 import apiService from '../services/api';
+import { timetableService } from '../services/timetableService';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -23,6 +24,8 @@ export const TeacherAttendance: React.FC = () => {
   const [classes, setClasses] = useState<any[]>([]);
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedPeriod, setSelectedPeriod] = useState('');
+  const [selectedSubject, setSelectedSubject] = useState('');
   const [searchStudent, setSearchStudent] = useState('');
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
@@ -30,6 +33,9 @@ export const TeacherAttendance: React.FC = () => {
 
   const [students, setStudents] = useState<any[]>([]);
   const schoolId: string = (user as any)?.schoolId || JSON.parse(localStorage.getItem('userInfo') || '{}').schoolId || JSON.parse(localStorage.getItem('user') || '{}').schoolId || '';
+
+  // Period options derived from timetable for selected class/date
+  const [periodOptions, setPeriodOptions] = useState<Array<{ period: string; startTime?: string; endTime?: string; subjectName?: string; room?: string }>>([]);
 
   useEffect(() => {
     const loadClasses = async () => {
@@ -39,7 +45,13 @@ export const TeacherAttendance: React.FC = () => {
         setClasses(cls);
         const params = new URLSearchParams(location.search);
         const preSel = params.get('classId');
+        const preDate = params.get('date');
+        const prePeriod = params.get('period');
+        const preSubject = params.get('subject');
         if (preSel && (cls || []).some((c: any) => c.id === preSel)) setSelectedClass(preSel);
+        if (preDate) setSelectedDate(preDate);
+        if (prePeriod) setSelectedPeriod(prePeriod);
+        if (preSubject) setSelectedSubject(preSubject);
       } catch (e: any) {
         setError(e?.response?.data?.message || 'Failed to load classes');
       } finally {
@@ -73,6 +85,45 @@ export const TeacherAttendance: React.FC = () => {
     loadStudents();
   }, [selectedClass]);
 
+  // Load period options from timetable for the selected class + date (day-of-week)
+  useEffect(() => {
+    const loadPeriods = async () => {
+      if (!selectedClass || !selectedDate) { setPeriodOptions([]); return; }
+      try {
+        const tt = await timetableService.getByClass(selectedClass).catch(async () => {
+          // fallback to list
+          const schoolId = (user as any)?.schoolId;
+          const list = await timetableService.list(schoolId ? { schoolId } : undefined);
+          return (list || []).find((t: any) => t.classId === selectedClass);
+        });
+        if (!tt) { setPeriodOptions([]); return; }
+        const dayName = new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
+        const entries = (tt.entries || []).filter((e: any) => String(e.day).toUpperCase() === dayName);
+        // Deduplicate by period label if present, else by startTime
+        const seen = new Set<string>();
+        const options: Array<{ period: string; startTime?: string; endTime?: string; subjectName?: string; room?: string }> = [];
+        for (const e of entries) {
+          const key = (e.period || e.startTime || '').toString();
+          if (key && !seen.has(key)) {
+            seen.add(key);
+            options.push({ period: e.period || key, startTime: e.startTime, endTime: e.endTime, subjectName: e.subjectName, room: e.room });
+          }
+        }
+        setPeriodOptions(options);
+        // Prefill subject based on selected period or default first option
+        const match = options.find(o => o.period === selectedPeriod) || options[0];
+        if (match) {
+          if (!selectedPeriod) setSelectedPeriod(match.period || '');
+          if (!selectedSubject) setSelectedSubject(match.subjectName || '');
+        }
+      } catch {
+        setPeriodOptions([]);
+      }
+    };
+    loadPeriods();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedClass, selectedDate]);
+
   const handleMarkAttendance = (studentId: string, status: string) => {
     setStudents(students.map(s => 
       s.id === studentId ? { ...s, status } : s
@@ -81,6 +132,7 @@ export const TeacherAttendance: React.FC = () => {
 
   const handleSaveAttendance = async () => {
     if (!selectedClass || students.length === 0) return;
+    if (!selectedPeriod) { setError('Please select a period'); return; }
     try {
       setLoading(true); setError('');
       const date = selectedDate; // YYYY-MM-DD
@@ -88,6 +140,8 @@ export const TeacherAttendance: React.FC = () => {
         studentId: s.id,
         schoolId,
         date,
+        period: selectedPeriod,
+        subject: selectedSubject || undefined,
         status: s.status,
         remarks: undefined,
       }));
@@ -95,7 +149,7 @@ export const TeacherAttendance: React.FC = () => {
       for (const p of payloads) {
         await apiService.post(`/teacher/classes/${selectedClass}/attendance`, p);
       }
-      setSuccess(`Attendance saved for selected class on ${new Date(selectedDate).toLocaleDateString()}.`);
+      setSuccess(`Attendance saved for ${new Date(selectedDate).toLocaleDateString()} • Period ${selectedPeriod}.`);
       setTimeout(() => setSuccess(''), 3000);
     } catch (e: any) {
       setError(e?.response?.data?.message || 'Failed to save attendance');
@@ -165,7 +219,36 @@ export const TeacherAttendance: React.FC = () => {
                     />
                   </Form.Group>
                 </Col>
-                <Col md={5}>
+                <Col md={2}>
+                  <Form.Group className="mb-3">
+                    <Form.Label><strong>Period *</strong></Form.Label>
+                    <Form.Select
+                      value={selectedPeriod}
+                      onChange={(e) => {
+                        const p = e.target.value; setSelectedPeriod(p);
+                        const match = periodOptions.find(o => o.period === p);
+                        if (match) setSelectedSubject(match.subjectName || '');
+                      }}
+                    >
+                      <option value="">Select period...</option>
+                      {periodOptions.map((p) => (
+                        <option key={p.period} value={p.period}>{p.period}{p.startTime ? ` (${String(p.startTime).slice(0,5)})` : ''}</option>
+                      ))}
+                    </Form.Select>
+                  </Form.Group>
+                </Col>
+                <Col md={3}>
+                  <Form.Group className="mb-3">
+                    <Form.Label><strong>Subject</strong></Form.Label>
+                    <Form.Control
+                      type="text"
+                      placeholder="Subject for this period"
+                      value={selectedSubject}
+                      onChange={(e) => setSelectedSubject(e.target.value)}
+                    />
+                  </Form.Group>
+                </Col>
+                <Col md={3}>
                   <Form.Group className="mb-3">
                     <Form.Label><strong>Search Student</strong></Form.Label>
                     <Form.Control

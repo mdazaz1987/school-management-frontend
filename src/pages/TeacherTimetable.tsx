@@ -4,6 +4,7 @@ import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { timetableService } from '../services/timetableService';
 import { teacherService } from '../services/teacherService';
+import { classService } from '../services/classService';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -46,7 +47,15 @@ export const TeacherTimetable: React.FC = () => {
         
         // Build friendly class name map
         const myClasses = await teacherService.getMyClasses().catch(() => [] as any[]);
-        const nameMap = new Map<string, string>((myClasses || []).map((c: any) => [c.id, (c.name || c.className || `${c.grade || 'Class'}${c.section ? ' - ' + c.section : ''}`)]));
+        const composeClass = (c: any) => (c?.name || `${c?.className || c?.grade || 'Class'}${c?.section ? ' - ' + c.section : ''}`);
+        const nameMap = new Map<string, string>((myClasses || []).map((c: any) => [c.id, composeClass(c)]));
+        const missingIds = Array.from(new Set(entries.map((e: any) => e.classId))).filter((id) => !nameMap.has(id));
+        if (missingIds.length > 0) {
+          const fetched = await Promise.all(missingIds.map(async (id) => {
+            try { const c = await classService.getClassById(id); return [id, composeClass(c)] as const; } catch { return [id, id] as const; }
+          }));
+          for (const [id, label] of fetched) nameMap.set(id, label);
+        }
 
         const toHHMM = (s: string) => String(s || '').slice(0,5);
         const diffMinutes = (start?: string, end?: string) => {

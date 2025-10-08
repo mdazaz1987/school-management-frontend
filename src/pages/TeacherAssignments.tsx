@@ -42,14 +42,30 @@ export const TeacherAssignments: React.FC = () => {
   const filteredSubjects = useMemo(() => {
     if (!formData.classId) return subjects;
     try {
+      const classObj = (classes || []).find((c: any) => c.id === formData.classId);
+      const classLabel = classObj ? (classObj.name || `${classObj.className || classObj.grade || 'Class'}${classObj.section ? ' - ' + classObj.section : ''}`) : '';
+      const tokens = [
+        (classObj?.className || '').toString(),
+        (classObj?.grade || '').toString(),
+        (classObj?.section || '').toString(),
+        classLabel.toString(),
+      ]
+      .filter(Boolean)
+      .map((t) => String(t).toLowerCase());
+
       return (subjects || []).filter((s: any) => {
         const list = s.classIds || s.classIDs || s.classes || [];
-        return Array.isArray(list) ? list.includes(formData.classId) : true;
+        // 1) Exact match by classId if available
+        if (Array.isArray(list) && list.includes(formData.classId)) return true;
+        // 2) Fallback: string match against subject name/code if class mapping missing
+        const name = String(s.name || '').toLowerCase();
+        const code = String(s.code || '').toLowerCase();
+        return tokens.some((t) => t && (name.includes(t) || code.includes(t)));
       });
     } catch {
       return subjects;
     }
-  }, [subjects, formData.classId]);
+  }, [subjects, classes, formData.classId]);
 
   useEffect(() => {
     loadClassesAndAssignments();
@@ -327,9 +343,10 @@ export const TeacherAssignments: React.FC = () => {
                       <Form.Select
                         value={formData.subject}
                         onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                        disabled={!formData.classId}
                       >
-                        <option value="">Select subject...</option>
-                        {filteredSubjects.map((s: any) => {
+                        <option value="">{formData.classId ? 'Select subject...' : 'Select class first'}</option>
+                        {(formData.classId ? filteredSubjects : []).map((s: any) => {
                           const key = s.id || s.code || s.name;
                           const value = s.name || s.code;
                           const label = [s.name, s.code].filter(Boolean).join(' ');

@@ -5,6 +5,7 @@ import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
 import { teacherService } from '../services/teacherService';
+import { classService } from '../services/classService';
 import { timetableService } from '../services/timetableService';
 
 const sidebarItems = [
@@ -92,7 +93,16 @@ export const TeacherDashboard: React.FC = () => {
         });
         // Build a class name map for user-friendly display
         const myClasses = await teacherService.getMyClasses().catch(() => [] as any[]);
-        const nameMap = new Map<string, string>((myClasses || []).map((c: any) => [c.id, (c.name || c.className || `${c.grade || 'Class'}${c.section ? ' - ' + c.section : ''}`)]));
+        const composeClass = (c: any) => (c?.name || `${c?.className || c?.grade || 'Class'}${c?.section ? ' - ' + c.section : ''}`);
+        const nameMap = new Map<string, string>((myClasses || []).map((c: any) => [c.id, composeClass(c)]));
+        // Fallback: fetch missing class names
+        const missingIds = Array.from(new Set(todays.map((e: any) => e.classId))).filter((id) => !nameMap.has(id));
+        if (missingIds.length > 0) {
+          const fetched = await Promise.all(missingIds.map(async (id) => {
+            try { const c = await classService.getClassById(id); return [id, composeClass(c)] as const; } catch { return [id, id] as const; }
+          }));
+          for (const [id, label] of fetched) nameMap.set(id, label);
+        }
 
         const parseTimeToDate = (timeStr?: string) => {
           if (!timeStr) return null;
@@ -114,6 +124,7 @@ export const TeacherDashboard: React.FC = () => {
             endTime: e.endTime,
             class: nameMap.get(e.classId) || e.className || e.classId,
             classId: e.classId,
+            period: e.period,
             subject: e.subjectName || '—',
             room: e.room || '—',
             isCurrent,
@@ -253,7 +264,7 @@ export const TeacherDashboard: React.FC = () => {
                             size="sm"
                             className={schedule.isCurrent ? 'blink' : ''}
                             disabled={!schedule.isCurrent}
-                            onClick={() => navigate(`/teacher/attendance?classId=${encodeURIComponent(schedule.classId)}`)}
+                            onClick={() => navigate(`/teacher/attendance?classId=${encodeURIComponent(schedule.classId)}&date=${encodeURIComponent(new Date().toISOString().split('T')[0])}&period=${encodeURIComponent(schedule.period || '')}&subject=${encodeURIComponent(schedule.subject || '')}`)}
                           >
                             Start Class
                           </Button>
