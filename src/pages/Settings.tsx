@@ -345,6 +345,159 @@ export const Settings: React.FC = () => {
               </Card>
             )}
 
+            {/* Email Config Tab (Admin only) */}
+            {activeTab === 'email' && isAdmin && (
+              <Card className="border-0 shadow-sm">
+                <Card.Header className="bg-white d-flex justify-content-between align-items-center">
+                  <h5 className="mb-0">
+                    <i className="bi bi-envelope-paper me-2"></i>
+                    Email Configuration
+                  </h5>
+                  {emailLoading && <Spinner animation="border" size="sm" />}
+                </Card.Header>
+                <Card.Body className="p-4">
+                  <Form
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      if (!user?.schoolId) return;
+                      setErrorMessage('');
+                      setSaveMessage('');
+                      setEmailSaving(true);
+                      try {
+                        const payload = { ...emailConfig };
+                        const saved = await apiService.put(`/admin/schools/${user.schoolId}/email-config`, payload);
+                        setEmailConfig(saved as any);
+                        setSaveMessage('Email configuration saved');
+                        setTimeout(() => setSaveMessage(''), 3000);
+                      } catch (err: any) {
+                        setErrorMessage(err.response?.data?.message || 'Failed to save email configuration');
+                      } finally {
+                        setEmailSaving(false);
+                      }
+                    }}
+                  >
+                    <Row>
+                      <Col md={6} className="mb-3">
+                        <Form.Group>
+                          <Form.Label>SMTP Host</Form.Label>
+                          <Form.Control
+                            type="text"
+                            value={emailConfig.smtpHost || ''}
+                            onChange={(e) => setEmailConfig({ ...emailConfig, smtpHost: e.target.value })}
+                          />
+                        </Form.Group>
+                      </Col>
+                      <Col md={3} className="mb-3">
+                        <Form.Group>
+                          <Form.Label>SMTP Port</Form.Label>
+                          <Form.Control
+                            type="number"
+                            value={emailConfig.smtpPort || 0}
+                            onChange={(e) => setEmailConfig({ ...emailConfig, smtpPort: parseInt(e.target.value || '0', 10) })}
+                          />
+                        </Form.Group>
+                      </Col>
+                      <Col md={3} className="mb-3">
+                        <Form.Group>
+                          <Form.Label>From Name</Form.Label>
+                          <Form.Control
+                            type="text"
+                            value={emailConfig.fromName || ''}
+                            onChange={(e) => setEmailConfig({ ...emailConfig, fromName: e.target.value })}
+                          />
+                        </Form.Group>
+                      </Col>
+                    </Row>
+                    <Row>
+                      <Col md={6} className="mb-3">
+                        <Form.Group>
+                          <Form.Label>SMTP Username</Form.Label>
+                          <Form.Control
+                            type="text"
+                            value={emailConfig.smtpUsername || ''}
+                            onChange={(e) => setEmailConfig({ ...emailConfig, smtpUsername: e.target.value })}
+                          />
+                        </Form.Group>
+                      </Col>
+                      <Col md={6} className="mb-3">
+                        <Form.Group>
+                          <Form.Label>SMTP Password</Form.Label>
+                          <Form.Control
+                            type="password"
+                            value={emailConfig.smtpPassword || ''}
+                            onChange={(e) => setEmailConfig({ ...emailConfig, smtpPassword: e.target.value })}
+                          />
+                        </Form.Group>
+                      </Col>
+                    </Row>
+                    <Row>
+                      <Col md={6} className="mb-3">
+                        <Form.Group>
+                          <Form.Label>From Email</Form.Label>
+                          <Form.Control
+                            type="email"
+                            value={emailConfig.fromEmail || ''}
+                            onChange={(e) => setEmailConfig({ ...emailConfig, fromEmail: e.target.value })}
+                          />
+                        </Form.Group>
+                      </Col>
+                      <Col md={6} className="mb-3 d-flex align-items-center gap-3">
+                        <Form.Check
+                          type="switch"
+                          id="enable-ssl"
+                          label="Enable SSL"
+                          checked={!!emailConfig.enableSSL}
+                          onChange={(e) => setEmailConfig({ ...emailConfig, enableSSL: e.target.checked })}
+                        />
+                        <Form.Check
+                          type="switch"
+                          id="enable-tls"
+                          label="Enable TLS"
+                          checked={!!emailConfig.enableTLS}
+                          onChange={(e) => setEmailConfig({ ...emailConfig, enableTLS: e.target.checked })}
+                        />
+                      </Col>
+                    </Row>
+
+                    <div className="d-flex gap-2">
+                      <Button type="submit" variant="primary" disabled={emailSaving}>
+                        {emailSaving ? (
+                          <>
+                            <Spinner size="sm" animation="border" className="me-2" />
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <i className="bi bi-check-lg me-2"></i>
+                            Save Email Config
+                          </>
+                        )}
+                      </Button>
+                      <Form.Control
+                        type="email"
+                        placeholder="Test email address"
+                        value={testEmail}
+                        onChange={(e) => setTestEmail(e.target.value)}
+                        style={{ maxWidth: 280 }}
+                      />
+                      <Button variant="outline-secondary" onClick={async () => {
+                        if (!user?.schoolId || !testEmail) return;
+                        try {
+                          await apiService.post(`/admin/schools/${user.schoolId}/test-email`, { ...emailConfig, testEmail });
+                          setSaveMessage(`Test email sent to ${testEmail}`);
+                          setTimeout(() => setSaveMessage(''), 3000);
+                        } catch (err: any) {
+                          setErrorMessage(err.response?.data?.message || 'Failed to send test email');
+                        }
+                      }}>
+                        Send Test Email
+                      </Button>
+                    </div>
+                  </Form>
+                </Card.Body>
+              </Card>
+            )}
+
             {/* Notifications Tab */}
             {activeTab === 'notifications' && (
               <Card className="border-0 shadow-sm">

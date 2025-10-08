@@ -27,4 +27,8 @@ export const schoolService = {
   async list(): Promise<School[]> {
     return apiService.get<School[]>(`/admin/schools`);
   },
+
+  async getPublicBasic(id: string): Promise<{ id: string; name: string; logo?: string; branding?: any }> {
+    return apiService.get(`/schools/${id}/public`);
+  },
 };

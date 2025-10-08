@@ -1,9 +1,10 @@
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useEffect, useState } from 'react';
 import { Container, Navbar, Nav, NavDropdown } from 'react-bootstrap';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import { NotificationBell } from './NotificationBell';
+import { schoolService } from '../services/schoolService';
 
 interface LayoutProps {
   children: ReactNode;
@@ -14,8 +15,24 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const { theme, setTheme, effectiveTheme, toggleTheme, colorTheme, setColorTheme } = useTheme();
   
-  // Get school name from user's school or use default
-  const schoolName = (user as any)?.schoolName || 'School Management System';
+  // Branding state
+  const [brandName, setBrandName] = useState<string>('School Management System');
+  const [brandLogo, setBrandLogo] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    const loadBranding = async () => {
+      try {
+        const sid = (user as any)?.schoolId;
+        if (!sid) return;
+        const info = await schoolService.getPublicBasic(sid);
+        if (info?.name) setBrandName(info.name);
+        if (info?.logo) setBrandLogo(info.logo);
+      } catch {
+        // keep defaults
+      }
+    };
+    loadBranding();
+  }, [user?.schoolId]);
 
   const handleLogout = () => {
     logout();
@@ -26,9 +43,13 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     <div>
       <Navbar className="navbar-primary mb-4" variant="dark" expand="lg">
         <Container fluid>
-          <Navbar.Brand href="/dashboard">
-            <i className="bi bi-mortarboard-fill me-2"></i>
-            {schoolName}
+          <Navbar.Brand href="/dashboard" className="d-flex align-items-center gap-2">
+            {brandLogo ? (
+              <img src={brandLogo} alt="logo" style={{ height: 24 }} />
+            ) : (
+              <i className="bi bi-mortarboard-fill"></i>
+            )}
+            <span>{brandName}</span>
           </Navbar.Brand>
           <Navbar.Toggle aria-controls="basic-navbar-nav" />
           <Navbar.Collapse id="basic-navbar-nav">
