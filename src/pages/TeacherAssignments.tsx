@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Row, Col, Card, Table, Badge, Button, Modal, Form, Alert } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
 import { teacherService } from '../services/teacherService';
+import { apiService } from '../services/api';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -37,6 +38,19 @@ export const TeacherAssignments: React.FC = () => {
 
   const [assignments, setAssignments] = useState<any[]>([]);
 
+  // Subjects filtered by selected class
+  const filteredSubjects = useMemo(() => {
+    if (!formData.classId) return subjects;
+    try {
+      return (subjects || []).filter((s: any) => {
+        const list = s.classIds || s.classIDs || s.classes || [];
+        return Array.isArray(list) ? list.includes(formData.classId) : true;
+      });
+    } catch {
+      return subjects;
+    }
+  }, [subjects, formData.classId]);
+
   useEffect(() => {
     loadClassesAndAssignments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -52,7 +66,16 @@ export const TeacherAssignments: React.FC = () => {
       ]);
       
       setClasses(cls);
-      setSubjects(subs);
+      let finalSubjects = subs || [];
+      // Fallback: if teacher has no subjects configured, fetch school subjects
+      if ((!finalSubjects || finalSubjects.length === 0) && user?.schoolId) {
+        try {
+          finalSubjects = await apiService.get<any[]>(`/subjects`, { schoolId: user.schoolId });
+        } catch (e) {
+          // ignore fallback failure; keep empty
+        }
+      }
+      setSubjects(finalSubjects);
       
       // Load assignments via session-based endpoint
       const list = await teacherService.getMyAssignments();
@@ -77,6 +100,16 @@ export const TeacherAssignments: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // Reset subject selection when class changes and current subject isn't valid for the class
+  useEffect(() => {
+    if (!formData.classId || filteredSubjects.length === 0) return;
+    const valid = filteredSubjects.some((s: any) => (s.name || s.code) === formData.subject);
+    if (!valid && formData.subject) {
+      setFormData((prev) => ({ ...prev, subject: '' }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.classId, filteredSubjects.length]);
 
   const handleCreate = async () => {
     if (!user?.id || !user?.schoolId) return;
@@ -296,11 +329,16 @@ export const TeacherAssignments: React.FC = () => {
                         onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
                       >
                         <option value="">Select subject...</option>
-                        {subjects.map((s) => (
-                          <option key={s.id} value={s.name}>
-                            {s.name} ({s.code})
-                          </option>
-                        ))}
+                        {filteredSubjects.map((s: any) => {
+                          const key = s.id || s.code || s.name;
+                          const value = s.name || s.code;
+                          const label = [s.name, s.code].filter(Boolean).join(' ');
+                          return (
+                            <option key={key} value={value}>
+                              {label}
+                            </option>
+                          );
+                        })}
                       </Form.Select>
                     </Form.Group>
                   </Col>
