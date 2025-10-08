@@ -129,6 +129,15 @@ export const StudentForm: React.FC = () => {
     }
   }, [id, isEditMode, loadClasses]);
 
+  // Auto-fill student section from selected class
+  useEffect(() => {
+    if (!formData.classId) return;
+    const cls = classes.find(c => c.id === formData.classId);
+    if (cls && cls.section && formData.section !== cls.section) {
+      setFormData(prev => ({ ...prev, section: cls.section }));
+    }
+  }, [formData.classId, classes]);
+
   const loadStudent = async (studentId: string) => {
     try {
       setLoading(true);
@@ -600,8 +609,11 @@ export const StudentForm: React.FC = () => {
                           name="section"
                           value={formData.section}
                           onChange={handleChange}
-                          placeholder="e.g., A"
+                          disabled
+                          readOnly
+                          placeholder="Auto-filled from selected Class"
                         />
+                        <Form.Text className="text-muted">Section is derived from the selected Class.</Form.Text>
                       </Form.Group>
                     </Col>
                     <Col md={4}>

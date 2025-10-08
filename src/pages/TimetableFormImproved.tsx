@@ -115,12 +115,14 @@ export const TimetableFormImproved: React.FC = () => {
       
       setClasses(classesData);
       setSubjects(subjectsData.filter(s => s.isActive));
-      setTeachers(teachersData.filter(t => t.isActive));
+      // Include inactive teachers to ensure previously assigned teacher still appears when editing
+      setTeachers(teachersData);
 
       // Load all timetables in this school for teacher availability validation
       try {
         const allTt = await timetableService.list({ schoolId: user.schoolId });
-        setExistingTimetables(allTt || []);
+        // In edit mode, exclude the timetable being edited from availability checks
+        setExistingTimetables(id ? (allTt || []).filter((tt: any) => tt.id !== id) : (allTt || []));
       } catch {}
 
       // Set default academic year
@@ -499,21 +501,28 @@ export const TimetableFormImproved: React.FC = () => {
                               onChange={(e) => updateCell(day, slotIndex, 'teacherId', e.target.value)}
                             >
                               <option value="">Select Teacher</option>
-                              {teachers
-                                .filter(t => isTeacherFree(t.id, day, slotIndex))
-                                .filter(t => {
-                                  // Subject-teacher constraint on UI as well
-                                  const subj = subjects.find(s => s.id === cell.subjectId);
-                                  if (!subj) return true; // if no subject selected, show all
-                                  const ids = (subj as any).teacherIds as string[] | undefined;
-                                  if (!ids || ids.length === 0) return true; // unrestricted subject
-                                  return ids.includes(t.id) || ids.includes((t as any).userId);
-                                })
-                                .map(t => (
+                              {(() => {
+                                const assigned = cell.teacherId;
+                                const assignedTeacher = assigned ? teachers.find(t => t.id === assigned) : undefined;
+                                const filtered = teachers
+                                  .filter(t => isTeacherFree(t.id, day, slotIndex))
+                                  .filter(t => {
+                                    // Subject-teacher constraint on UI as well
+                                    const subj = subjects.find(s => s.id === cell.subjectId);
+                                    if (!subj) return true; // if no subject selected, show all
+                                    const ids = (subj as any).teacherIds as string[] | undefined;
+                                    if (!ids || ids.length === 0) return true; // unrestricted subject
+                                    return ids.includes(t.id) || ids.includes((t as any).userId);
+                                  });
+                                const finalList = assignedTeacher && !filtered.some(t => t.id === assignedTeacher.id)
+                                  ? [assignedTeacher, ...filtered]
+                                  : filtered;
+                                return finalList.map(t => (
                                   <option key={t.id} value={t.id}>
-                                    {t.firstName} {t.lastName}
+                                    {t.firstName} {t.lastName}{t.isActive === false ? ' (inactive)' : ''}
                                   </option>
-                                ))}
+                                ));
+                              })()}
                             </Form.Select>
                             <div className="d-flex gap-1">
                               <Form.Control

@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Container, Spinner } from 'react-bootstrap';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Login } from './pages/Login';
+import { ForgotPassword } from './pages/ForgotPassword';
+import { ResetPassword } from './pages/ResetPassword';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { TeacherDashboard } from './pages/TeacherDashboard';
 import { StudentDashboard } from './pages/StudentDashboard';
@@ -108,6 +110,8 @@ function App() {
         <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           
           {/* Dashboard routes */}
           <Route

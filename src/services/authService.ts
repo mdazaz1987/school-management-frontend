@@ -94,4 +94,12 @@ export const authService = {
     // Clear the flag after successful change
     this.clearPasswordChangeRequired();
   },
+
+  async forgotPassword(email: string): Promise<void> {
+    await apiService.post('/auth/forgot-password', { email });
+  },
+
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    await apiService.post('/auth/reset-password', { token, newPassword });
+  },
 };
