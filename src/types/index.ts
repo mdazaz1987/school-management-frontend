@@ -63,6 +63,11 @@ export interface SchoolConfiguration {
   gradeSystem?: string;
   currency?: string;
   timezone?: string;
+  weekendDays?: string[]; // e.g., ["SUNDAY"]
+  workingStartTime?: string; // HH:mm
+  workingEndTime?: string;   // HH:mm
+  defaultBreakStartTime?: string; // HH:mm
+  defaultBreakEndTime?: string;   // HH:mm
 }
 
 export interface School {
@@ -543,6 +548,18 @@ export interface TimetableEntry {
   teacherName?: string;
   room?: string;
   periodType: PeriodType;
+}
+
+// Classroom types
+export interface Classroom {
+  id: string;
+  schoolId: string;
+  name: string;
+  code?: string;
+  capacity?: number;
+  building?: string;
+  floor?: string;
+  isActive?: boolean;
 }
 
 // Dashboard stats

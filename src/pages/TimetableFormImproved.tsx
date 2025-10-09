@@ -7,7 +7,8 @@ import { timetableService } from '../services/timetableService';
 import { classService } from '../services/classService';
 import { subjectService } from '../services/subjectService';
 import { teacherService } from '../services/teacherService';
-import { TimetableEntry, DayOfWeek, SchoolClass, Subject, Teacher } from '../types';
+import { TimetableEntry, DayOfWeek, SchoolClass, Subject, Teacher, Classroom } from '../types';
+import { classroomService } from '../services/classroomService';
 import { FaSave, FaTimes, FaClock, FaCalendarAlt } from 'react-icons/fa';
 
 const WORKING_DAYS: DayOfWeek[] = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
@@ -34,6 +35,7 @@ export const TimetableFormImproved: React.FC = () => {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [existingTimetables, setExistingTimetables] = useState<any[]>([]);
+  const [availableRooms, setAvailableRooms] = useState<Record<string, Classroom[]>>({}); // key: `${day}-${slotIndex}`
 
   // Form state
   const [selectedClass, setSelectedClass] = useState('');
@@ -62,6 +64,24 @@ export const TimetableFormImproved: React.FC = () => {
     const hhmm = t.slice(0,5);
     const [h, m] = hhmm.split(':').map(Number);
     return (h * 60) + m;
+  };
+
+  // Fetch available rooms for a given cell (day, slot)
+  const fetchAvailableRooms = async (day: DayOfWeek, slotIndex: number) => {
+    try {
+      const slotStart = timeSlots[slotIndex]?.startTime;
+      const slotEnd = timeSlots[slotIndex]?.endTime;
+      if (!user?.schoolId || !slotStart || !slotEnd) return;
+      const rooms = await classroomService.getAvailability({
+        schoolId: user.schoolId,
+        day,
+        startTime: slotStart.slice(0,5),
+        endTime: slotEnd.slice(0,5),
+        excludeTimetableId: isEdit && id ? id : undefined,
+      });
+      const key = `${day}-${slotIndex}`;
+      setAvailableRooms(prev => ({ ...prev, [key]: rooms }));
+    } catch {}
   };
 
   const overlaps = (aStart: string, aEnd: string, bStart: string, bEnd: string): boolean => {
@@ -167,6 +187,10 @@ export const TimetableFormImproved: React.FC = () => {
       newGrid[day][slotIndex] = { ...newGrid[day][slotIndex], [field]: value };
       return newGrid;
     });
+    // When time params present and room is requested, refresh availability for that cell
+    if (field === 'room') {
+      // no-op; user selected a room from list
+    }
   };
 
   const clearCell = (day: DayOfWeek, slotIndex: number) => {
@@ -481,6 +505,9 @@ export const TimetableFormImproved: React.FC = () => {
 
                         const cell = timetableGrid[day]?.[slotIndex] || { subjectId: '', teacherId: '', room: '' };
                         
+                        const subjectsForClass = subjects.filter(s => !s.classIds || s.classIds.length === 0 || s.classIds.includes(selectedClass));
+                        const key = `${day}-${slotIndex}`;
+
                         return (
                           <td key={slotIndex} className="p-2">
                             <Form.Select
@@ -490,7 +517,7 @@ export const TimetableFormImproved: React.FC = () => {
                               onChange={(e) => updateCell(day, slotIndex, 'subjectId', e.target.value)}
                             >
                               <option value="">Select Subject</option>
-                              {subjects.map(s => (
+                              {subjectsForClass.map(s => (
                                 <option key={s.id} value={s.id}>{s.name}</option>
                               ))}
                             </Form.Select>
@@ -525,12 +552,19 @@ export const TimetableFormImproved: React.FC = () => {
                               })()}
                             </Form.Select>
                             <div className="d-flex gap-1">
-                              <Form.Control
+                              <Form.Select
                                 size="sm"
-                                placeholder="Room"
                                 value={cell.room}
+                                onFocus={() => fetchAvailableRooms(day, slotIndex)}
                                 onChange={(e) => updateCell(day, slotIndex, 'room', e.target.value)}
-                              />
+                              >
+                                <option value="">Select Room</option>
+                                {(availableRooms[key] || []).map(r => (
+                                  <option key={r.id} value={r.name}>
+                                    {r.name}{r.capacity ? ` (${r.capacity})` : ''}
+                                  </option>
+                                ))}
+                              </Form.Select>
                               {(cell.subjectId || cell.teacherId) && (
                                 <Button
                                   variant="outline-danger"
