@@ -4,6 +4,7 @@ import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
 import { parentService } from '../services/parentService';
+import { useNavigate } from 'react-router-dom';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -16,6 +17,7 @@ const sidebarItems = [
 
 export const ParentDashboard: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [children, setChildren] = useState<Array<{
     id: string;
     name: string;
@@ -182,7 +184,7 @@ export const ParentDashboard: React.FC = () => {
                     </Row>
                   </Card.Body>
                   <Card.Footer className="bg-white">
-                    <Button variant="outline-primary" size="sm" className="w-100">
+                    <Button variant="outline-primary" size="sm" className="w-100" onClick={() => navigate(`/parent/attendance?child=${child.id}`)}>
                       View Details
                     </Button>
                   </Card.Footer>

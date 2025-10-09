@@ -3,7 +3,8 @@ import { School } from '../types';
 
 export const schoolService = {
   async getById(id: string): Promise<School> {
-    return apiService.get<School>(`/admin/schools/${id}`);
+    // Backend exposes configuration (and school object) via this endpoint
+    return apiService.get<School>(`/admin/schools/${id}/configuration`);
   },
 
   async create(data: Partial<School>): Promise<School> {
@@ -11,7 +12,7 @@ export const schoolService = {
   },
 
   async update(id: string, data: Partial<School>): Promise<School> {
-    // Pass nested structure as-is; backend expects School model
+    // Backend expects School model at /configuration path
     const payload: any = {
       name: data.name,
       logo: data.logo,
@@ -21,7 +22,7 @@ export const schoolService = {
       cmsPages: data.cmsPages,
       branding: data.branding,
     };
-    return apiService.put<School>(`/admin/schools/${id}`, payload);
+    return apiService.put<School>(`/admin/schools/${id}/configuration`, payload);
   },
 
   async list(): Promise<School[]> {

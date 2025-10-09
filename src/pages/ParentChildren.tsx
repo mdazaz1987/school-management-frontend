@@ -153,7 +153,12 @@ export const ParentChildren: React.FC = () => {
 
                       <Row>
                         <Col xs={6}>
-                          <Button variant="outline-primary" size="sm" className="w-100">
+                          <Button
+                            variant="outline-primary"
+                            size="sm"
+                            className="w-100"
+                            onClick={() => navigate(`/parent/attendance?child=${child.id}`)}
+                          >
                             <i className="bi bi-eye me-1"></i>
                             View Details
                           </Button>

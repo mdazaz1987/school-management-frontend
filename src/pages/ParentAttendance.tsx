@@ -4,6 +4,9 @@ import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
 import { parentService, AttendanceSummary } from '../services/parentService';
+import { studentService } from '../services/studentService';
+import { timetableService } from '../services/timetableService';
+import { useSearchParams } from 'react-router-dom';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -16,11 +19,13 @@ const sidebarItems = [
 
 export const ParentAttendance: React.FC = () => {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
   const [children, setChildren] = useState<Array<{ id: string; name: string; className?: string }>>([]);
   const [selectedChild, setSelectedChild] = useState<string>('');
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [attendanceRecords, setAttendanceRecords] = useState<{ date: string; status: string }[]>([]);
+  const [timeSlotsByDay, setTimeSlotsByDay] = useState<Record<string, Record<string, { start: string; end: string }>>>({});
   const [stats, setStats] = useState({ total: 0, present: 0, absent: 0, late: 0, percentage: 0 });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -32,7 +37,10 @@ export const ParentAttendance: React.FC = () => {
         const list = await parentService.getMyChildren();
         const items = (list || []).map((c: any) => ({ id: c.id, name: `${c.firstName || ''} ${c.lastName || ''}`.trim(), className: c.className }));
         setChildren(items);
-        if (!selectedChild && items.length) setSelectedChild(items[0].id);
+        if (!selectedChild && items.length) {
+          const qChild = searchParams.get('child');
+          setSelectedChild(qChild && items.some(i => i.id === qChild) ? qChild : items[0].id);
+        }
       } catch (e: any) {
         setError(e?.response?.data?.message || 'Failed to load children');
       } finally {
@@ -41,18 +49,32 @@ export const ParentAttendance: React.FC = () => {
     };
     loadChildren();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [searchParams]);
 
   useEffect(() => {
     const loadAttendance = async () => {
       if (!selectedChild) return;
       try {
         setLoading(true); setError('');
+        // Build timetable slot map for child's class for time lookup per period
+        try {
+          const stud = await studentService.getStudentById(selectedChild);
+          const classId = (stud as any).classId;
+          const section = (stud as any).section;
+          const tt = await timetableService.getByClass(classId, section);
+          const map: Record<string, Record<string, { start: string; end: string }>> = {};
+          (tt.entries || []).forEach((e: any) => {
+            const day = String(e.day || '').toUpperCase();
+            if (!map[day]) map[day] = {};
+            map[day][e.period] = { start: String(e.startTime||'').slice(0,5), end: String(e.endTime||'').slice(0,5) };
+          });
+          setTimeSlotsByDay(map);
+        } catch {}
         const start = new Date(selectedYear, selectedMonth, 1);
         const end = new Date(selectedYear, selectedMonth + 1, 0);
         const toISO = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         const summary: AttendanceSummary = await parentService.getChildAttendance(selectedChild, toISO(start), toISO(end));
-        const recs = (summary.records || []).map((r: any) => ({ date: r.date, status: r.status }))
+        const recs = (summary.records || []).map((r: any) => ({ date: r.date, status: r.status, subject: r.subject, period: r.period }))
           .filter((r) => {
             const dt = new Date(r.date);
             return dt.getMonth() === selectedMonth && dt.getFullYear() === selectedYear;
@@ -199,17 +221,25 @@ export const ParentAttendance: React.FC = () => {
                         <th>Date</th>
                         <th>Day</th>
                         <th>Status</th>
+                        <th>Subject</th>
+                        <th>Period</th>
+                        <th>Time</th>
                       </tr>
                     </thead>
                     <tbody>
                       {attendanceRecords.map((record, index) => {
                         const date = new Date(record.date);
                         const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                        const dayKey = dayNames[date.getDay()].toUpperCase();
+                        const slot = timeSlotsByDay[dayKey]?.[(record as any).period || ''] || { start: '', end: '' };
                         return (
                           <tr key={index}>
                             <td>{date.toLocaleDateString()}</td>
                             <td>{dayNames[date.getDay()]}</td>
                             <td>{getStatusBadge(record.status)}</td>
+                            <td>{(record as any).subject || '—'}</td>
+                            <td>{(record as any).period || '—'}</td>
+                            <td>{slot.start && slot.end ? `${slot.start} - ${slot.end}` : '—'}</td>
                           </tr>
                         );
                       })}

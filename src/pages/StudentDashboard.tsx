@@ -5,6 +5,8 @@ import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
 import { studentService } from '../services/studentService';
 import { timetableService } from '../services/timetableService';
+import { attendanceService } from '../services/attendanceService';
+import { useNavigate } from 'react-router-dom';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -18,6 +20,7 @@ const sidebarItems = [
 
 export const StudentDashboard: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [stats, setStats] = useState({
     attendanceRate: 0,
     pendingAssignments: 0,
@@ -49,12 +52,30 @@ export const StudentDashboard: React.FC = () => {
           const tt = await timetableService.getByClass(classId, section);
           const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
           const entries = (tt.entries || []).filter((e: any) => String(e.day).toUpperCase() === dayName);
-          const classesForToday = entries.map((e: any) => ({
-            time: String(e.startTime).slice(0,5),
-            subject: e.subjectName || '—',
-            teacher: e.teacherName || '—',
-            room: e.room || '—',
-          }));
+
+          // Fetch today's attendance per period to show status next to each class slot
+          const todayISO = new Date().toISOString().slice(0, 10);
+          let todayAttendance: any[] = [];
+          try {
+            todayAttendance = await attendanceService.getByStudent((student as any).id, { startDate: todayISO, endDate: todayISO });
+          } catch {}
+          const attMap: Record<string, string> = {};
+          (todayAttendance || []).forEach((r: any) => { if (r?.period) attMap[r.period] = r.status; });
+
+          const classesForToday = entries.map((e: any) => {
+            const start = (String(e.startTime || '')).slice(0,5);
+            const end = (String(e.endTime || '')).slice(0,5);
+            const isBreak = String(e.periodType || '').toUpperCase() === 'BREAK' || String(e.periodType || '').toUpperCase() === 'LUNCH';
+            return {
+              period: e.period,
+              time: start && end ? `${start} - ${end}` : start || '—',
+              subject: isBreak ? (String(e.periodType || 'BREAK').toUpperCase() === 'LUNCH' ? 'Lunch Break' : 'Break') : (e.subjectName || '—'),
+              teacher: e.teacherName || '—',
+              room: e.room || '—',
+              type: e.periodType,
+              attendance: attMap[e.period] || null,
+            };
+          });
           setTodayClasses(classesForToday);
         } catch {}
         // Upcoming exams count
@@ -85,9 +106,16 @@ export const StudentDashboard: React.FC = () => {
           status: 'pending',
         })));
 
+        // Map assignmentId -> title using student's assignments for readable names
+        let assignTitleById: Record<string, string> = {};
+        try {
+          const myAssignments = await studentService.getMyAssignments();
+          assignTitleById = (myAssignments || []).reduce((acc: any, a: any) => { if (a?.id) acc[a.id] = a.title || a.name || 'Assignment'; return acc; }, {});
+        } catch {}
+
         setRecentGrades((dashboard.recentSubmissions || []).map((s: any) => ({
-          subject: '—',
-          assignment: s.assignmentId,
+          subject: s.subjectName || '—',
+          assignment: assignTitleById[s.assignmentId] || s.assignmentTitle || s.assignmentId,
           grade: s.grade || '—',
           marks: s.marksObtained != null ? String(s.marksObtained) : '—',
           date: s.submittedAt ? new Date(s.submittedAt).toLocaleString() : '—',
@@ -207,12 +235,21 @@ export const StudentDashboard: React.FC = () => {
                       <ListGroup.Item key={index}>
                         <div className="d-flex align-items-center">
                           <div className="bg-primary bg-opacity-10 p-2 rounded me-3">
-                            <i className="bi bi-book text-primary"></i>
+                            <i className={`bi ${String(classItem.type).toUpperCase()==='BREAK' || String(classItem.type).toUpperCase()==='LUNCH' ? 'bi-cup-hot text-warning' : 'bi-book text-primary'}`}></i>
                           </div>
                           <div className="flex-grow-1">
                             <h6 className="mb-0">{classItem.subject}</h6>
                             <small className="text-muted">{classItem.time} • {classItem.room}</small>
                           </div>
+                          {classItem.attendance && (
+                            <div className="ms-2">
+                              {classItem.attendance === 'PRESENT' && <Badge bg="success">Present</Badge>}
+                              {classItem.attendance === 'ABSENT' && <Badge bg="danger">Absent</Badge>}
+                              {classItem.attendance === 'LATE' && <Badge bg="warning" text="dark">Late</Badge>}
+                              {classItem.attendance === 'EXCUSED' && <Badge bg="info">Excused</Badge>}
+                              {classItem.attendance === 'HALF_DAY' && <Badge bg="secondary">Half Day</Badge>}
+                            </div>
+                          )}
                         </div>
                       </ListGroup.Item>
                     ))}
@@ -269,7 +306,7 @@ export const StudentDashboard: React.FC = () => {
               <Card className="border-0 shadow-sm">
                 <Card.Header className="bg-white d-flex justify-content-between align-items-center">
                   <h5 className="mb-0">Recent Grades</h5>
-                  <Button variant="link" size="sm">View All</Button>
+                  <Button variant="link" size="sm" onClick={() => navigate('/student/assignments')}>View All</Button>
                 </Card.Header>
                 <Card.Body className="p-0">
                   <Table hover className="mb-0">
@@ -301,7 +338,7 @@ export const StudentDashboard: React.FC = () => {
                           </td>
                           <td>{grade.date}</td>
                           <td>
-                            <Button variant="outline-primary" size="sm">View</Button>
+                            <Button variant="outline-primary" size="sm" onClick={() => navigate('/student/assignments')}>View</Button>
                           </td>
                         </tr>
                       ))}

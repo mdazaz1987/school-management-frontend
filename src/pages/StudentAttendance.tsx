@@ -6,6 +6,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { attendanceService } from '../services/attendanceService';
 import { studentService } from '../services/studentService';
 import apiService from '../services/api';
+import { timetableService } from '../services/timetableService';
+import { classService } from '../services/classService';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -37,6 +39,8 @@ export const StudentAttendance: React.FC = () => {
   const [correctionPeriod, setCorrectionPeriod] = useState('');
   const [correctionReason, setCorrectionReason] = useState('');
   const [success, setSuccess] = useState('');
+  const [timeSlotsByDay, setTimeSlotsByDay] = useState<Record<string, Record<string, { start: string; end: string }>>>({});
+  const [classLabel, setClassLabel] = useState<string>('');
 
   useEffect(() => {
     loadAttendance();
@@ -52,9 +56,36 @@ export const StudentAttendance: React.FC = () => {
       const studentId = (student as any).id;
       const schoolId = (student as any).schoolId;
       const classId = (student as any).classId;
+      const section = (student as any).section;
 
       // Backend month is 1-indexed
       const records = await attendanceService.getMonthly(studentId, selectedYear, selectedMonth + 1);
+
+      // Build day->period->time map from timetable for this student's class
+      try {
+        const tt = await timetableService.getByClass(classId, section);
+        const map: Record<string, Record<string, { start: string; end: string }>> = {};
+        (tt.entries || []).forEach((e: any) => {
+          const day = String(e.day || '').toUpperCase();
+          if (!map[day]) map[day] = {};
+          map[day][e.period] = {
+            start: String(e.startTime || '').slice(0,5),
+            end: String(e.endTime || '').slice(0,5),
+          };
+        });
+        setTimeSlotsByDay(map);
+      } catch {}
+
+      // Resolve class label (e.g., "UKG - A")
+      try {
+        if ((student as any).className) {
+          setClassLabel((student as any).className);
+        } else if (classId) {
+          const cls = await classService.getClassById(classId);
+          const label = `${(cls as any).className || (cls as any).name || ''}${(cls as any).section ? ' - ' + (cls as any).section : ''}`.trim();
+          setClassLabel(label);
+        }
+      } catch {}
 
       const present = records.filter((r: any) => r.status === 'PRESENT').length;
       const absent = records.filter((r: any) => r.status === 'ABSENT').length;
@@ -251,6 +282,10 @@ export const StudentAttendance: React.FC = () => {
                         <th>Date</th>
                         <th>Day</th>
                         <th>Status</th>
+                        <th>Class</th>
+                        <th>Subject</th>
+                        <th>Period</th>
+                        <th>Time</th>
                         <th>Remarks</th>
                         <th>Action</th>
                       </tr>
@@ -259,11 +294,17 @@ export const StudentAttendance: React.FC = () => {
                       {attendanceRecords.map((record, index) => {
                         const date = new Date(record.date);
                         const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                        const dayKey = dayNames[date.getDay()].toUpperCase();
+                        const slot = timeSlotsByDay[dayKey]?.[record.period || ''] || { start: '', end: '' };
                         return (
                           <tr key={index}>
                             <td>{date.toLocaleDateString()}</td>
                             <td>{dayNames[date.getDay()]}</td>
                             <td>{getStatusBadge(record.status)}</td>
+                            <td>{classLabel || '—'}</td>
+                            <td>{record.subject || '—'}</td>
+                            <td>{record.period || '—'}</td>
+                            <td>{slot.start && slot.end ? `${slot.start} - ${slot.end}` : '—'}</td>
                             <td><small className="text-muted">{record.remarks || '—'}</small></td>
                             <td>
                               {(record.status === 'ABSENT' || record.status === 'LATE') && (
