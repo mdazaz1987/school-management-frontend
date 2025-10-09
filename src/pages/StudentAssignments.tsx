@@ -24,7 +24,7 @@ export const StudentAssignments: React.FC = () => {
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
   const [submissionText, setSubmissionText] = useState('');
-  const [, setSubmissionFile] = useState<File | null>(null);
+  const [submissionFile, setSubmissionFile] = useState<File | null>(null);
   const [activeTab, setActiveTab] = useState('pending');
   const [attachments, setAttachments] = useState<string[]>([]);
 
@@ -119,12 +119,22 @@ export const StudentAssignments: React.FC = () => {
     try {
       const student = await studentService.getStudentByEmail(user.email);
       const studentId = (student as any).id;
-      await apiService.post(`/students/${studentId}/assignments/${selectedAssignment.id}/submit`, {
+      const created = await apiService.post(`/students/${studentId}/assignments/${selectedAssignment.id}/submit`, {
         content: submissionText,
-        attachments: [] as string[],
+        attachments: submissionFile ? [submissionFile.name] : [] as string[],
       });
+      // If a file is selected, upload it to the new submission attachments endpoint
+      if (submissionFile && created?.id) {
+        const form = new FormData();
+        form.append('file', submissionFile);
+        const axios = apiService.getAxiosInstance();
+        await axios.post(`/assignments/${selectedAssignment.id}/submissions/${created.id}/attachments` as any, form, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+      }
       setShowSubmitModal(false);
       setSubmissionText('');
+      setSubmissionFile(null);
       loadAssignments();
     } catch (e: any) {
       setError(e.response?.data?.message || 'Failed to submit assignment');
@@ -348,8 +358,11 @@ export const StudentAssignments: React.FC = () => {
                   <Form.Label>Upload File (Optional)</Form.Label>
                   <Form.Control
                     type="file"
-                    onChange={(e: any) => setSubmissionFile(e.target.files[0])}
+                    onChange={(e: any) => setSubmissionFile(e.target.files?.[0] || null)}
                   />
+                  {submissionFile && (
+                    <div className="small text-muted mt-1">Selected: {submissionFile.name}</div>
+                  )}
                   <Form.Text className="text-muted">
                     Accepted formats: PDF, DOC, DOCX, ZIP (Max 10MB)
                   </Form.Text>
