@@ -42,7 +42,26 @@ export const TeacherAttendance: React.FC = () => {
       try {
         setLoading(true); setError('');
         const cls = await teacherService.getMyClasses();
-        setClasses(cls);
+        const initial = Array.isArray(cls) ? cls : [];
+        const stored = localStorage.getItem('user');
+        const me = stored ? JSON.parse(stored) : {};
+        const schoolId = me?.schoolId;
+        const myProfile = await teacherService.getMyProfile().catch(() => null as any);
+        const teacherId = myProfile?.id;
+        const userId = me?.id;
+        // Derive classes from timetables where this teacher has entries
+        const tts = await timetableService.list(schoolId ? { schoolId } : undefined).catch(() => [] as any[]);
+        const classIdsFromTT = Array.from(new Set((tts || [])
+          .flatMap((t: any) => (t.entries || []).some((e: any) => (teacherId && e.teacherId === teacherId) || (userId && e.teacherId === userId)) ? [t.classId] : [])
+        ));
+        // Fetch missing class objects
+        const existingIds = new Set((initial || []).map((c: any) => c.id));
+        const missingIds = classIdsFromTT.filter((id) => !existingIds.has(id));
+        const fetchedMissing = await Promise.all(missingIds.map(async (id) => {
+          try { const c = await (await import('../services/classService')).classService.getClassById(id); return c; } catch { return null; }
+        }));
+        const merged = [...initial, ...fetchedMissing.filter(Boolean) as any[]];
+        setClasses(merged);
         const params = new URLSearchParams(location.search);
         const preSel = params.get('classId');
         const preDate = params.get('date');
@@ -98,7 +117,14 @@ export const TeacherAttendance: React.FC = () => {
         });
         if (!tt) { setPeriodOptions([]); return; }
         const dayName = new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
-        const entries = (tt.entries || []).filter((e: any) => String(e.day).toUpperCase() === dayName);
+        const stored = localStorage.getItem('user');
+        const me = stored ? JSON.parse(stored) : {};
+        const myProfile = await teacherService.getMyProfile().catch(() => null as any);
+        const teacherId = myProfile?.id;
+        const userId = me?.id;
+        const entries = (tt.entries || [])
+          .filter((e: any) => String(e.day).toUpperCase() === dayName)
+          .filter((e: any) => (teacherId && e.teacherId === teacherId) || (userId && e.teacherId === userId));
         // Deduplicate by period label if present, else by startTime
         const seen = new Set<string>();
         const options: Array<{ period: string; startTime?: string; endTime?: string; subjectName?: string; room?: string }> = [];
@@ -201,11 +227,14 @@ export const TeacherAttendance: React.FC = () => {
                       onChange={(e) => setSelectedClass(e.target.value)}
                     >
                       <option value="">Select class...</option>
-                      {classes.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name || `${c.className || c.grade || 'Class'}${c.section ? ' - ' + c.section : ''}`}
-                        </option>
-                      ))}
+                      {classes.map((c) => {
+                        const label = `${c.className || c.grade || c.name || 'Class'}${c.section ? ' - ' + c.section : ''}`;
+                        return (
+                          <option key={c.id} value={c.id}>
+                            {label}
+                          </option>
+                        );
+                      })}
                     </Form.Select>
                   </Form.Group>
                 </Col>

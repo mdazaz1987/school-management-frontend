@@ -4,6 +4,8 @@ import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
 import { teacherService } from '../services/teacherService';
+import { timetableService } from '../services/timetableService';
+import { classService } from '../services/classService';
 import { useNavigate } from 'react-router-dom';
 
 const sidebarItems = [
@@ -32,7 +34,23 @@ export const TeacherMyClasses: React.FC = () => {
   const loadClasses = async () => {
     try {
       setLoading(true);
-      const data = await teacherService.getMyClasses();
+      const base = await teacherService.getMyClasses();
+      const stored = localStorage.getItem('user');
+      const me = stored ? JSON.parse(stored) : {};
+      const schoolId = me?.schoolId;
+      const myProfile = await teacherService.getMyProfile().catch(() => null as any);
+      const teacherId = myProfile?.id;
+      const userId = me?.id;
+      const tts = await timetableService.list(schoolId ? { schoolId } : undefined).catch(() => [] as any[]);
+      const classIdsFromTT = Array.from(new Set((tts || [])
+        .flatMap((t: any) => (t.entries || []).some((e: any) => (teacherId && e.teacherId === teacherId) || (userId && e.teacherId === userId)) ? [t.classId] : [])
+      ));
+      const existingIds = new Set((base || []).map((c: any) => c.id));
+      const missingIds = classIdsFromTT.filter((id) => !existingIds.has(id));
+      const fetchedMissing = await Promise.all(missingIds.map(async (id) => {
+        try { return await classService.getClassById(id); } catch { return null; }
+      }));
+      const data = [...(base || []), ...fetchedMissing.filter(Boolean) as any[]];
       
       // Separate classes by academic year
       const currentYear = new Date().getFullYear();
@@ -42,7 +60,7 @@ export const TeacherMyClasses: React.FC = () => {
       // Build mapped classes first (without counts)
       const mapClass = (c: any) => ({
         id: c.id,
-        name: c.name || c.className || `${c.grade || 'Class'}${c.section ? ' - ' + c.section : ''}`,
+        name: `${c.className || c.grade || c.name || 'Class'}${c.section ? ' - ' + c.section : ''}`,
         subject: c.subject || 'Multiple Subjects',
         students: 0, // will populate below
         schedule: 'Check Timetable',

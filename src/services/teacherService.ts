@@ -13,6 +13,14 @@ export const teacherService = {
   async getMyProfile(): Promise<any> {
     return apiService.get(`/teacher/profile`);
   },
+
+  async getSubmissionAttachmentBlob(assignmentId: string, submissionId: string, filename: string): Promise<Blob> {
+    const axios = apiService.getAxiosInstance();
+    const resp = await axios.get(`/assignments/${assignmentId}/submissions/${submissionId}/attachments/${encodeURIComponent(filename)}` as any, {
+      responseType: 'blob',
+    });
+    return resp.data as Blob;
+  },
   // Admin CRUD operations
   async getAllTeachers(params?: PageRequest): Promise<PageResponse<Teacher>> {
     const queryParams = new URLSearchParams();

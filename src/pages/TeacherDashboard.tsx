@@ -93,7 +93,11 @@ export const TeacherDashboard: React.FC = () => {
         });
         // Build a class name map for user-friendly display
         const myClasses = await teacherService.getMyClasses().catch(() => [] as any[]);
-        const composeClass = (c: any) => (c?.name || `${c?.className || c?.grade || 'Class'}${c?.section ? ' - ' + c.section : ''}`);
+        const composeClass = (c: any) => {
+          const base = c?.className || c?.grade || c?.name || 'Class';
+          const sec = c?.section ? ` - ${c.section}` : '';
+          return `${base}${sec}`;
+        };
         const nameMap = new Map<string, string>((myClasses || []).map((c: any) => [c.id, composeClass(c)]));
         // Fallback: fetch missing class names
         const missingIds = Array.from(new Set(todays.map((e: any) => e.classId))).filter((id) => !nameMap.has(id));

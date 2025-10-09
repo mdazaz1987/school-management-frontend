@@ -4,6 +4,8 @@ import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
 import { teacherService } from '../services/teacherService';
+import { timetableService } from '../services/timetableService';
+import { classService } from '../services/classService';
 import { studentService } from '../services/studentService';
 
 const sidebarItems = [
@@ -41,8 +43,23 @@ export const TeacherGrading: React.FC = () => {
   useEffect(() => {
     const init = async () => {
       try {
-        const cls = await teacherService.getMyClasses();
-        setClasses(cls || []);
+        const base = await teacherService.getMyClasses();
+        const stored = localStorage.getItem('user');
+        const me = stored ? JSON.parse(stored) : {};
+        const schoolId = me?.schoolId;
+        const myProfile = await teacherService.getMyProfile().catch(() => null as any);
+        const teacherId = myProfile?.id;
+        const userId = me?.id;
+        const tts = await timetableService.list(schoolId ? { schoolId } : undefined).catch(() => [] as any[]);
+        const classIdsFromTT = Array.from(new Set((tts || [])
+          .flatMap((t: any) => (t.entries || []).some((e: any) => (teacherId && e.teacherId === teacherId) || (userId && e.teacherId === userId)) ? [t.classId] : [])
+        ));
+        const existingIds = new Set((base || []).map((c: any) => c.id));
+        const missingIds = classIdsFromTT.filter((id) => !existingIds.has(id));
+        const fetchedMissing = await Promise.all(missingIds.map(async (id) => {
+          try { return await classService.getClassById(id); } catch { return null; }
+        }));
+        setClasses([...(base || []), ...fetchedMissing.filter(Boolean) as any[]]);
       } catch {}
       await loadAssignments();
     };
@@ -139,7 +156,7 @@ export const TeacherGrading: React.FC = () => {
                       <option value="">All Classes</option>
                       {classes.map((c: any) => (
                         <option key={c.id} value={c.id}>
-                          {c.name || c.className || `${c.grade || 'Class'}${c.section ? ' - ' + c.section : ''}`}
+                          {(c.className || c.grade || c.name || 'Class') + (c.section ? ' - ' + c.section : '')}
                         </option>
                       ))}
                     </Form.Select>
@@ -259,7 +276,16 @@ export const TeacherGrading: React.FC = () => {
                                       <i className="bi bi-paperclip me-1"></i>{String(f)}
                                     </a>
                                   ) : (
-                                    <span><i className="bi bi-paperclip me-1"></i>{String(f)}</span>
+                                    <Button variant="link" className="p-0" onClick={async () => {
+                                      try {
+                                        const blob = await teacherService.getSubmissionAttachmentBlob(selectedItem, gradingStudent.id, f);
+                                        const url = window.URL.createObjectURL(blob);
+                                        window.open(url, '_blank');
+                                        setTimeout(() => window.URL.revokeObjectURL(url), 10000);
+                                      } catch {}
+                                    }}>
+                                      <i className="bi bi-paperclip me-1"></i>{String(f)}
+                                    </Button>
                                   )}
                                 </li>
                               ))}
