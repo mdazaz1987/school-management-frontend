@@ -100,8 +100,10 @@ export const feeService = {
     return apiService.get(`/fees/school/${schoolId}/stats`);
   },
 
-  async studentSummary(studentId: string): Promise<any> {
-    return apiService.get(`/fees/student/${studentId}/summary`);
+  async studentSummary(studentId: string, options?: { academicYear?: string }): Promise<any> {
+    const params: any = {};
+    if (options?.academicYear) params.academicYear = options.academicYear;
+    return apiService.get(`/fees/student/${studentId}/summary`, params);
   },
 
   // Admin tools: create admission fee

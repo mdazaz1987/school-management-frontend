@@ -72,6 +72,8 @@ export const TeacherTimetable: React.FC = () => {
 
         const mapped = entries
           .map((e: any) => ({
+            start: toHHMM(e.startTime),
+            end: toHHMM(e.endTime),
             time: toHHMM(e.startTime),
             duration: diffMinutes(e.startTime, e.endTime),
             class: nameMap.get(e.classId) || e.className || e.classId,
@@ -87,26 +89,28 @@ export const TeacherTimetable: React.FC = () => {
     load();
   }, [selectedDate]);
 
-  const getPeriodStatus = (time: string, date: string) => {
+  const getPeriodStatus = (startTime: string, endTime: string, date: string) => {
     const now = new Date();
-    const selectedDateTime = new Date(date);
-    const [hours, minutes] = time.split(':').map(Number);
-    const periodTime = new Date(selectedDateTime);
-    periodTime.setHours(hours, minutes);
+    const selected = new Date(date + 'T00:00:00');
+    const today = new Date(now.toDateString());
+    if (selected < today) return 'completed';
+    if (selected > today) return 'upcoming';
 
-    if (selectedDateTime.toDateString() < now.toDateString()) {
-      return 'completed';
+    // Same day
+    const [sh, sm] = (startTime || '00:00').split(':').map(Number);
+    const start = new Date(selected);
+    start.setHours(sh, sm || 0, 0, 0);
+    let end: Date;
+    if (endTime) {
+      const [eh, em] = endTime.split(':').map(Number);
+      end = new Date(selected);
+      end.setHours(eh, em || 0, 0, 0);
+    } else {
+      end = new Date(start.getTime() + 45 * 60 * 1000);
     }
-    if (selectedDateTime.toDateString() > now.toDateString()) {
-      return 'upcoming';
-    }
-    if (periodTime < now) {
-      return 'missed';
-    }
-    if (periodTime.getTime() - now.getTime() < 3600000) {
-      return 'current';
-    }
-    return 'upcoming';
+    if (now < start) return 'upcoming';
+    if (now >= start && now <= end) return 'current';
+    return 'completed';
   };
 
   const getStatusBadge = (status: string) => {
@@ -173,7 +177,7 @@ export const TeacherTimetable: React.FC = () => {
                   </thead>
                   <tbody>
                     {todaySchedule.map((period, index) => {
-                      const status = getPeriodStatus(period.time, selectedDate);
+                      const status = getPeriodStatus(period.start, period.end, selectedDate);
                       return (
                         <tr key={index}>
                           <td><strong>{period.time}</strong></td>

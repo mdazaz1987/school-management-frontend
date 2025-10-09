@@ -117,7 +117,10 @@ export const StudentDashboard: React.FC = () => {
         // Map assignmentId -> title using student's assignments for readable names
         let assignTitleById: Record<string, string> = {};
         try {
-          const myAssignments = await studentService.getMyAssignments();
+          const myAssignments = await apiService.get<any[]>(`/students/${(student as any).id}/assignments`, {
+            classId: (student as any).classId,
+            section: (student as any).section,
+          });
           assignTitleById = (myAssignments || []).reduce((acc: any, a: any) => { if (a?.id) acc[a.id] = a.title || a.name || 'Assignment'; return acc; }, {});
         } catch {}
 
