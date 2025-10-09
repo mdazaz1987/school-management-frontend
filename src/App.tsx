@@ -48,6 +48,8 @@ import { ParentFees } from './pages/ParentFees';
 import { ParentNotifications } from './pages/ParentNotifications';
 import { TeacherMyClasses } from './pages/TeacherMyClasses';
 import { TeacherAssignments } from './pages/TeacherAssignments';
+import { TeacherStudyMaterials } from './pages/TeacherStudyMaterials';
+import { TeacherQuizTest } from './pages/TeacherQuizTest';
 import { TeacherAttendance } from './pages/TeacherAttendance';
 import { TeacherGrading } from './pages/TeacherGrading';
 import { TeacherTimetable } from './pages/TeacherTimetable';
@@ -558,6 +560,22 @@ function App() {
             element={
               <ProtectedRoute>
                 <TeacherAssignments />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/teacher/study-materials"
+            element={
+              <ProtectedRoute>
+                <TeacherStudyMaterials />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/teacher/quiz-test"
+            element={
+              <ProtectedRoute>
+                <TeacherQuizTest />
               </ProtectedRoute>
             }
           />

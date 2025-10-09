@@ -10,6 +10,8 @@ const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
   { path: '/teacher/my-classes', label: 'My Classes', icon: 'bi-door-open' },
   { path: '/teacher/assignments', label: 'Assignments', icon: 'bi-file-text' },
+  { path: '/teacher/study-materials', label: 'Study Materials', icon: 'bi-book' },
+  { path: '/teacher/quiz-test', label: 'Quiz & Tests', icon: 'bi-clipboard-check' },
   { path: '/teacher/attendance', label: 'Attendance', icon: 'bi-calendar-check' },
   { path: '/teacher/grading', label: 'Grading', icon: 'bi-star' },
   { path: '/teacher/timetable', label: 'My Timetable', icon: 'bi-calendar3' },

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, Button, Table, Badge, ProgressBar, ListGroup, Alert, Spinner } from 'react-bootstrap';
+import { Row, Col, Card, Button, Table, Badge, ProgressBar, ListGroup, Alert, Spinner, Modal, Form } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
 import { studentService } from '../services/studentService';
 import { timetableService } from '../services/timetableService';
 import { attendanceService } from '../services/attendanceService';
+import apiService from '../services/api';
 import { useNavigate } from 'react-router-dom';
 
 const sidebarItems = [
@@ -34,6 +35,13 @@ export const StudentDashboard: React.FC = () => {
   const [todayClasses, setTodayClasses] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [leaveForm, setLeaveForm] = useState({
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: new Date().toISOString().split('T')[0],
+    reason: '',
+    leaveType: 'SICK'
+  });
 
   useEffect(() => {
     const load = async () => {
@@ -140,8 +148,16 @@ export const StudentDashboard: React.FC = () => {
         </Col>
         <Col md={10}>
           <div className="mb-4">
-            <h2>Student Dashboard</h2>
-            <p className="text-muted">Welcome back, {user?.firstName}! Stay on top of your studies.</p>
+            <div className="d-flex justify-content-between align-items-center">
+              <div>
+                <h2>Student Dashboard</h2>
+                <p className="text-muted mb-0">Welcome back, {user?.firstName}! Stay on top of your studies.</p>
+              </div>
+              <Button variant="outline-primary" onClick={() => setShowLeaveModal(true)}>
+                <i className="bi bi-calendar-x me-2"></i>
+                Apply for Leave
+              </Button>
+            </div>
           </div>
 
           {error && (
@@ -348,6 +364,97 @@ export const StudentDashboard: React.FC = () => {
               </Card>
             </Col>
           </Row>
+
+          {/* Leave Application Modal */}
+          <Modal show={showLeaveModal} onHide={() => setShowLeaveModal(false)}>
+            <Modal.Header closeButton>
+              <Modal.Title>Apply for Leave</Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+              <Form>
+                <Form.Group className="mb-3">
+                  <Form.Label>Leave Type *</Form.Label>
+                  <Form.Select
+                    value={leaveForm.leaveType}
+                    onChange={(e) => setLeaveForm({ ...leaveForm, leaveType: e.target.value })}
+                  >
+                    <option value="SICK">Sick Leave</option>
+                    <option value="PERSONAL">Personal</option>
+                    <option value="FAMILY">Family Emergency</option>
+                    <option value="OTHER">Other</option>
+                  </Form.Select>
+                </Form.Group>
+
+                <Row>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Start Date *</Form.Label>
+                      <Form.Control
+                        type="date"
+                        value={leaveForm.startDate}
+                        onChange={(e) => setLeaveForm({ ...leaveForm, startDate: e.target.value })}
+                      />
+                    </Form.Group>
+                  </Col>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>End Date *</Form.Label>
+                      <Form.Control
+                        type="date"
+                        value={leaveForm.endDate}
+                        onChange={(e) => setLeaveForm({ ...leaveForm, endDate: e.target.value })}
+                        min={leaveForm.startDate}
+                      />
+                    </Form.Group>
+                  </Col>
+                </Row>
+
+                <Form.Group className="mb-3">
+                  <Form.Label>Reason *</Form.Label>
+                  <Form.Control
+                    as="textarea"
+                    rows={4}
+                    value={leaveForm.reason}
+                    onChange={(e) => setLeaveForm({ ...leaveForm, reason: e.target.value })}
+                    placeholder="Explain the reason for your leave..."
+                  />
+                </Form.Group>
+
+                <Alert variant="info" className="mb-0">
+                  <i className="bi bi-info-circle me-2"></i>
+                  Your leave application will be sent to your parent for approval, then forwarded to admin.
+                </Alert>
+              </Form>
+            </Modal.Body>
+            <Modal.Footer>
+              <Button variant="secondary" onClick={() => setShowLeaveModal(false)}>Cancel</Button>
+              <Button 
+                variant="primary" 
+                onClick={async () => {
+                  if (!leaveForm.reason || !leaveForm.startDate || !leaveForm.endDate) {
+                    setError('Please fill all required fields');
+                    return;
+                  }
+                  try {
+                    await apiService.post('/student/leave/apply', leaveForm);
+                    setShowLeaveModal(false);
+                    setLeaveForm({
+                      startDate: new Date().toISOString().split('T')[0],
+                      endDate: new Date().toISOString().split('T')[0],
+                      reason: '',
+                      leaveType: 'SICK'
+                    });
+                    alert('Leave application submitted successfully!');
+                  } catch (e: any) {
+                    setError(e?.response?.data?.message || 'Failed to submit leave application');
+                  }
+                }}
+                disabled={!leaveForm.reason || !leaveForm.startDate || !leaveForm.endDate}
+              >
+                Submit Application
+              </Button>
+            </Modal.Footer>
+          </Modal>
         </Col>
       </Row>
     </Layout>
