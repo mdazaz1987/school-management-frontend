@@ -25,6 +25,7 @@ export const TeacherGrading: React.FC = () => {
   const [selectedType, setSelectedType] = useState('');
   const [selectedItem, setSelectedItem] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [viewOnly, setViewOnly] = useState(false);
   const [gradingStudent, setGradingStudent] = useState<any>(null);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
@@ -107,6 +108,14 @@ export const TeacherGrading: React.FC = () => {
       feedback: ''
     });
     setSubmissionPreview({ attachments: student.attachments || [], content: student.content });
+    setViewOnly(false);
+    setShowModal(true);
+  };
+
+  const handleView = (student: any) => {
+    setGradingStudent(student);
+    setSubmissionPreview({ attachments: student.attachments || [], content: student.content });
+    setViewOnly(true);
     setShowModal(true);
   };
 
@@ -226,14 +235,25 @@ export const TeacherGrading: React.FC = () => {
                           </Badge>
                         </td>
                         <td>
-                          <Button
-                            variant={submission.status === 'graded' ? 'outline-primary' : 'primary'}
-                            size="sm"
-                            onClick={() => handleGrade(submission)}
-                          >
-                            <i className="bi bi-pencil me-1"></i>
-                            {submission.status === 'graded' ? 'Edit' : 'Grade'}
-                          </Button>
+                          <div className="d-flex gap-2">
+                            <Button
+                              variant="outline-secondary"
+                              size="sm"
+                              onClick={() => handleView(submission)}
+                              title="View submission"
+                            >
+                              <i className="bi bi-eye me-1"></i>
+                              View
+                            </Button>
+                            <Button
+                              variant={submission.status === 'graded' ? 'outline-primary' : 'primary'}
+                              size="sm"
+                              onClick={() => handleGrade(submission)}
+                            >
+                              <i className="bi bi-pencil me-1"></i>
+                              {submission.status === 'graded' ? 'Edit' : 'Grade'}
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -245,7 +265,7 @@ export const TeacherGrading: React.FC = () => {
 
           <Modal show={showModal} onHide={() => setShowModal(false)}>
             <Modal.Header closeButton>
-              <Modal.Title>Grade Submission</Modal.Title>
+              <Modal.Title>{viewOnly ? 'View Submission' : 'Grade Submission'}</Modal.Title>
             </Modal.Header>
             <Modal.Body>
               {gradingStudent && (
@@ -321,6 +341,7 @@ export const TeacherGrading: React.FC = () => {
                     </Card>
                   )}
 
+                  {!viewOnly && (
                   <Form>
                     <Form.Group className="mb-3">
                       <Form.Label>Marks Obtained (out of 100) *</Form.Label>
@@ -366,18 +387,25 @@ export const TeacherGrading: React.FC = () => {
                       Student and parents will be notified about the grade
                     </Alert>
                   </Form>
+                  )}
                 </>
               )}
             </Modal.Body>
             <Modal.Footer>
-              <Button variant="secondary" onClick={() => setShowModal(false)}>Cancel</Button>
-              <Button
-                variant="primary"
-                onClick={handleSubmitGrade}
-                disabled={!gradeData.marksObtained || !gradeData.grade}
-              >
-                Submit Grade
-              </Button>
+              {viewOnly ? (
+                <Button variant="secondary" onClick={() => setShowModal(false)}>Close</Button>
+              ) : (
+                <>
+                  <Button variant="secondary" onClick={() => setShowModal(false)}>Cancel</Button>
+                  <Button
+                    variant="primary"
+                    onClick={handleSubmitGrade}
+                    disabled={!gradeData.marksObtained || !gradeData.grade}
+                  >
+                    Submit Grade
+                  </Button>
+                </>
+              )}
             </Modal.Footer>
           </Modal>
         </Col>

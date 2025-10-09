@@ -27,6 +27,7 @@ export const StudentAssignments: React.FC = () => {
   const [submissionFile, setSubmissionFile] = useState<File | null>(null);
   const [activeTab, setActiveTab] = useState('pending');
   const [attachments, setAttachments] = useState<string[]>([]);
+  const [viewOnly, setViewOnly] = useState(false);
 
   useEffect(() => {
     loadAssignments();
@@ -76,6 +77,7 @@ export const StudentAssignments: React.FC = () => {
           marksObtained: sub?.marksObtained,
           feedback: sub?.feedback,
           status, // include computed status so tabs filter works
+          type: a.type || 'HOMEWORK',
         };
       });
 
@@ -90,6 +92,7 @@ export const StudentAssignments: React.FC = () => {
   const openSubmitModal = async (assignment: any) => {
     setSelectedAssignment(assignment);
     setShowSubmitModal(true);
+    setViewOnly((assignment?.type || '') === 'PRESENTATION');
     try {
       const list = await studentService.listAssignmentAttachments(assignment.id);
       setAttachments(list || []);
@@ -233,19 +236,21 @@ export const StudentAssignments: React.FC = () => {
                                 size="sm"
                                 variant="outline-secondary"
                                 onClick={() => openSubmitModal(assignment)}
-                                title="View attachments"
+                                title={(assignment?.type || '') === 'PRESENTATION' ? 'View study materials' : 'View attachments'}
                               >
                                 <i className="bi bi-paperclip me-1"></i>
-                                View attachments
+                                {(assignment?.type || '') === 'PRESENTATION' ? 'View materials' : 'View attachments'}
                               </Button>
-                              <Button
-                                size="sm"
-                                variant="primary"
-                                onClick={() => openSubmitModal(assignment)}
-                              >
-                                <i className="bi bi-upload me-1"></i>
-                                Submit
-                              </Button>
+                              {(assignment?.type || '') !== 'PRESENTATION' && (
+                                <Button
+                                  size="sm"
+                                  variant="primary"
+                                  onClick={() => openSubmitModal(assignment)}
+                                >
+                                  <i className="bi bi-upload me-1"></i>
+                                  Submit
+                                </Button>
+                              )}
                             </td>
                           </tr>
                         ))}
@@ -329,7 +334,7 @@ export const StudentAssignments: React.FC = () => {
               <p className="text-muted">{selectedAssignment.description}</p>
               {attachments.length > 0 && (
                 <div className="mb-3">
-                  <strong>Attachments from teacher:</strong>
+                  <strong>{(selectedAssignment?.type || '') === 'PRESENTATION' ? 'Study materials:' : 'Attachments from teacher:'}</strong>
                   <ul className="mt-2">
                     {attachments.map((f) => (
                       <li key={f}>
@@ -342,33 +347,38 @@ export const StudentAssignments: React.FC = () => {
                 </div>
               )}
               <hr />
+              {viewOnly ? (
+                <Alert variant="info" className="mb-0">
+                  This is study material shared by your teacher. No submission is required.
+                </Alert>
+              ) : (
+                <Form>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Submission Text</Form.Label>
+                    <Form.Control
+                      as="textarea"
+                      rows={5}
+                      value={submissionText}
+                      onChange={(e) => setSubmissionText(e.target.value)}
+                      placeholder="Type your submission here..."
+                    />
+                  </Form.Group>
 
-              <Form>
-                <Form.Group className="mb-3">
-                  <Form.Label>Submission Text</Form.Label>
-                  <Form.Control
-                    as="textarea"
-                    rows={5}
-                    value={submissionText}
-                    onChange={(e) => setSubmissionText(e.target.value)}
-                    placeholder="Type your submission here..."
-                  />
-                </Form.Group>
-
-                <Form.Group className="mb-3">
-                  <Form.Label>Upload File (Optional)</Form.Label>
-                  <Form.Control
-                    type="file"
-                    onChange={(e: any) => setSubmissionFile(e.target.files?.[0] || null)}
-                  />
-                  {submissionFile && (
-                    <div className="small text-muted mt-1">Selected: {submissionFile.name}</div>
-                  )}
-                  <Form.Text className="text-muted">
-                    Accepted formats: PDF, DOC, DOCX, ZIP (Max 10MB)
-                  </Form.Text>
-                </Form.Group>
-              </Form>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Upload File (Optional)</Form.Label>
+                    <Form.Control
+                      type="file"
+                      onChange={(e: any) => setSubmissionFile(e.target.files?.[0] || null)}
+                    />
+                    {submissionFile && (
+                      <div className="small text-muted mt-1">Selected: {submissionFile.name}</div>
+                    )}
+                    <Form.Text className="text-muted">
+                      Accepted formats: PDF, DOC, DOCX, ZIP (Max 10MB)
+                    </Form.Text>
+                  </Form.Group>
+                </Form>
+              )}
             </>
           )}
         </Modal.Body>
@@ -376,10 +386,12 @@ export const StudentAssignments: React.FC = () => {
           <Button variant="secondary" onClick={() => setShowSubmitModal(false)}>
             Cancel
           </Button>
-          <Button variant="primary" onClick={handleSubmit}>
-            <i className="bi bi-check-lg me-2"></i>
-            Submit Assignment
-          </Button>
+          {!viewOnly && (
+            <Button variant="primary" onClick={handleSubmit}>
+              <i className="bi bi-check-lg me-2"></i>
+              Submit Assignment
+            </Button>
+          )}
         </Modal.Footer>
       </Modal>
     </Layout>

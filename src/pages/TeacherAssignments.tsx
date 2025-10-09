@@ -33,7 +33,8 @@ export const TeacherAssignments: React.FC = () => {
     classId: '',
     subject: '',
     dueDate: '',
-    totalMarks: 100
+    totalMarks: 100,
+    type: 'HOMEWORK'
   });
 
   const [assignments, setAssignments] = useState<any[]>([]);
@@ -104,6 +105,7 @@ export const TeacherAssignments: React.FC = () => {
         subject: a.subject || a.subjectName,
         dueDate: a.dueDate,
         totalMarks: a.maxMarks || a.totalMarks,
+        type: a.type || 'HOMEWORK',
         submissions: a.submissionsCount || 0,
         totalStudents: a.totalStudents || 0,
         status: a.isActive === false ? 'inactive' : 'active'
@@ -138,6 +140,7 @@ export const TeacherAssignments: React.FC = () => {
         subject: formData.subject,
         dueDate: formData.dueDate,
         maxMarks: formData.totalMarks,
+        type: formData.type || 'HOMEWORK',
         schoolId: user.schoolId,
         assignedDate: new Date().toISOString().split('T')[0],
       };
@@ -166,7 +169,8 @@ export const TeacherAssignments: React.FC = () => {
       classId: assignment.classId || '',
       subject: assignment.subject,
       dueDate: assignment.dueDate,
-      totalMarks: assignment.totalMarks
+      totalMarks: assignment.totalMarks,
+      type: assignment.type || 'HOMEWORK'
     });
     setShowModal(true);
   };
@@ -182,6 +186,7 @@ export const TeacherAssignments: React.FC = () => {
         subject: formData.subject,
         dueDate: formData.dueDate,
         maxMarks: formData.totalMarks,
+        type: formData.type || 'HOMEWORK',
         schoolId: user.schoolId,
       };
       const updated = await teacherService.updateAssignment(editingAssignment.id, payload);
@@ -224,7 +229,8 @@ export const TeacherAssignments: React.FC = () => {
       classId: '',
       subject: '',
       dueDate: '',
-      totalMarks: 100
+      totalMarks: 100,
+      type: 'HOMEWORK'
     });
     setAttachmentFile(null);
   };
@@ -380,6 +386,27 @@ export const TeacherAssignments: React.FC = () => {
                         value={formData.totalMarks}
                         onChange={(e) => setFormData({ ...formData, totalMarks: Number(e.target.value) })}
                       />
+                    </Form.Group>
+                  </Col>
+                </Row>
+
+                <Row>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Type *</Form.Label>
+                      <Form.Select
+                        value={formData.type}
+                        onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                      >
+                        <option value="HOMEWORK">Homework / Assignment</option>
+                        <option value="QUIZ">Short Quiz</option>
+                        <option value="EXAM">Test / Exam</option>
+                        <option value="PRESENTATION">Study Material</option>
+                        <option value="PROJECT">Project</option>
+                        <option value="PRACTICAL">Practical</option>
+                        <option value="RESEARCH">Research</option>
+                      </Form.Select>
+                      <Form.Text className="text-muted">Use Study Material to share files/notes without strict submission.</Form.Text>
                     </Form.Group>
                   </Col>
                 </Row>
