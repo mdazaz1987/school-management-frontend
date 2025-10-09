@@ -119,16 +119,17 @@ export const StudentAssignments: React.FC = () => {
     try {
       const student = await studentService.getStudentByEmail(user.email);
       const studentId = (student as any).id;
-      const created = await apiService.post(`/students/${studentId}/assignments/${selectedAssignment.id}/submit`, {
+      const created = await apiService.post<any>(`/students/${studentId}/assignments/${selectedAssignment.id}/submit`, {
         content: submissionText,
-        attachments: submissionFile ? [submissionFile.name] : [] as string[],
+        attachments: [] as string[],
       });
       // If a file is selected, upload it to the new submission attachments endpoint
-      if (submissionFile && created?.id) {
+      const submissionId: string | undefined = (created as any)?.id;
+      if (submissionFile && submissionId) {
         const form = new FormData();
         form.append('file', submissionFile);
         const axios = apiService.getAxiosInstance();
-        await axios.post(`/assignments/${selectedAssignment.id}/submissions/${created.id}/attachments` as any, form, {
+        await axios.post(`/assignments/${selectedAssignment.id}/submissions/${submissionId}/attachments` as any, form, {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
       }
