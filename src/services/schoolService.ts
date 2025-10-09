@@ -36,7 +36,7 @@ export const schoolService = {
     branding?: any;
     address?: { street?: string; city?: string; state?: string; zipCode?: string };
     contactInfo?: { phone?: string; email?: string; website?: string };
-    configuration?: { academicYear?: string; currency?: string; timezone?: string; gstin?: string; gstRate?: number };
+    configuration?: { academicYear?: string; currency?: string; timezone?: string; gstin?: string; gstRate?: number; principalName?: string; principalSignatureUrl?: string };
   }> {
     return apiService.get(`/schools/${id}/public`);
   },

@@ -40,6 +40,9 @@ export const TeacherQuizTest: React.FC = () => {
   });
 
   const [items, setItems] = useState<any[]>([]);
+  const [quizConfig, setQuizConfig] = useState<{ timeLimitMinutes?: number; optional?: boolean; maxAttempts?: number; passingMarks?: number; showResultsImmediately?: boolean }>({ showResultsImmediately: true });
+  type Question = { id: string; type: 'SCQ' | 'MCQ' | 'IMAGE'; text?: string; imageUrl?: string; options?: string[]; correctAnswers?: number[]; points?: number };
+  const [questions, setQuestions] = useState<Question[]>([]);
 
   const filteredSubjects = useMemo(() => {
     if (!formData.classId) return subjects;
@@ -138,6 +141,8 @@ export const TeacherQuizTest: React.FC = () => {
         type: formData.type,
         schoolId: user.schoolId,
         assignedDate: new Date().toISOString().split('T')[0],
+        quizConfig,
+        questions,
       };
       const created = await teacherService.createAssignment(payload);
       if (attachmentFile && created?.id) {
@@ -182,6 +187,8 @@ export const TeacherQuizTest: React.FC = () => {
         maxMarks: formData.totalMarks,
         type: formData.type,
         schoolId: user.schoolId,
+        quizConfig,
+        questions,
       };
       const updated = await teacherService.updateAssignment(editingItem.id, payload);
       if (attachmentFile && (editingItem?.id || updated?.id)) {
@@ -227,6 +234,8 @@ export const TeacherQuizTest: React.FC = () => {
       type: 'QUIZ'
     });
     setAttachmentFile(null);
+    setQuizConfig({ showResultsImmediately: true });
+    setQuestions([]);
   };
 
   return (
@@ -400,6 +409,150 @@ export const TeacherQuizTest: React.FC = () => {
                     </Form.Group>
                   </Col>
                 </Row>
+
+                {/* Quiz Settings */}
+                <Card className="border-0 shadow-sm mb-3">
+                  <Card.Header className="bg-white"><strong>Quiz Settings</strong></Card.Header>
+                  <Card.Body>
+                    <Row>
+                      <Col md={3}>
+                        <Form.Group className="mb-3">
+                          <Form.Label>Time Limit (min)</Form.Label>
+                          <Form.Control type="number" value={quizConfig.timeLimitMinutes ?? ''}
+                            onChange={(e) => setQuizConfig({ ...quizConfig, timeLimitMinutes: e.target.value ? Number(e.target.value) : undefined })} />
+                        </Form.Group>
+                      </Col>
+                      <Col md={3}>
+                        <Form.Group className="mb-3">
+                          <Form.Label>Max Attempts</Form.Label>
+                          <Form.Control type="number" value={quizConfig.maxAttempts ?? ''}
+                            onChange={(e) => setQuizConfig({ ...quizConfig, maxAttempts: e.target.value ? Number(e.target.value) : undefined })} />
+                        </Form.Group>
+                      </Col>
+                      <Col md={3}>
+                        <Form.Group className="mb-3">
+                          <Form.Label>Passing Marks</Form.Label>
+                          <Form.Control type="number" value={quizConfig.passingMarks ?? ''}
+                            onChange={(e) => setQuizConfig({ ...quizConfig, passingMarks: e.target.value ? Number(e.target.value) : undefined })} />
+                        </Form.Group>
+                      </Col>
+                      <Col md={3}>
+                        <Form.Check type="checkbox" className="mt-4" label="Optional Quiz"
+                          checked={!!quizConfig.optional}
+                          onChange={(e) => setQuizConfig({ ...quizConfig, optional: e.target.checked })} />
+                        <Form.Check type="checkbox" className="mt-2" label="Show Results Immediately"
+                          checked={quizConfig.showResultsImmediately !== false}
+                          onChange={(e) => setQuizConfig({ ...quizConfig, showResultsImmediately: e.target.checked })} />
+                      </Col>
+                    </Row>
+                  </Card.Body>
+                </Card>
+
+                {/* Questions Builder */}
+                <Card className="border-0 shadow-sm mb-3">
+                  <Card.Header className="bg-white d-flex justify-content-between align-items-center">
+                    <strong>Questions</strong>
+                    <Button size="sm" onClick={() => {
+                      const q: Question = { id: `q${Date.now()}`, type: 'SCQ', text: '', options: ['', '', '', ''], correctAnswers: [0], points: 1 };
+                      setQuestions(prev => [...prev, q]);
+                    }}>
+                      <i className="bi bi-plus-lg me-1"></i> Add Question
+                    </Button>
+                  </Card.Header>
+                  <Card.Body>
+                    {questions.length === 0 && <div className="text-muted">No questions added</div>}
+                    {questions.map((q, idx) => (
+                      <Card key={q.id} className="mb-3">
+                        <Card.Body>
+                          <Row>
+                            <Col md={2}>
+                              <Form.Group className="mb-2">
+                                <Form.Label>Type</Form.Label>
+                                <Form.Select value={q.type}
+                                  onChange={(e) => {
+                                    const type = e.target.value as Question['type'];
+                                    const copy = [...questions];
+                                    copy[idx] = { ...q, type, correctAnswers: type === 'MCQ' ? (q.correctAnswers || []) : [(q.correctAnswers || [0])[0]] };
+                                    setQuestions(copy);
+                                  }}>
+                                  <option value="SCQ">Single Choice</option>
+                                  <option value="MCQ">Multiple Choice</option>
+                                  <option value="IMAGE">Image-based</option>
+                                </Form.Select>
+                              </Form.Group>
+                              <Form.Group>
+                                <Form.Label>Points</Form.Label>
+                                <Form.Control type="number" value={q.points ?? 1} onChange={(e) => {
+                                  const copy = [...questions];
+                                  copy[idx] = { ...q, points: Number(e.target.value) };
+                                  setQuestions(copy);
+                                }} />
+                              </Form.Group>
+                            </Col>
+                            <Col md={10}>
+                              <Form.Group className="mb-2">
+                                <Form.Label>Question Text</Form.Label>
+                                <Form.Control as="textarea" rows={2} value={q.text || ''}
+                                  onChange={(e) => {
+                                    const copy = [...questions];
+                                    copy[idx] = { ...q, text: e.target.value };
+                                    setQuestions(copy);
+                                  }} />
+                              </Form.Group>
+                              <Form.Group className="mb-2">
+                                <Form.Label>Image URL (optional)</Form.Label>
+                                <Form.Control type="text" value={q.imageUrl || ''}
+                                  onChange={(e) => {
+                                    const copy = [...questions];
+                                    copy[idx] = { ...q, imageUrl: e.target.value };
+                                    setQuestions(copy);
+                                  }} />
+                              </Form.Group>
+                              <Row>
+                                {(q.options || ['','','','']).map((opt, oi) => (
+                                  <Col md={6} key={oi} className="mb-2">
+                                    <div className="d-flex align-items-center gap-2">
+                                      {q.type === 'MCQ' ? (
+                                        <Form.Check type="checkbox" checked={(q.correctAnswers || []).includes(oi)} onChange={(e) => {
+                                          const sel = new Set(q.correctAnswers || []);
+                                          if (e.target.checked) sel.add(oi); else sel.delete(oi);
+                                          const copy = [...questions];
+                                          copy[idx] = { ...q, correctAnswers: Array.from(sel) };
+                                          setQuestions(copy);
+                                        }} />
+                                      ) : (
+                                        <Form.Check type="radio" name={`scq-${idx}`} checked={(q.correctAnswers || [0])[0] === oi} onChange={() => {
+                                          const copy = [...questions];
+                                          copy[idx] = { ...q, correctAnswers: [oi] };
+                                          setQuestions(copy);
+                                        }} />
+                                      )}
+                                      <Form.Control type="text" placeholder={`Option ${oi + 1}`} value={opt}
+                                        onChange={(e) => {
+                                          const opts = [...(q.options || ['','','',''])];
+                                          opts[oi] = e.target.value;
+                                          const copy = [...questions];
+                                          copy[idx] = { ...q, options: opts };
+                                          setQuestions(copy);
+                                        }} />
+                                    </div>
+                                  </Col>
+                                ))}
+                              </Row>
+                              <div className="d-flex justify-content-end">
+                                <Button variant="outline-danger" size="sm" onClick={() => {
+                                  setQuestions(prev => prev.filter((_, i) => i !== idx));
+                                }}>
+                                  Remove
+                                </Button>
+                              </div>
+                            </Col>
+                          </Row>
+                        </Card.Body>
+                      </Card>
+                    ))}
+                  </Card.Body>
+                </Card>
 
                 <Form.Group className="mb-3">
                   <Form.Label>Question Paper (optional)</Form.Label>

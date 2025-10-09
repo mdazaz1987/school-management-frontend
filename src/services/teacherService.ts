@@ -371,6 +371,11 @@ export const teacherService = {
     return apiService.put(`/teacher/attendance/${attendanceId}`, attendance);
   },
 
+  async checkAttendanceAuthorization(classId: string, date: string): Promise<{ allowed: boolean; firstPeriod?: any }> {
+    const params = new URLSearchParams({ date });
+    return apiService.get(`/teacher/classes/${classId}/attendance/authorization?${params.toString()}`);
+  },
+
   // Teacher Portal - Leave Approval
   async getPendingLeaveApplications(): Promise<any[]> {
     return apiService.get('/teacher/leave/pending');

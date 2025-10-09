@@ -35,6 +35,8 @@ export const TeacherAttendance: React.FC = () => {
 
   const [students, setStudents] = useState<any[]>([]);
   const schoolId: string = (user as any)?.schoolId || JSON.parse(localStorage.getItem('userInfo') || '{}').schoolId || JSON.parse(localStorage.getItem('user') || '{}').schoolId || '';
+  const [canMark, setCanMark] = useState<boolean>(false);
+  const [authInfo, setAuthInfo] = useState<any>(null);
 
   // Period options derived from timetable for selected class/date
   const [periodOptions, setPeriodOptions] = useState<Array<{ period: string; startTime?: string; endTime?: string; subjectName?: string; room?: string }>>([]);
@@ -106,6 +108,22 @@ export const TeacherAttendance: React.FC = () => {
     loadStudents();
   }, [selectedClass]);
 
+  // Authorization for daily attendance marking
+  useEffect(() => {
+    const check = async () => {
+      if (!selectedClass || !selectedDate) { setCanMark(false); setAuthInfo(null); return; }
+      try {
+        const resp = await teacherService.checkAttendanceAuthorization(selectedClass, selectedDate);
+        setCanMark(!!resp?.allowed);
+        setAuthInfo(resp?.firstPeriod || null);
+      } catch {
+        setCanMark(false);
+        setAuthInfo(null);
+      }
+    };
+    check();
+  }, [selectedClass, selectedDate]);
+
   // Load period options from timetable for the selected class + date (day-of-week)
   useEffect(() => {
     const loadPeriods = async () => {
@@ -153,6 +171,7 @@ export const TeacherAttendance: React.FC = () => {
   }, [selectedClass, selectedDate]);
 
   const handleMarkAttendance = (studentId: string, status: string) => {
+    if (!canMark) return; // read-only when not authorized
     setStudents(students.map(s => 
       s.id === studentId ? { ...s, status } : s
     ));
@@ -293,11 +312,11 @@ export const TeacherAttendance: React.FC = () => {
 
               {selectedClass && (
                 <div className="d-flex gap-2">
-                  <Button variant="success" size="sm" onClick={() => handleMarkAll('PRESENT')}>
+                  <Button variant="success" size="sm" onClick={() => handleMarkAll('PRESENT')} disabled={!canMark}>
                     <i className="bi bi-check-all me-1"></i>
                     Mark All Present
                   </Button>
-                  <Button variant="danger" size="sm" onClick={() => handleMarkAll('ABSENT')}>
+                  <Button variant="danger" size="sm" onClick={() => handleMarkAll('ABSENT')} disabled={!canMark}>
                     <i className="bi bi-x-circle me-1"></i>
                     Mark All Absent
                   </Button>
@@ -376,6 +395,7 @@ export const TeacherAttendance: React.FC = () => {
                                 variant="success"
                                 size="sm"
                                 onClick={() => handleMarkAttendance(student.id, 'PRESENT')}
+                                disabled={!canMark}
                               >
                                 Present
                               </Button>
@@ -383,6 +403,7 @@ export const TeacherAttendance: React.FC = () => {
                                 variant="danger"
                                 size="sm"
                                 onClick={() => handleMarkAttendance(student.id, 'ABSENT')}
+                                disabled={!canMark}
                               >
                                 Absent
                               </Button>
@@ -390,6 +411,7 @@ export const TeacherAttendance: React.FC = () => {
                                 variant="warning"
                                 size="sm"
                                 onClick={() => handleMarkAttendance(student.id, 'LATE')}
+                                disabled={!canMark}
                               >
                                 Late
                               </Button>
@@ -402,11 +424,19 @@ export const TeacherAttendance: React.FC = () => {
                 </Card.Body>
                 <Card.Footer className="bg-white">
                   <div className="d-flex justify-content-between align-items-center">
-                    <Alert variant="info" className="mb-0">
-                      <i className="bi bi-info-circle me-2"></i>
-                      Absent students and their parents will be notified automatically
-                    </Alert>
-                    <Button variant="primary" size="lg" onClick={handleSaveAttendance}>
+                    <div className="d-flex flex-column">
+                      <Alert variant="info" className="mb-2">
+                        <i className="bi bi-info-circle me-2"></i>
+                        Absent students and their parents will be notified automatically
+                      </Alert>
+                      {!canMark && (
+                        <Alert variant="warning" className="mb-0">
+                          <i className="bi bi-lock me-2"></i>
+                          Read-only: Only the teacher assigned to the first period can mark attendance for {new Date(selectedDate).toLocaleDateString()}.
+                        </Alert>
+                      )}
+                    </div>
+                    <Button variant="primary" size="lg" onClick={handleSaveAttendance} disabled={!canMark}>
                       <i className="bi bi-save me-2"></i>
                       Save Attendance
                     </Button>

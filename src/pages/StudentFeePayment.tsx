@@ -114,6 +114,8 @@ export const StudentFeePayment: React.FC = () => {
       const cgst = base * halfRate;
       const sgst = base * halfRate;
       const gstin = (sch as any)?.configuration?.gstin;
+      const principalName = (sch as any)?.configuration?.principalName;
+      const principalSignatureUrl = (sch as any)?.configuration?.principalSignatureUrl;
       const html = `<!doctype html>
       <html>
       <head>
@@ -172,7 +174,14 @@ export const StudentFeePayment: React.FC = () => {
           </tbody>
         </table>
         <p class="meta">Payment Method: ${fee.paymentMethod || '-'} | Transaction: ${fee.transactionId || '-'}</p>
-        <p class="center">This is a computer generated receipt.</p>
+        <div style="display:flex; justify-content: space-between; align-items: flex-end; margin-top: 24px;">
+          <div></div>
+          <div class="meta center" style="min-width: 220px;">
+            ${principalSignatureUrl ? `<img src="${principalSignatureUrl}" alt="Principal Signature" style="max-height:60px;" />` : ''}
+            <div style="border-top: 1px solid #ccc; margin-top: 8px; padding-top: 4px;">${principalName || 'Principal'}</div>
+          </div>
+        </div>
+        <p class="center" style="margin-top: 12px;">This is a computer generated receipt.</p>
         <script>window.print(); setTimeout(() => window.close(), 300);</script>
       </body>
       </html>`;

@@ -309,6 +309,8 @@ function handlePrintReceipt(fee: any) {
       const cgst = base * halfRate;
       const sgst = base * halfRate;
       const gstin = (sch as any)?.configuration?.gstin;
+      const principalName = (sch as any)?.configuration?.principalName;
+      const principalSignatureUrl = (sch as any)?.configuration?.principalSignatureUrl;
 
       const html = `<!doctype html>
       <html>
@@ -332,6 +334,7 @@ function handlePrintReceipt(fee: any) {
         <div class="header">
           <div>
             <div class="school">${sch?.name || 'School'}</div>
+            <div class="meta">ID: ${sch?.id || '-'}</div>
             <div class="meta">${sch?.address?.street || ''} ${sch?.address?.city || ''} ${sch?.address?.state || ''} ${sch?.address?.zipCode || ''}</div>
             <div class="meta">${sch?.contactInfo?.email || ''} ${sch?.contactInfo?.phone || ''}</div>
             ${gstin ? `<div class="meta">GSTIN: ${gstin}</div>` : ''}
@@ -369,7 +372,14 @@ function handlePrintReceipt(fee: any) {
           </tbody>
         </table>
         <p class="meta">Payment Method: ${fee.paymentMethod || '-'} | Transaction: ${fee.transactionId || '-'}</p>
-        <p class="center">This is a computer generated receipt.</p>
+        <div style="display:flex; justify-content: space-between; align-items: flex-end; margin-top: 24px;">
+          <div></div>
+          <div class="meta center" style="min-width: 220px;">
+            ${principalSignatureUrl ? `<img src="${principalSignatureUrl}" alt="Principal Signature" style="max-height:60px;" />` : ''}
+            <div style="border-top: 1px solid #ccc; margin-top: 8px; padding-top: 4px;">${principalName || 'Principal'}</div>
+          </div>
+        </div>
+        <p class="center" style="margin-top: 12px;">This is a computer generated receipt.</p>
         <script>window.print(); setTimeout(() => window.close(), 300);</script>
       </body>
       </html>`;
