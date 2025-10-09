@@ -46,6 +46,10 @@ export const parentService = {
     return apiService.get('/parent/dashboard');
   },
 
+  async getChildDetails(childId: string): Promise<any> {
+    return apiService.get(`/parent/children/${childId}`);
+  },
+
   async getMyChildren(): Promise<ChildDetail[]> {
     return apiService.get('/parent/children');
   },

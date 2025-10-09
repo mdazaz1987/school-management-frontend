@@ -29,7 +29,15 @@ export const schoolService = {
     return apiService.get<School[]>(`/admin/schools`);
   },
 
-  async getPublicBasic(id: string): Promise<{ id: string; name: string; logo?: string; branding?: any }> {
+  async getPublicBasic(id: string): Promise<{
+    id: string;
+    name: string;
+    logo?: string;
+    branding?: any;
+    address?: { street?: string; city?: string; state?: string; zipCode?: string };
+    contactInfo?: { phone?: string; email?: string; website?: string };
+    configuration?: { academicYear?: string; currency?: string; timezone?: string; gstin?: string; gstRate?: number };
+  }> {
     return apiService.get(`/schools/${id}/public`);
   },
 };

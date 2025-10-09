@@ -4,6 +4,7 @@ import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { parentService } from '../services/parentService';
 import { feeService } from '../services/feeService';
+import { schoolService } from '../services/schoolService';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -20,6 +21,8 @@ export const ParentFees: React.FC = () => {
   const [fees, setFees] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [childDetail, setChildDetail] = useState<any>(null);
+  const [school, setSchool] = useState<any>(null);
 
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedFee, setSelectedFee] = useState<any>(null);
@@ -48,6 +51,14 @@ export const ParentFees: React.FC = () => {
       if (!selectedChild) return;
       try {
         setLoading(true); setError('');
+        // load child details and school info for receipts
+        try {
+          const child = await parentService.getChildDetails(selectedChild);
+          setChildDetail(child);
+          if (child?.schoolId) {
+            try { setSchool(await schoolService.getPublicBasic(child.schoolId)); } catch {}
+          }
+        } catch {}
         const list = await feeService.listByStudent(selectedChild);
         // Normalize to UI structure
         const mapped = (list || []).map((f: any) => ({
@@ -59,6 +70,12 @@ export const ParentFees: React.FC = () => {
           status: (f.status || '').toString().toLowerCase(),
           paidDate: f.paidDate,
           receiptNumber: f.receiptNumber,
+          description: (f as any).feeDescription,
+          academicYear: f.academicYear,
+          paymentMethod: f.paymentMethod,
+          transactionId: f.transactionId,
+          netAmount: f.netAmount,
+          discountAmount: f.discountAmount,
         }));
         setFees(mapped);
       } catch (e: any) {
@@ -203,7 +220,7 @@ export const ParentFees: React.FC = () => {
                       <td>{getStatusBadge(fee.status)}</td>
                       <td>
                         {fee.status === 'paid' ? (
-                          <Button size="sm" variant="outline-primary">
+                          <Button size="sm" variant="outline-primary" onClick={() => handlePrintReceipt(fee)}>
                             <i className="bi bi-download me-1"></i>
                             Receipt
                           </Button>
@@ -271,3 +288,98 @@ export const ParentFees: React.FC = () => {
     </Layout>
   );
 };
+
+// Receipt printing logic
+function handlePrintReceipt(fee: any) {
+  // We'll fetch required data from local state via closures in component; for this module-level helper, re-query minimal info
+  try {
+    const userRaw = localStorage.getItem('user');
+    const user = userRaw ? JSON.parse(userRaw) : {};
+    const childId = (document.querySelector('select[aria-label="Select Child"]') as HTMLSelectElement)?.value || '';
+    const fetchAll = async () => {
+      const child = childId ? await parentService.getChildDetails(childId) : null;
+      const sch = child?.schoolId ? await schoolService.getPublicBasic(child.schoolId) : null;
+      const original = Number(fee.amount ?? 0);
+      const discount = Number(fee.discountAmount ?? 0);
+      const net = Number(fee.netAmount ?? (original - discount));
+      const configuredRate = Number((sch as any)?.configuration?.gstRate);
+      const gstRate = isFinite(configuredRate) && configuredRate > 0 ? configuredRate : 0.18; // default 18%
+      const base = net / (1 + gstRate);
+      const halfRate = gstRate / 2;
+      const cgst = base * halfRate;
+      const sgst = base * halfRate;
+      const gstin = (sch as any)?.configuration?.gstin;
+
+      const html = `<!doctype html>
+      <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>Fee Receipt ${fee.receiptNumber || ''}</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 24px; }
+          .header { display:flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+          .school { font-size: 18px; font-weight: bold; }
+          .meta { color:#555; font-size: 12px; }
+          table { width:100%; border-collapse: collapse; margin-top: 12px; }
+          th, td { border:1px solid #ddd; padding:8px; font-size: 13px; }
+          th { background:#f8f9fa; text-align:left; }
+          .totals td { font-weight:bold; }
+          .right { text-align:right; }
+          .center { text-align:center; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <div class="school">${sch?.name || 'School'}</div>
+            <div class="meta">${sch?.address?.street || ''} ${sch?.address?.city || ''} ${sch?.address?.state || ''} ${sch?.address?.zipCode || ''}</div>
+            <div class="meta">${sch?.contactInfo?.email || ''} ${sch?.contactInfo?.phone || ''}</div>
+            ${gstin ? `<div class="meta">GSTIN: ${gstin}</div>` : ''}
+          </div>
+          <div class="meta right">
+            <div>Receipt No: <strong>${fee.receiptNumber || '-'}</strong></div>
+            <div>Date: <strong>${fee.paidDate ? new Date(fee.paidDate).toLocaleDateString() : new Date().toLocaleDateString()}</strong></div>
+          </div>
+        </div>
+        <hr />
+        <div class="meta">
+          Student: <strong>${(child as any)?.firstName || ''} ${(child as any)?.lastName || ''}</strong> | Admission No: ${(child as any)?.admissionNumber || '-'} | Class: ${(child as any)?.className || (child as any)?.classId || '-'} | Section: ${(child as any)?.section || '-'}
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Description</th>
+              <th>Term</th>
+              <th>Academic Year</th>
+              <th class="right">Amount (₹)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>${fee.type} ${fee.description ? `- ${fee.description}` : ''}</td>
+              <td>${fee.term || '-'}</td>
+              <td>${fee.academicYear || '-'}</td>
+              <td class="right">${Number(fee.amount ?? net).toFixed(2)}</td>
+            </tr>
+            ${discount ? `<tr><td colspan="3">Discount</td><td class="right">- ${discount.toFixed(2)}</td></tr>` : ''}
+            <tr class="totals"><td colspan="3">Taxable Amount</td><td class="right">${base.toFixed(2)}</td></tr>
+            <tr><td colspan="2">CGST (${(halfRate*100).toFixed(2)}%)</td><td class="right" colspan="2">₹ ${cgst.toFixed(2)}</td></tr>
+            <tr><td colspan="2">SGST (${(halfRate*100).toFixed(2)}%)</td><td class="right" colspan="2">₹ ${sgst.toFixed(2)}</td></tr>
+            <tr class="totals"><td colspan="3">Grand Total</td><td class="right">₹ ${net.toFixed(2)}</td></tr>
+          </tbody>
+        </table>
+        <p class="meta">Payment Method: ${fee.paymentMethod || '-'} | Transaction: ${fee.transactionId || '-'}</p>
+        <p class="center">This is a computer generated receipt.</p>
+        <script>window.print(); setTimeout(() => window.close(), 300);</script>
+      </body>
+      </html>`;
+      const w = window.open('', '_blank');
+      if (!w) return;
+      w.document.open();
+      w.document.write(html);
+      w.document.close();
+    };
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
+    fetchAll();
+  } catch {}
+}

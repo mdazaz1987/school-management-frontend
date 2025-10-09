@@ -30,6 +30,8 @@ export const ParentDashboard: React.FC = () => {
   const [recentActivities, setRecentActivities] = useState<Array<{ child: string; activity: string; type: string; time: string; color: string }>>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [pendingLeaves, setPendingLeaves] = useState<any[]>([]);
+  const [leaveActionBusy, setLeaveActionBusy] = useState<string>('');
 
   useEffect(() => {
     const load = async () => {
@@ -102,6 +104,12 @@ export const ParentDashboard: React.FC = () => {
           time: toAgo(n.createdAt),
           color: colorByType[n.type] || 'secondary',
         })));
+
+        // Load pending leave approvals
+        try {
+          const leaves = await parentService.getPendingLeaveApplications();
+          setPendingLeaves(Array.isArray(leaves) ? leaves : []);
+        } catch {}
       } catch (e: any) {
         setError(e?.response?.data?.message || 'Failed to load dashboard');
       } finally {
@@ -110,6 +118,31 @@ export const ParentDashboard: React.FC = () => {
     };
     load();
   }, []);
+
+  const handleApproveLeave = async (id: string) => {
+    try {
+      setLeaveActionBusy(id);
+      await parentService.approveLeaveApplication(id);
+      setPendingLeaves(pendingLeaves.filter(l => l.id !== id));
+    } catch (e: any) {
+      setError(e?.response?.data?.message || 'Failed to approve leave');
+    } finally {
+      setLeaveActionBusy('');
+    }
+  };
+
+  const handleRejectLeave = async (id: string) => {
+    const reason = window.prompt('Reason for rejection?') || 'Rejected by parent';
+    try {
+      setLeaveActionBusy(id);
+      await parentService.rejectLeaveApplication(id, reason);
+      setPendingLeaves(pendingLeaves.filter(l => l.id !== id));
+    } catch (e: any) {
+      setError(e?.response?.data?.message || 'Failed to reject leave');
+    } finally {
+      setLeaveActionBusy('');
+    }
+  };
 
   const upcomingEvents: Array<{ title: string; date: string; time: string }> = [];
 
@@ -218,6 +251,42 @@ export const ParentDashboard: React.FC = () => {
                                 <small className="text-muted">{activity.time}</small>
                               </div>
                               <p className="mb-0 text-muted">{activity.activity}</p>
+                            </div>
+                          </div>
+                        </ListGroup.Item>
+                      ))}
+                    </ListGroup>
+                  )}
+                </Card.Body>
+              </Card>
+            </Col>
+
+            {/* Pending Leave Approvals */}
+            <Col md={4} className="mb-3">
+              <Card className="border-0 shadow-sm h-100">
+                <Card.Header className="bg-white">
+                  <h5 className="mb-0">Pending Leave Approvals</h5>
+                </Card.Header>
+                <Card.Body className="p-0">
+                  {pendingLeaves.length === 0 ? (
+                    <div className="text-center text-muted py-4">No pending requests</div>
+                  ) : (
+                    <ListGroup variant="flush">
+                      {pendingLeaves.map((l: any) => (
+                        <ListGroup.Item key={l.id}>
+                          <div className="d-flex justify-content-between align-items-start">
+                            <div>
+                              <div><strong>{l.studentName || l.studentId}</strong></div>
+                              <small className="text-muted">{new Date(l.startDate).toLocaleDateString()} → {new Date(l.endDate).toLocaleDateString()}</small>
+                              {l.reason && <div className="text-muted small mt-1">{l.reason}</div>}
+                            </div>
+                            <div className="d-flex gap-2">
+                              <Button size="sm" variant="success" disabled={leaveActionBusy===l.id} onClick={() => handleApproveLeave(l.id)}>
+                                <i className="bi bi-check"></i>
+                              </Button>
+                              <Button size="sm" variant="outline-danger" disabled={leaveActionBusy===l.id} onClick={() => handleRejectLeave(l.id)}>
+                                <i className="bi bi-x"></i>
+                              </Button>
                             </div>
                           </div>
                         </ListGroup.Item>

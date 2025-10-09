@@ -160,7 +160,6 @@ export const TeacherAttendance: React.FC = () => {
 
   const handleSaveAttendance = async () => {
     if (!selectedClass || students.length === 0) return;
-    if (!selectedPeriod) { setError('Please select a period'); return; }
     try {
       setLoading(true); setError('');
       const date = selectedDate; // YYYY-MM-DD
@@ -168,7 +167,7 @@ export const TeacherAttendance: React.FC = () => {
         studentId: s.id,
         schoolId,
         date,
-        period: selectedPeriod,
+        // period omitted - daily attendance
         subject: selectedSubject || undefined,
         status: s.status,
         remarks: undefined,
@@ -177,7 +176,7 @@ export const TeacherAttendance: React.FC = () => {
       for (const p of payloads) {
         await apiService.post(`/teacher/classes/${selectedClass}/attendance`, p);
       }
-      setSuccess(`Attendance saved for ${new Date(selectedDate).toLocaleDateString()} • Period ${selectedPeriod}.`);
+      setSuccess(`Attendance saved for ${new Date(selectedDate).toLocaleDateString()}.`);
       setTimeout(() => setSuccess(''), 3000);
     } catch (e: any) {
       setError(e?.response?.data?.message || 'Failed to save attendance');
