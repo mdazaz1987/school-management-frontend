@@ -355,8 +355,6 @@ export const AttendancePage: React.FC = () => {
                   <tr>
                     <th>Date</th>
                     <th>Status</th>
-                    <th>Subject</th>
-                    <th>Period</th>
                     <th>Remarks</th>
                   </tr>
                 </thead>
@@ -371,8 +369,6 @@ export const AttendancePage: React.FC = () => {
                         {r.status === 'EXCUSED' && <Badge bg="info">Excused</Badge>}
                         {r.status === 'HALF_DAY' && <Badge bg="secondary">Half Day</Badge>}
                       </td>
-                      <td>{r.subject || '-'}</td>
-                      <td>{r.period || '-'}</td>
                       <td>{r.remarks || '-'}</td>
                     </tr>
                   ))}
@@ -392,8 +388,6 @@ export const AttendancePage: React.FC = () => {
                       <th>Date</th>
                       <th>Student</th>
                       <th>Status</th>
-                      <th>Subject</th>
-                      <th>Period</th>
                       <th>Remarks</th>
                       <th className="text-end">Action</th>
                     </tr>
@@ -410,8 +404,6 @@ export const AttendancePage: React.FC = () => {
                           {r.status === 'EXCUSED' && <Badge bg="info">Excused</Badge>}
                           {r.status === 'HALF_DAY' && <Badge bg="secondary">Half Day</Badge>}
                         </td>
-                        <td>{r.subject || '-'}</td>
-                        <td>{r.period || '-'}</td>
                         <td>{r.remarks || '-'}</td>
                         <td className="text-end">
                           <Button size="sm" variant="outline-primary" onClick={() => setEditing({ id: r.id as string, status: r.status, remarks: r.remarks || '' })}>

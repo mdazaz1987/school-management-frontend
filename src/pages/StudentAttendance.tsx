@@ -283,9 +283,6 @@ export const StudentAttendance: React.FC = () => {
                         <th>Day</th>
                         <th>Status</th>
                         <th>Class</th>
-                        <th>Subject</th>
-                        <th>Period</th>
-                        <th>Time</th>
                         <th>Remarks</th>
                         <th>Action</th>
                       </tr>
@@ -294,17 +291,12 @@ export const StudentAttendance: React.FC = () => {
                       {attendanceRecords.map((record, index) => {
                         const date = new Date(record.date);
                         const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-                        const dayKey = dayNames[date.getDay()].toUpperCase();
-                        const slot = timeSlotsByDay[dayKey]?.[record.period || ''] || { start: '', end: '' };
                         return (
                           <tr key={index}>
                             <td>{date.toLocaleDateString()}</td>
                             <td>{dayNames[date.getDay()]}</td>
                             <td>{getStatusBadge(record.status)}</td>
                             <td>{classLabel || '—'}</td>
-                            <td>{record.subject || '—'}</td>
-                            <td>{record.period || '—'}</td>
-                            <td>{slot.start && slot.end ? `${slot.start} - ${slot.end}` : '—'}</td>
                             <td><small className="text-muted">{record.remarks || '—'}</small></td>
                             <td>
                               {(record.status === 'ABSENT' || record.status === 'LATE') && (

@@ -37,6 +37,8 @@ export const AdminDashboard: React.FC = () => {
     upcomingExams: 0,
   });
   const [recentActivities, setRecentActivities] = useState<Notification[]>([]);
+  const [pendingLeaves, setPendingLeaves] = useState<any[]>([]);
+  const [leavesLoading, setLeavesLoading] = useState(false);
 
   useEffect(() => {
     const loadStats = async () => {
@@ -60,6 +62,17 @@ export const AdminDashboard: React.FC = () => {
       } catch (err) {
         // Keep defaults if backend not available
         // console.error('Failed to load admin stats', err);
+      }
+    };
+    const loadPendingLeaves = async () => {
+      try {
+        setLeavesLoading(true);
+        const list = await adminService.getPendingLeaves();
+        setPendingLeaves(Array.isArray(list) ? list : []);
+      } catch (e) {
+        setPendingLeaves([]);
+      } finally {
+        setLeavesLoading(false);
       }
     };
     const loadAttendance = async () => {
@@ -86,6 +99,7 @@ export const AdminDashboard: React.FC = () => {
     loadStats();
     loadAttendance();
     loadNotifications();
+    loadPendingLeaves();
   }, [user?.schoolId]);
 
   return (
@@ -159,6 +173,65 @@ export const AdminDashboard: React.FC = () => {
                       <i className="bi bi-book fs-2 text-warning"></i>
                     </div>
                   </div>
+                </Card.Body>
+              </Card>
+            </Col>
+          </Row>
+
+          {/* Pending Leave Approvals */}
+          <Row className="mt-4">
+            <Col md={12}>
+              <Card className="border-0 shadow-sm">
+                <Card.Header className="bg-white d-flex justify-content-between align-items-center">
+                  <h5 className="mb-0">Pending Leave Approvals</h5>
+                  {leavesLoading && <span className="text-muted small">Loading...</span>}
+                </Card.Header>
+                <Card.Body className="p-0">
+                  {pendingLeaves.length === 0 ? (
+                    <div className="text-center text-muted py-4">No pending leave applications</div>
+                  ) : (
+                    <Table responsive hover className="mb-0">
+                      <thead>
+                        <tr>
+                          <th>Student</th>
+                          <th>Class</th>
+                          <th>Date Range</th>
+                          <th>Type</th>
+                          <th>Reason</th>
+                          <th>Status</th>
+                          <th className="text-end">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pendingLeaves.map((l: any) => (
+                          <tr key={l.id}>
+                            <td>{l.studentName || l.studentId}</td>
+                            <td>{l.className || l.classId}</td>
+                            <td>{new Date(l.startDate).toLocaleDateString()} - {new Date(l.endDate).toLocaleDateString()}</td>
+                            <td>{l.leaveType}</td>
+                            <td><small className="text-muted">{l.reason}</small></td>
+                            <td><Badge bg="warning">{(l.status || '').toString()}</Badge></td>
+                            <td className="text-end">
+                              <div className="d-inline-flex gap-2">
+                                <Button size="sm" variant="outline-success" onClick={async () => {
+                                  await adminService.approveLeave(l.id, 'Approved by Admin');
+                                  setPendingLeaves((prev) => prev.filter((x: any) => x.id !== l.id));
+                                }}>
+                                  Approve
+                                </Button>
+                                <Button size="sm" variant="outline-danger" onClick={async () => {
+                                  await adminService.rejectLeave(l.id, 'Rejected by Admin');
+                                  setPendingLeaves((prev) => prev.filter((x: any) => x.id !== l.id));
+                                }}>
+                                  Reject
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </Table>
+                  )}
                 </Card.Body>
               </Card>
             </Col>

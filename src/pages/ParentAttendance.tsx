@@ -221,9 +221,6 @@ export const ParentAttendance: React.FC = () => {
                         <th>Date</th>
                         <th>Day</th>
                         <th>Status</th>
-                        <th>Subject</th>
-                        <th>Period</th>
-                        <th>Time</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -231,15 +228,11 @@ export const ParentAttendance: React.FC = () => {
                         const date = new Date(record.date);
                         const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
                         const dayKey = dayNames[date.getDay()].toUpperCase();
-                        const slot = timeSlotsByDay[dayKey]?.[(record as any).period || ''] || { start: '', end: '' };
                         return (
                           <tr key={index}>
                             <td>{date.toLocaleDateString()}</td>
                             <td>{dayNames[date.getDay()]}</td>
                             <td>{getStatusBadge(record.status)}</td>
-                            <td>{(record as any).subject || '—'}</td>
-                            <td>{(record as any).period || '—'}</td>
-                            <td>{slot.start && slot.end ? `${slot.start} - ${slot.end}` : '—'}</td>
                           </tr>
                         );
                       })}
