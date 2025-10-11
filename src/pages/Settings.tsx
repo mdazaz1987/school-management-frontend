@@ -816,7 +816,7 @@ export const Settings: React.FC = () => {
                           {school.configuration?.principalSignatureUrl && (
                             <div className="mt-2">
                               <small className="text-muted d-block mb-1">Preview:</small>
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              {/* preview image */}
                               <img
                                 src={school.configuration.principalSignatureUrl as string}
                                 alt="Principal Signature"
