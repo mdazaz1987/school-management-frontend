@@ -40,4 +40,12 @@ export const schoolService = {
   }> {
     return apiService.get(`/schools/${id}/public`);
   },
+
+  async uploadPrincipalSignature(schoolId: string, file: File): Promise<{ url: string }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiService.post(`/admin/schools/${schoolId}/principal-signature`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
 };

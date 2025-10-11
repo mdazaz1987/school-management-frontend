@@ -32,12 +32,23 @@ export const TeacherStudents: React.FC = () => {
   useEffect(() => {
     const loadClasses = async () => {
       try {
+        // Base set from teacher assignments
         const classes = await teacherService.getMyClasses();
-        setMyClasses(classes || []);
+        const base = Array.isArray(classes) ? classes : [];
+        // Union with classes derived from students taught by this teacher
+        const myStudents = await teacherService.getMyStudents().catch(() => [] as any[]);
+        const classIds = Array.from(new Set((myStudents || []).map((s: any) => s.classId).filter(Boolean)));
+        const existingIds = new Set(base.map((c: any) => c.id));
+        const missingIds = classIds.filter(id => !existingIds.has(id));
+        const fetched = await Promise.all(missingIds.map(async (id) => {
+          try { const { classService } = await import('../services/classService'); return await classService.getClassById(id); } catch { return null; }
+        }));
+        const merged = [...base, ...fetched.filter(Boolean) as any[]];
+        setMyClasses(merged);
         const params = new URLSearchParams(location.search);
         const preSel = params.get('classId');
-        if (preSel && (classes || []).some((c: any) => c.id === preSel)) setSelectedClassId(preSel);
-        else if ((classes || []).length > 0) setSelectedClassId(classes[0].id);
+        if (preSel && (merged || []).some((c: any) => c.id === preSel)) setSelectedClassId(preSel);
+        else if ((merged || []).length > 0) setSelectedClassId(merged[0].id);
       } catch (e) {
         setMyClasses([]);
       }

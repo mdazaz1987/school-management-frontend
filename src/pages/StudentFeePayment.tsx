@@ -138,8 +138,10 @@ export const StudentFeePayment: React.FC = () => {
         <div class="header">
           <div>
             <div class="school">${sch?.name || 'School'}</div>
+            <div class="meta">ID: ${sch?.id || '-'}</div>
             <div class="meta">${sch?.address?.street || ''} ${sch?.address?.city || ''} ${sch?.address?.state || ''} ${sch?.address?.zipCode || ''}</div>
             <div class="meta">${sch?.contactInfo?.email || ''} ${sch?.contactInfo?.phone || ''}</div>
+            ${gstin ? `<div class="meta">GSTIN: ${gstin}</div>` : ''}
           </div>
           <div class="meta right">
             <div>Receipt No: <strong>${fee.receiptNumber || '-'}</strong></div>

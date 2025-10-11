@@ -5,6 +5,7 @@ import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-b
 import { useAuth } from '../contexts/AuthContext';
 import { Subject } from '../types';
 import { teacherService } from '../services/teacherService';
+import { classService } from '../services/classService';
 import { subjectService } from '../services/subjectService';
 
 export const SubjectForm: React.FC = () => {
@@ -31,6 +32,7 @@ export const SubjectForm: React.FC = () => {
   });
 
   const [teachers, setTeachers] = useState<any[]>([]);
+  const [classes, setClasses] = useState<any[]>([]);
 
   const isEdit = Boolean(id);
 
@@ -64,6 +66,17 @@ export const SubjectForm: React.FC = () => {
     loadTeachers();
   }, [user?.schoolId]);
 
+  useEffect(() => {
+    const loadClasses = async () => {
+      if (!user?.schoolId) return;
+      try {
+        const list = await classService.getAllClasses({ schoolId: user.schoolId });
+        setClasses(list || []);
+      } catch {}
+    };
+    loadClasses();
+  }, [user?.schoolId]);
+
   const handleChange = (key: keyof Subject, value: any) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
@@ -85,6 +98,7 @@ export const SubjectForm: React.FC = () => {
         totalHours: form.totalHours ?? undefined,
         isActive: form.isActive ?? true,
         teacherIds: form.teacherIds || [],
+        classIds: (form as any).classIds || [],
       };
       if (isEdit && id) {
         await subjectService.update(id, payload);
@@ -255,6 +269,26 @@ export const SubjectForm: React.FC = () => {
                 </Row>
 
                 <Row>
+                  <Col md={12} className="mb-3">
+                    <Form.Group>
+                      <Form.Label>Assign to Classes</Form.Label>
+                      <Form.Select
+                        multiple
+                        value={((form as any).classIds as any) || []}
+                        onChange={(e) => {
+                          const options = Array.from(e.target.selectedOptions).map(o => o.value);
+                          setForm(prev => ({ ...prev, classIds: options as any } as any));
+                        }}
+                      >
+                        {classes.map((c: any) => (
+                          <option key={c.id} value={c.id}>
+                            {(c.name || c.className || 'Class') + (c.section ? ` - ${c.section}` : '')}
+                          </option>
+                        ))}
+                      </Form.Select>
+                      <Form.Text className="text-muted">Hold Ctrl/Cmd to select multiple classes</Form.Text>
+                    </Form.Group>
+                  </Col>
                   <Col md={12} className="mb-3">
                     <Form.Group>
                       <Form.Label>Assign Teachers</Form.Label>

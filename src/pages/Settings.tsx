@@ -761,6 +761,73 @@ export const Settings: React.FC = () => {
                       </Col>
                     </Row>
 
+                    {/* Principal details for receipts */}
+                    <Row>
+                      <Col md={6} className="mb-3">
+                        <Form.Group>
+                          <Form.Label>Principal Name (for receipts)</Form.Label>
+                          <Form.Control
+                            type="text"
+                            value={school.configuration?.principalName || ''}
+                            onChange={(e) => setSchool(prev => ({
+                              ...prev,
+                              configuration: { ...(prev.configuration || {}), principalName: e.target.value },
+                            }))}
+                            placeholder="e.g., Dr. A. B. Principal"
+                          />
+                        </Form.Group>
+                      </Col>
+                      <Col md={6} className="mb-3">
+                        <Form.Group>
+                          <Form.Label>Principal Signature</Form.Label>
+                          <div className="d-flex align-items-center gap-2">
+                            <Form.Control
+                              type="text"
+                              placeholder="Signature Image URL"
+                              value={school.configuration?.principalSignatureUrl || ''}
+                              onChange={(e) => setSchool(prev => ({
+                                ...prev,
+                                configuration: { ...(prev.configuration || {}), principalSignatureUrl: e.target.value },
+                              }))}
+                            />
+                            <Form.Control
+                              type="file"
+                              accept="image/*"
+                              onChange={async (e) => {
+                                const input = e.target as HTMLInputElement;
+                                const file = input.files?.[0];
+                                if (!file || !user?.schoolId) return;
+                                try {
+                                  const resp: any = await schoolService.uploadPrincipalSignature(user.schoolId, file);
+                                  const url = resp?.url || resp;
+                                  setSchool(prev => ({
+                                    ...prev,
+                                    configuration: { ...(prev.configuration || {}), principalSignatureUrl: url },
+                                  }));
+                                  setSaveMessage('Signature uploaded');
+                                  setTimeout(() => setSaveMessage(''), 2000);
+                                } catch (err: any) {
+                                  setErrorMessage(err.response?.data?.message || 'Upload failed');
+                                  setTimeout(() => setErrorMessage(''), 3000);
+                                }
+                              }}
+                            />
+                          </div>
+                          {school.configuration?.principalSignatureUrl && (
+                            <div className="mt-2">
+                              <small className="text-muted d-block mb-1">Preview:</small>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={school.configuration.principalSignatureUrl as string}
+                                alt="Principal Signature"
+                                style={{ maxHeight: 60 }}
+                              />
+                            </div>
+                          )}
+                        </Form.Group>
+                      </Col>
+                    </Row>
+
                     {/* Working hours configuration */}
                     <Row>
                       <Col md={3} className="mb-3">

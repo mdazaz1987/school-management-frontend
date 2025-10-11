@@ -68,6 +68,12 @@ export interface SchoolConfiguration {
   workingEndTime?: string;   // HH:mm
   defaultBreakStartTime?: string; // HH:mm
   defaultBreakEndTime?: string;   // HH:mm
+  // GST configuration
+  gstin?: string;
+  gstRate?: number;
+  // Principal details for receipts
+  principalName?: string;
+  principalSignatureUrl?: string;
 }
 
 export interface School {
