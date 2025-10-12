@@ -700,12 +700,16 @@ export const Settings: React.FC = () => {
                   <Form
                     onSubmit={async (e) => {
                       e.preventDefault();
-                      if (!user?.schoolId) return;
+                      const schoolId = school.id || user?.schoolId;
+                      if (!schoolId) {
+                        setErrorMessage('School ID is required');
+                        return;
+                      }
                       setErrorMessage('');
                       setSaveMessage('');
                       setSchoolSaving(true);
                       try {
-                        const updated = await schoolService.update(user.schoolId, school);
+                        const updated = await schoolService.update(schoolId, school);
                         setSchool(updated);
                         setSaveMessage('School settings saved');
                         setTimeout(() => setSaveMessage(''), 3000);
@@ -714,7 +718,7 @@ export const Settings: React.FC = () => {
                         if (err?.response?.status === 404) {
                           try {
                             const created = await schoolService.create({
-                              id: user.schoolId,
+                              id: schoolId,
                               ...school,
                             });
                             setSchool(created);
@@ -735,7 +739,16 @@ export const Settings: React.FC = () => {
                       <Col md={6} className="mb-3">
                         <Form.Group>
                           <Form.Label>School ID</Form.Label>
-                          <Form.Control type="text" value={user?.schoolId || ''} disabled readOnly />
+                          <Form.Control
+                            type="text"
+                            value={school.id || user?.schoolId || ''}
+                            onChange={(e) => setSchool((prev) => ({ ...prev, id: e.target.value }))}
+                            disabled={!!school.id || !!user?.schoolId}
+                            placeholder="Enter unique school ID (e.g., SCH001)"
+                          />
+                          <Form.Text className="text-muted">
+                            School ID can only be set once during first-time configuration
+                          </Form.Text>
                         </Form.Group>
                       </Col>
                       <Col md={6} className="mb-3">

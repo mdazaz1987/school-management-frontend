@@ -32,7 +32,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       }
     };
     loadBranding();
-  }, [user?.schoolId]);
+  }, [user]);
 
   const handleLogout = () => {
     logout();
@@ -103,9 +103,21 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               </NavDropdown>
               <NavDropdown
                 title={
-                  <span>
-                    <i className="bi bi-person-circle me-2"></i>
-                    {user?.firstName} {user?.lastName}
+                  <span className="d-flex align-items-center gap-2">
+                    {user?.profilePhoto ? (
+                      <img
+                        src={user.profilePhoto}
+                        alt="Profile"
+                        className="rounded-circle"
+                        style={{ width: 32, height: 32, objectFit: 'cover' }}
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                          (e.target as HTMLImageElement).nextElementSibling?.classList.remove('d-none');
+                        }}
+                      />
+                    ) : null}
+                    <i className={`bi bi-person-circle ${user?.profilePhoto ? 'd-none' : ''}`}></i>
+                    <span>{user?.firstName} {user?.lastName}</span>
                   </span>
                 }
                 id="user-dropdown"

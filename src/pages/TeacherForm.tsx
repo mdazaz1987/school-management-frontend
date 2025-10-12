@@ -136,9 +136,10 @@ export const TeacherForm: React.FC = () => {
           subjectIds: teacher.subjectIds || [],
           classIds: teacher.classIds || [],
           joiningDate: teacher.joiningDate || new Date().toISOString().split('T')[0],
+          isPrincipal: teacher.isPrincipal || false,
           passwordMode: 'NONE',
           sendEmailToTeacher: false,
-        });
+        } as any);
       }
     } catch (err: any) {
       console.error('Error loading data:', err);
@@ -606,6 +607,23 @@ export const TeacherForm: React.FC = () => {
                             <option value="Contract">Contract</option>
                             <option value="Guest">Guest</option>
                           </Form.Select>
+                        </Form.Group>
+                      </Col>
+                    </Row>
+
+                    <Row>
+                      <Col md={12}>
+                        <Form.Group className="mb-3">
+                          <Form.Check
+                            type="checkbox"
+                            name="isPrincipal"
+                            label="Principal (Has elevated permissions for leave approvals and administrative tasks)"
+                            checked={(formData as any).isPrincipal || false}
+                            onChange={(e) => setFormData({ ...formData, isPrincipal: e.target.checked } as any)}
+                          />
+                          <Form.Text className="text-muted">
+                            Only one teacher should be designated as Principal
+                          </Form.Text>
                         </Form.Group>
                       </Col>
                     </Row>

@@ -279,6 +279,7 @@ export interface Teacher {
   classIds?: string[];
   profilePicture?: string;
   isActive: boolean;
+  isPrincipal?: boolean;
   joiningDate?: string;
   createdAt: string;
   updatedAt: string;
