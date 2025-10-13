@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { studentService } from '../services/studentService';
 import { feeService } from '../services/feeService';
 import { schoolService } from '../services/schoolService';
+import { resolveUrl } from '../services/api';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -116,6 +117,7 @@ export const StudentFeePayment: React.FC = () => {
       const gstin = (sch as any)?.configuration?.gstin;
       const principalName = (sch as any)?.configuration?.principalName;
       const principalSignatureUrl = (sch as any)?.configuration?.principalSignatureUrl;
+      const principalSignatureUrlAbs = resolveUrl(String(principalSignatureUrl || ''));
       const html = `<!doctype html>
       <html>
       <head>
@@ -179,7 +181,7 @@ export const StudentFeePayment: React.FC = () => {
         <div style="display:flex; justify-content: space-between; align-items: flex-end; margin-top: 24px;">
           <div></div>
           <div class="meta center" style="min-width: 220px;">
-            ${principalSignatureUrl ? `<img src="${principalSignatureUrl}" alt="Principal Signature" style="max-height:60px;" />` : ''}
+            ${principalSignatureUrl ? `<img src="${principalSignatureUrlAbs}" alt="Principal Signature" style="max-height:60px;" />` : ''}
             <div style="border-top: 1px solid #ccc; margin-top: 8px; padding-top: 4px;">${principalName || 'Principal'}</div>
           </div>
         </div>
