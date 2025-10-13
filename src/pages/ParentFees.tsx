@@ -143,7 +143,7 @@ export const ParentFees: React.FC = () => {
             <Card.Body>
               <Form.Group>
                 <Form.Label>Select Child</Form.Label>
-                <Form.Select value={selectedChild} onChange={(e) => setSelectedChild(e.target.value)}>
+                <Form.Select aria-label="Select Child" value={selectedChild} onChange={(e) => setSelectedChild(e.target.value)}>
                   {children.map(child => (
                     <option key={child.id} value={child.id}>{child.name}{child.className ? ` - ${child.className}` : ''}</option>
                   ))}
@@ -299,7 +299,7 @@ function handlePrintReceipt(fee: any) {
     const childId = (document.querySelector('select[aria-label="Select Child"]') as HTMLSelectElement)?.value || '';
     const fetchAll = async () => {
       const child = childId ? await parentService.getChildDetails(childId) : null;
-      const sch = child?.schoolId ? await schoolService.getPublicBasic(child.schoolId) : null;
+      const sch = (child as any)?.schoolId ? await schoolService.getPublicBasic((child as any).schoolId) : null;
       const original = Number(fee.amount ?? 0);
       const discount = Number(fee.discountAmount ?? 0);
       const net = Number(fee.netAmount ?? (original - discount));
@@ -348,7 +348,7 @@ function handlePrintReceipt(fee: any) {
         </div>
         <hr />
         <div class="meta">
-          Student: <strong>${(child as any)?.firstName || ''} ${(child as any)?.lastName || ''}</strong> | Admission No: ${(child as any)?.admissionNumber || '-'} | Class: ${(child as any)?.className || (child as any)?.classId || '-'} | Section: ${(child as any)?.section || '-'}
+          Student: <strong>${(child as any)?.firstName || (child as any)?.studentName || (child as any)?.name || ''} ${(child as any)?.lastName || (child as any)?.studentLastName || ''}</strong> | Admission No: ${(child as any)?.admissionNumber || (child as any)?.admissionNo || (child as any)?.studentAdmissionNo || '-'} | Class: ${(child as any)?.className || (child as any)?.class || (child as any)?.studentClass || '-'} | Section: ${(child as any)?.section || (child as any)?.studentSection || '-'}
         </div>
         <table>
           <thead>

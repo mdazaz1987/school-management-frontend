@@ -520,83 +520,97 @@ export const TimetableFormImproved: React.FC = () => {
 
                         const cell = timetableGrid[day]?.[slotIndex] || { subjectId: '', teacherId: '', room: '' };
                         
-                        const subjectsForClass = subjects.filter(s => !s.classIds || s.classIds.length === 0 || s.classIds.includes(selectedClass));
+                        const classObj = classes.find(c => c.id === selectedClass);
+                        const classSubjectIds = (classObj?.subjects || []) as string[];
+                        const subjectsForClass = subjects.filter(s => {
+                          if (classSubjectIds && classSubjectIds.length > 0) return classSubjectIds.includes(s.id);
+                          if (Array.isArray(s.classIds) && s.classIds.length > 0) return s.classIds.includes(selectedClass);
+                          return true; // no mapping -> available to all
+                        });
                         const key = `${day}-${slotIndex}`;
 
                         return (
                           <td key={slotIndex} className="p-2">
-                            <Form.Select
-                              size="sm"
-                              className="mb-1"
-                              value={cell.subjectId}
-                              onChange={(e) => updateCell(day, slotIndex, 'subjectId', e.target.value)}
-                            >
-                              <option value="">Select Subject</option>
-                              {subjectsForClass.map(s => (
-                                <option key={s.id} value={s.id}>{s.name}</option>
-                              ))}
-                            </Form.Select>
-                            <Form.Select
-                              size="sm"
-                              className="mb-1"
-                              value={cell.teacherId}
-                              onChange={(e) => updateCell(day, slotIndex, 'teacherId', e.target.value)}
-                            >
-                              <option value="">Select Teacher</option>
-                              {(() => {
-                                const assigned = cell.teacherId;
-                                const assignedTeacher = assigned ? teachers.find(t => t.id === assigned) : undefined;
-                                const filtered = teachers
-                                  .filter(t => isTeacherFree(t.id, day, slotIndex))
-                                  .filter(t => {
-                                    // Subject-teacher constraint on UI as well
-                                    const subj = subjects.find(s => s.id === cell.subjectId);
-                                    if (!subj) return true; // if no subject selected, show all
-                                    const ids = (subj as any).teacherIds as string[] | undefined;
-                                    if (!ids || ids.length === 0) return true; // unrestricted subject
-                                    return ids.includes(t.id) || ids.includes((t as any).userId);
-                                  });
-                                const finalList = assignedTeacher && !filtered.some(t => t.id === assignedTeacher.id)
-                                  ? [assignedTeacher, ...filtered]
-                                  : filtered;
-                                return finalList.map(t => (
-                                  <option key={t.id} value={t.id}>
-                                    {t.firstName} {t.lastName}{t.isActive === false ? ' (inactive)' : ''}
-                                  </option>
-                                ));
-                              })()}
-                            </Form.Select>
-                            <div className="d-flex gap-1">
-                              <Form.Select
-                                size="sm"
-                                value={cell.room}
-                                onFocus={() => fetchAvailableRooms(day, slotIndex)}
-                                onClick={() => fetchAvailableRooms(day, slotIndex)}
-                                onMouseDown={() => fetchAvailableRooms(day, slotIndex)}
-                                onChange={(e) => updateCell(day, slotIndex, 'room', e.target.value)}
-                              >
-                                <option value="">Select Room</option>
-                                {(availableRooms[key] || []).length === 0 ? (
-                                  <option value="">No rooms available</option>
-                                ) : (
-                                  (availableRooms[key] || []).map(r => (
-                                    <option key={r.id} value={r.name}>
-                                      {r.name}{r.capacity ? ` (${r.capacity})` : ''}
-                                    </option>
-                                  ))
-                                )}
-                              </Form.Select>
-                              {(cell.subjectId || cell.teacherId) && (
-                                <Button
-                                  variant="outline-danger"
+                            {timeSlots[slotIndex].type !== 'LECTURE' ? (
+                              <div className="text-center text-muted" style={{fontSize: 12}}>
+                                {timeSlots[slotIndex].type}
+                              </div>
+                            ) : (
+                              <>
+                                <Form.Select
                                   size="sm"
-                                  onClick={() => clearCell(day, slotIndex)}
-                                  title="Clear"
+                                  className="mb-1"
+                                  value={cell.subjectId}
+                                  onChange={(e) => updateCell(day, slotIndex, 'subjectId', e.target.value)}
                                 >
-                                  ×
-                                </Button>
-                              )}
-                            </div>
+                                  <option value="">Select Subject</option>
+                                  {subjectsForClass.map(s => (
+                                    <option key={s.id} value={s.id}>{s.name}</option>
+                                  ))}
+                                </Form.Select>
+                                <Form.Select
+                                  size="sm"
+                                  className="mb-1"
+                                  value={cell.teacherId}
+                                  onChange={(e) => updateCell(day, slotIndex, 'teacherId', e.target.value)}
+                                >
+                                  <option value="">Select Teacher</option>
+                                  {(() => {
+                                    const assigned = cell.teacherId;
+                                    const assignedTeacher = assigned ? teachers.find(t => t.id === assigned) : undefined;
+                                    const filtered = teachers
+                                      .filter(t => isTeacherFree(t.id, day, slotIndex))
+                                      .filter(t => {
+                                        // Subject-teacher constraint on UI as well
+                                        const subj = subjects.find(s => s.id === cell.subjectId);
+                                        if (!subj) return true; // if no subject selected, show all
+                                        const ids = (subj as any).teacherIds as string[] | undefined;
+                                        if (!ids || ids.length === 0) return true; // unrestricted subject
+                                        return ids.includes(t.id) || ids.includes((t as any).userId);
+                                      });
+                                    const finalList = assignedTeacher && !filtered.some(t => t.id === assignedTeacher.id)
+                                      ? [assignedTeacher, ...filtered]
+                                      : filtered;
+                                    return finalList.map(t => (
+                                      <option key={t.id} value={t.id}>
+                                        {t.firstName} {t.lastName}{t.isActive === false ? ' (inactive)' : ''}
+                                      </option>
+                                    ));
+                                  })()}
+                                </Form.Select>
+                                <div className="d-flex gap-1">
+                                  <Form.Select
+                                    size="sm"
+                                    value={cell.room}
+                                    onFocus={() => fetchAvailableRooms(day, slotIndex)}
+                                    onClick={() => fetchAvailableRooms(day, slotIndex)}
+                                    onMouseDown={() => fetchAvailableRooms(day, slotIndex)}
+                                    onChange={(e) => updateCell(day, slotIndex, 'room', e.target.value)}
+                                  >
+                                    <option value="">Select Room</option>
+                                    {(availableRooms[key] || []).length === 0 ? (
+                                      <option value="">No rooms available</option>
+                                    ) : (
+                                      (availableRooms[key] || []).map(r => (
+                                        <option key={r.id} value={r.name}>
+                                          {r.name}{r.capacity ? ` (${r.capacity})` : ''}
+                                        </option>
+                                      ))
+                                    )}
+                                  </Form.Select>
+                                  {(cell.subjectId || cell.teacherId) && (
+                                    <Button
+                                      variant="outline-danger"
+                                      size="sm"
+                                      onClick={() => clearCell(day, slotIndex)}
+                                      title="Clear"
+                                    >
+                                      ×
+                                    </Button>
+                                  )}
+                                </div>
+                              </>
+                            )}
                           </td>
                         );
                       })}

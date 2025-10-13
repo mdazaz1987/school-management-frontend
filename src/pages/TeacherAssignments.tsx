@@ -4,7 +4,7 @@ import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
 import { teacherService } from '../services/teacherService';
-import { apiService } from '../services/api';
+import { subjectService } from '../services/subjectService';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -45,17 +45,19 @@ export const TeacherAssignments: React.FC = () => {
   const filteredSubjects = useMemo(() => {
     if (!formData.classId) return subjects || [];
     try {
+      // If class has an explicit subjects list, prefer that
+      const classObj = (classes || []).find((c: any) => c.id === formData.classId);
+      const classSubjectIds: string[] = (classObj?.subjects || []) as any;
       return (subjects || []).filter((s: any) => {
+        if (classSubjectIds && classSubjectIds.length > 0) return classSubjectIds.includes(s.id);
         const list = s.classIds || s.classIDs || s.classes || [];
-        // Prefer explicit mapping: include subject if mapped to selected class
         if (Array.isArray(list) && list.length > 0) return list.includes(formData.classId);
-        // If no mapping provided, treat as global subject available to all classes
-        return true;
+        return true; // global
       });
     } catch {
       return subjects || [];
     }
-  }, [subjects, formData.classId]);
+  }, [subjects, classes, formData.classId]);
 
   useEffect(() => {
     loadClassesAndAssignments();
@@ -68,20 +70,11 @@ export const TeacherAssignments: React.FC = () => {
       // Load teacher's assigned classes and subjects
       const [cls, subs] = await Promise.all([
         teacherService.getMyClasses(),
-        teacherService.getMySubjects()
+        user?.schoolId ? subjectService.getAllSubjects({ schoolId: user.schoolId }) : Promise.resolve([])
       ]);
       
       setClasses(cls);
-      let finalSubjects = subs || [];
-      // Fallback: if teacher has no subjects configured, fetch school subjects
-      if ((!finalSubjects || finalSubjects.length === 0) && user?.schoolId) {
-        try {
-          finalSubjects = await apiService.get<any[]>(`/subjects`, { schoolId: user.schoolId });
-        } catch (e) {
-          // ignore fallback failure; keep empty
-        }
-      }
-      setSubjects(finalSubjects);
+      setSubjects(subs || []);
       
       // Load assignments via session-based endpoint (filter to HOMEWORK and PROJECT only)
       const list = await teacherService.getMyAssignments();

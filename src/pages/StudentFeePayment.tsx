@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { studentService } from '../services/studentService';
 import { feeService } from '../services/feeService';
 import { schoolService } from '../services/schoolService';
+import { classService } from '../services/classService';
 import { resolveUrl } from '../services/api';
 
 const sidebarItems = [
@@ -104,7 +105,15 @@ export const StudentFeePayment: React.FC = () => {
   const handlePrintReceipt = async (fee: any) => {
     try {
       const me = student || (await studentService.getStudentByEmail(user?.email || ''));
-      const sch = school || (user?.schoolId ? await schoolService.getPublicBasic(user.schoolId) : null);
+      // prefer student.schoolId if user.schoolId missing
+      const sch = school || (me?.schoolId ? await schoolService.getPublicBasic(me.schoolId) : (user?.schoolId ? await schoolService.getPublicBasic(user.schoolId) : null));
+      let classLabel = (me as any)?.className || (me as any)?.classId || '-';
+      try {
+        if ((me as any)?.classId) {
+          const cls = await classService.getClassById((me as any).classId);
+          classLabel = cls?.name || cls?.className || `${cls?.grade || 'Class'}${cls?.section ? ' - ' + cls.section : ''}`;
+        }
+      } catch {}
       const original = Number(fee.amount ?? 0);
       const discount = Number(fee.discountAmount ?? 0);
       const net = Number(fee.netAmount ?? (original - discount));
@@ -152,7 +161,7 @@ export const StudentFeePayment: React.FC = () => {
         </div>
         <hr />
         <div class="meta">
-          Student: <strong>${(me as any)?.firstName || ''} ${(me as any)?.lastName || ''}</strong> | Admission No: ${(me as any)?.admissionNumber || '-'} | Class: ${(me as any)?.className || (me as any)?.classId || '-'} | Section: ${(me as any)?.section || '-'}
+          Student: <strong>${(me as any)?.firstName || ''} ${(me as any)?.lastName || ''}</strong> | Admission No: ${(me as any)?.admissionNumber || (me as any)?.admissionNo || '-'} | Class: ${classLabel} | Section: ${(me as any)?.section || '-'}
         </div>
         <table>
           <thead>

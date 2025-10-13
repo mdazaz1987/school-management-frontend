@@ -4,7 +4,7 @@ import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
 import { teacherService } from '../services/teacherService';
-import { apiService } from '../services/api';
+import { subjectService } from '../services/subjectService';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -42,15 +42,18 @@ export const TeacherStudyMaterials: React.FC = () => {
   const filteredSubjects = useMemo(() => {
     if (!formData.classId) return subjects || [];
     try {
+      const classObj = (classes || []).find((c: any) => c.id === formData.classId);
+      const classSubjectIds: string[] = (classObj?.subjects || []) as any;
       return (subjects || []).filter((s: any) => {
+        if (classSubjectIds && classSubjectIds.length > 0) return classSubjectIds.includes(s.id);
         const list = s.classIds || s.classIDs || s.classes || [];
         if (Array.isArray(list) && list.length > 0) return list.includes(formData.classId);
-        return true; // no mapping -> available globally
+        return true; // no mapping -> global
       });
     } catch {
       return subjects || [];
     }
-  }, [subjects, formData.classId]);
+  }, [subjects, classes, formData.classId]);
 
   useEffect(() => {
     loadData();
@@ -62,17 +65,10 @@ export const TeacherStudyMaterials: React.FC = () => {
     try {
       const [cls, subs] = await Promise.all([
         teacherService.getMyClasses(),
-        teacherService.getMySubjects()
+        user?.schoolId ? subjectService.getAllSubjects({ schoolId: user.schoolId }) : Promise.resolve([])
       ]);
-      
       setClasses(cls);
-      let finalSubjects = subs || [];
-      if ((!finalSubjects || finalSubjects.length === 0) && user?.schoolId) {
-        try {
-          finalSubjects = await apiService.get<any[]>(`/subjects`, { schoolId: user.schoolId });
-        } catch (e) {}
-      }
-      setSubjects(finalSubjects);
+      setSubjects(subs || []);
       
       const list = await teacherService.getMyAssignments();
       const nameMap = new Map<string, string>((cls || []).map((c: any) => [c.id, (c.name || c.className || `${c.grade || 'Class'}${c.section ? ' - ' + c.section : ''}`)]));
