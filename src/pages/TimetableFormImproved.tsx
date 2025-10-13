@@ -35,6 +35,7 @@ export const TimetableFormImproved: React.FC = () => {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [existingTimetables, setExistingTimetables] = useState<any[]>([]);
+  const [allRooms, setAllRooms] = useState<Classroom[]>([]);
   const [availableRooms, setAvailableRooms] = useState<Record<string, Classroom[]>>({}); // key: `${day}-${slotIndex}`
 
   // Form state
@@ -158,6 +159,12 @@ export const TimetableFormImproved: React.FC = () => {
         const allTt = await timetableService.list({ schoolId: user.schoolId });
         // In edit mode, exclude the timetable being edited from availability checks
         setExistingTimetables(id ? (allTt || []).filter((tt: any) => tt.id !== id) : (allTt || []));
+      } catch {}
+
+      // Pre-load all rooms once for better UX in room selects (fallback before availability is fetched)
+      try {
+        const rooms = await classroomService.list({ schoolId: user.schoolId });
+        setAllRooms((rooms || []).filter(r => r && (r as any).isActive !== false));
       } catch {}
 
       // Set default academic year
@@ -588,15 +595,19 @@ export const TimetableFormImproved: React.FC = () => {
                                     onChange={(e) => updateCell(day, slotIndex, 'room', e.target.value)}
                                   >
                                     <option value="">Select Room</option>
-                                    {(availableRooms[key] || []).length === 0 ? (
-                                      <option value="">No rooms available</option>
-                                    ) : (
-                                      (availableRooms[key] || []).map(r => (
+                                    {(() => {
+                                      const roomsForCell = (availableRooms[key] && (availableRooms[key] as Classroom[]).length > 0)
+                                        ? (availableRooms[key] as Classroom[])
+                                        : allRooms;
+                                      if (!roomsForCell || roomsForCell.length === 0) {
+                                        return <option value="">No rooms available</option>;
+                                      }
+                                      return roomsForCell.map(r => (
                                         <option key={r.id} value={r.name}>
                                           {r.name}{r.capacity ? ` (${r.capacity})` : ''}
                                         </option>
-                                      ))
-                                    )}
+                                      ));
+                                    })()}
                                   </Form.Select>
                                   {(cell.subjectId || cell.teacherId) && (
                                     <Button
