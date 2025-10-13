@@ -72,7 +72,7 @@ export const TimetableFormImproved: React.FC = () => {
       const slotStart = timeSlots[slotIndex]?.startTime;
       const slotEnd = timeSlots[slotIndex]?.endTime;
       if (!user?.schoolId || !slotStart || !slotEnd) return;
-      const rooms = await classroomService.getAvailability({
+      let rooms = await classroomService.getAvailability({
         schoolId: user.schoolId,
         day,
         startTime: slotStart.slice(0,5),
@@ -80,8 +80,23 @@ export const TimetableFormImproved: React.FC = () => {
         excludeTimetableId: isEdit && id ? id : undefined,
       });
       const key = `${day}-${slotIndex}`;
-      setAvailableRooms(prev => ({ ...prev, [key]: rooms }));
-    } catch {}
+      if (!rooms || rooms.length === 0) {
+        // Fallback: show all active rooms for selection
+        try {
+          const all = await classroomService.list({ schoolId: user.schoolId });
+          rooms = (all || []).filter(r => r && (r as any).isActive !== false);
+        } catch {}
+      }
+      setAvailableRooms(prev => ({ ...prev, [key]: rooms || [] }));
+    } catch {
+      // As a last resort, try listing all rooms
+      try {
+        if (!user?.schoolId) return;
+        const key = `${day}-${slotIndex}`;
+        const all = await classroomService.list({ schoolId: user.schoolId });
+        setAvailableRooms(prev => ({ ...prev, [key]: (all || []).filter(r => r && (r as any).isActive !== false) }));
+      } catch {}
+    }
   };
 
   const overlaps = (aStart: string, aEnd: string, bStart: string, bEnd: string): boolean => {
@@ -556,14 +571,20 @@ export const TimetableFormImproved: React.FC = () => {
                                 size="sm"
                                 value={cell.room}
                                 onFocus={() => fetchAvailableRooms(day, slotIndex)}
+                                onClick={() => fetchAvailableRooms(day, slotIndex)}
+                                onMouseDown={() => fetchAvailableRooms(day, slotIndex)}
                                 onChange={(e) => updateCell(day, slotIndex, 'room', e.target.value)}
                               >
                                 <option value="">Select Room</option>
-                                {(availableRooms[key] || []).map(r => (
-                                  <option key={r.id} value={r.name}>
-                                    {r.name}{r.capacity ? ` (${r.capacity})` : ''}
-                                  </option>
-                                ))}
+                                {(availableRooms[key] || []).length === 0 ? (
+                                  <option value="">No rooms available</option>
+                                ) : (
+                                  (availableRooms[key] || []).map(r => (
+                                    <option key={r.id} value={r.name}>
+                                      {r.name}{r.capacity ? ` (${r.capacity})` : ''}
+                                    </option>
+                                  ))
+                                )}
                               </Form.Select>
                               {(cell.subjectId || cell.teacherId) && (
                                 <Button

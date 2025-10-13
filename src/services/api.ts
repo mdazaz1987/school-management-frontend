@@ -20,6 +20,34 @@ function inferApiBaseUrl(): string {
 }
 
 const API_BASE_URL = inferApiBaseUrl();
+// Try to derive the API origin (scheme+host+port) from API_BASE_URL
+const API_ORIGIN = (() => {
+  try {
+    const u = new URL(API_BASE_URL);
+    return u.origin;
+  } catch {
+    try { return window.location.origin; } catch { return ''; }
+  }
+})();
+
+// Resolve a URL or API path (like "/api/..." or "//host/..." or absolute) to an absolute URL
+export function resolveUrl(pathOrUrl: string): string {
+  try {
+    if (!pathOrUrl) return '';
+    // Already absolute (http/https)
+    if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl;
+    // API path -> resolve against API origin so it hits backend server, not frontend origin
+    if (pathOrUrl.startsWith('/api/')) return `${API_ORIGIN}${pathOrUrl}`;
+    // Protocol-relative
+    if (/^\/\//.test(pathOrUrl)) return `${window.location.protocol}${pathOrUrl}`;
+    // Starts with / -> relative to current origin
+    if (pathOrUrl.startsWith('/')) return `${window.location.origin}${pathOrUrl}`;
+    // Otherwise return as-is
+    return pathOrUrl;
+  } catch {
+    return pathOrUrl;
+  }
+}
 
 class ApiService {
   private api: AxiosInstance;

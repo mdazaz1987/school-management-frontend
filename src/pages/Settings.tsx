@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { School } from '../types';
 import { schoolService } from '../services/schoolService';
 import { useTheme } from '../contexts/ThemeContext';
-import { apiService } from '../services/api';
+import apiService, { resolveUrl } from '../services/api';
 import { useNavigate } from 'react-router-dom';
 
 export const Settings: React.FC = () => {
@@ -831,95 +831,17 @@ export const Settings: React.FC = () => {
                               <small className="text-muted d-block mb-1">Preview:</small>
                               {/* preview image */}
                               <img
-                                src={school.configuration.principalSignatureUrl as string}
+                                src={resolveUrl(String(school.configuration?.principalSignatureUrl || ''))}
                                 alt="Principal Signature"
                                 style={{ maxHeight: 60 }}
+                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                               />
                             </div>
                           )}
                         </Form.Group>
                       </Col>
                     </Row>
-
-                    {/* Working hours configuration */}
-                    <Row>
-                      <Col md={3} className="mb-3">
-                        <Form.Group>
-                          <Form.Label>Working Start Time</Form.Label>
-                          <Form.Control
-                            type="time"
-                            value={school.configuration?.workingStartTime || ''}
-                            onChange={(e) => setSchool(prev => ({
-                              ...prev,
-                              configuration: { ...prev.configuration, workingStartTime: e.target.value },
-                            }))}
-                          />
-                        </Form.Group>
-                      </Col>
-                      <Col md={3} className="mb-3">
-                        <Form.Group>
-                          <Form.Label>Working End Time</Form.Label>
-                          <Form.Control
-                            type="time"
-                            value={school.configuration?.workingEndTime || ''}
-                            onChange={(e) => setSchool(prev => ({
-                              ...prev,
-                              configuration: { ...prev.configuration, workingEndTime: e.target.value },
-                            }))}
-                          />
-                        </Form.Group>
-                      </Col>
-                      <Col md={3} className="mb-3">
-                        <Form.Group>
-                          <Form.Label>Break Start</Form.Label>
-                          <Form.Control
-                            type="time"
-                            value={school.configuration?.defaultBreakStartTime || ''}
-                            onChange={(e) => setSchool(prev => ({
-                              ...prev,
-                              configuration: { ...prev.configuration, defaultBreakStartTime: e.target.value },
-                            }))}
-                          />
-                        </Form.Group>
-                      </Col>
-                      <Col md={3} className="mb-3">
-                        <Form.Group>
-                          <Form.Label>Break End</Form.Label>
-                          <Form.Control
-                            type="time"
-                            value={school.configuration?.defaultBreakEndTime || ''}
-                            onChange={(e) => setSchool(prev => ({
-                              ...prev,
-                              configuration: { ...prev.configuration, defaultBreakEndTime: e.target.value },
-                            }))}
-                          />
-                        </Form.Group>
-                      </Col>
-                    </Row>
-
-                    <Row>
-                      <Col md={6} className="mb-3">
-                        <Form.Group>
-                          <Form.Label>Weekend Days</Form.Label>
-                          <Form.Select
-                            multiple
-                            value={(school.configuration?.weekendDays || []) as any}
-                            onChange={(e) => {
-                              const opts = Array.from(e.target.selectedOptions).map(o => o.value);
-                              setSchool(prev => ({
-                                ...prev,
-                                configuration: { ...prev.configuration, weekendDays: opts },
-                              }));
-                            }}
-                          >
-                            {['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY'].map(d => (
-                              <option key={d} value={d}>{d}</option>
-                            ))}
-                          </Form.Select>
-                          <Form.Text className="text-muted">Hold Ctrl/Cmd to select multiple</Form.Text>
-                        </Form.Group>
-                      </Col>
-                    </Row>
+                    {/* Working hours and weekend configuration removed per requirement */}
 
                     <Row>
                       <Col md={6} className="mb-3">

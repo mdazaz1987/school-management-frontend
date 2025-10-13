@@ -5,6 +5,7 @@ import { Sidebar } from '../components/Sidebar';
 import { parentService } from '../services/parentService';
 import { feeService } from '../services/feeService';
 import { schoolService } from '../services/schoolService';
+import { resolveUrl } from '../services/api';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -312,6 +313,7 @@ function handlePrintReceipt(fee: any) {
       const principalName = (sch as any)?.configuration?.principalName;
       const principalSignatureUrl = (sch as any)?.configuration?.principalSignatureUrl;
 
+      const principalSignatureUrlAbs = resolveUrl(String(principalSignatureUrl || ''));
       const html = `<!doctype html>
       <html>
       <head>
@@ -375,7 +377,7 @@ function handlePrintReceipt(fee: any) {
         <div style="display:flex; justify-content: space-between; align-items: flex-end; margin-top: 24px;">
           <div></div>
           <div class="meta center" style="min-width: 220px;">
-            ${principalSignatureUrl ? `<img src="${principalSignatureUrl}" alt="Principal Signature" style="max-height:60px;" />` : ''}
+            ${principalSignatureUrl ? `<img src="${principalSignatureUrlAbs}" alt="Principal Signature" style="max-height:60px;" />` : ''}
             <div style="border-top: 1px solid #ccc; margin-top: 8px; padding-top: 4px;">${principalName || 'Principal'}</div>
           </div>
         </div>
