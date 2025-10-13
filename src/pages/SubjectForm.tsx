@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
@@ -33,6 +33,8 @@ export const SubjectForm: React.FC = () => {
 
   const [teachers, setTeachers] = useState<any[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
+  const classSelectRef = useRef<HTMLSelectElement>(null);
+  const teacherSelectRef = useRef<HTMLSelectElement>(null);
 
   const isEdit = Boolean(id);
 
@@ -87,6 +89,13 @@ export const SubjectForm: React.FC = () => {
     setSuccess('');
     setSaving(true);
     try {
+      // Read current selections directly from DOM to avoid relying on blur ordering
+      const selectedClassIds = classSelectRef.current
+        ? Array.from(classSelectRef.current.selectedOptions).map(o => o.value)
+        : ((form as any).classIds as any) || [];
+      const selectedTeacherIds = teacherSelectRef.current
+        ? Array.from(teacherSelectRef.current.selectedOptions).map(o => o.value)
+        : (form.teacherIds as any) || [];
       const payload: Partial<Subject> = {
         name: form.name?.trim() || '',
         code: form.code?.trim() || '',
@@ -97,8 +106,8 @@ export const SubjectForm: React.FC = () => {
         credits: form.credits ?? 0,
         totalHours: form.totalHours ?? undefined,
         isActive: form.isActive ?? true,
-        teacherIds: form.teacherIds || [],
-        classIds: (form as any).classIds || [],
+        teacherIds: selectedTeacherIds || [],
+        classIds: selectedClassIds || [],
       };
       if (isEdit && id) {
         await subjectService.update(id, payload);
@@ -279,6 +288,7 @@ export const SubjectForm: React.FC = () => {
                           const options = Array.from(e.target.selectedOptions).map(o => o.value);
                           setForm(prev => ({ ...prev, classIds: options as any } as any));
                         }}
+                        ref={classSelectRef}
                       >
                         {classes.map((c: any) => (
                           <option key={c.id} value={c.id}>
@@ -299,6 +309,7 @@ export const SubjectForm: React.FC = () => {
                           const options = Array.from(e.target.selectedOptions).map(o => o.value);
                           handleChange('teacherIds' as any, options);
                         }}
+                        ref={teacherSelectRef}
                       >
                         {teachers.map((t: any) => (
                           <option key={t.id} value={t.id}>
