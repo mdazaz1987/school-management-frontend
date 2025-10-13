@@ -240,6 +240,7 @@ export const TimetableFormImproved: React.FC = () => {
     try {
       // Convert grid to entries
       const entries: TimetableEntry[] = [];
+      const classObjSubmit = classes.find(c => c.id === selectedClass);
       
       WORKING_DAYS.forEach(day => {
         timeSlots.forEach((slot, index) => {
@@ -257,7 +258,7 @@ export const TimetableFormImproved: React.FC = () => {
             subjectName: subject?.name || '',
             teacherId: cell?.teacherId || '',
             teacherName: teacher ? `${teacher.firstName} ${teacher.lastName}`.trim() : '',
-            room: cell?.room || '',
+            room: cell?.room || classObjSubmit?.room || '',
           });
         });
       });
@@ -588,7 +589,7 @@ export const TimetableFormImproved: React.FC = () => {
                                 <div className="d-flex gap-1">
                                   <Form.Select
                                     size="sm"
-                                    value={cell.room}
+                                    value={cell.room || (classObj?.room || '')}
                                     onFocus={() => fetchAvailableRooms(day, slotIndex)}
                                     onClick={() => fetchAvailableRooms(day, slotIndex)}
                                     onMouseDown={() => fetchAvailableRooms(day, slotIndex)}
@@ -599,14 +600,32 @@ export const TimetableFormImproved: React.FC = () => {
                                       const roomsForCell = (availableRooms[key] && (availableRooms[key] as Classroom[]).length > 0)
                                         ? (availableRooms[key] as Classroom[])
                                         : allRooms;
+                                      const defaultRoom = (classObj?.room || '').trim();
                                       if (!roomsForCell || roomsForCell.length === 0) {
+                                        if (defaultRoom) {
+                                          return (
+                                            <option value={defaultRoom}>
+                                              Class Room: {defaultRoom}
+                                            </option>
+                                          );
+                                        }
                                         return <option value="">No rooms available</option>;
                                       }
-                                      return roomsForCell.map(r => (
+                                      const names = new Set(roomsForCell.map(r => r.name));
+                                      const options: JSX.Element[] = [];
+                                      if (defaultRoom && !names.has(defaultRoom)) {
+                                        options.push(
+                                          <option key="class-default-room" value={defaultRoom}>
+                                            Class Room: {defaultRoom}
+                                          </option>
+                                        );
+                                      }
+                                      options.push(...roomsForCell.map(r => (
                                         <option key={r.id} value={r.name}>
                                           {r.name}{r.capacity ? ` (${r.capacity})` : ''}
                                         </option>
-                                      ));
+                                      )));
+                                      return options;
                                     })()}
                                   </Form.Select>
                                   {(cell.subjectId || cell.teacherId) && (

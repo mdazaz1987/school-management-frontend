@@ -103,7 +103,14 @@ export const StudentFeePayment: React.FC = () => {
   const totalPaid = summary.totalPaid;
 
   const handlePrintReceipt = async (fee: any) => {
+    // Open a window immediately to avoid popup blockers, then populate after fetches complete
+    const w = window.open('', '_blank');
+    if (!w) return;
     try {
+      w.document.open();
+      w.document.write(`<!doctype html><html><head><meta charset="utf-8" /><title>Generating Receipt...</title></head><body style="font-family:Arial, sans-serif; padding:24px;"><p>Generating receipt...</p></body></html>`);
+      w.document.close();
+
       const me = student || (await studentService.getStudentByEmail(user?.email || ''));
       // prefer student.schoolId if user.schoolId missing
       const sch = school || (me?.schoolId ? await schoolService.getPublicBasic(me.schoolId) : (user?.schoolId ? await schoolService.getPublicBasic(user.schoolId) : null));
@@ -198,13 +205,15 @@ export const StudentFeePayment: React.FC = () => {
         <script>window.print(); setTimeout(() => window.close(), 300);</script>
       </body>
       </html>`;
-      const w = window.open('', '_blank');
-      if (!w) return;
       w.document.open();
       w.document.write(html);
       w.document.close();
     } catch (e) {
-      // ignore
+      try {
+        w.document.open();
+        w.document.write('<!doctype html><html><head><meta charset="utf-8" /><title>Receipt Error</title></head><body style="font-family:Arial, sans-serif; padding:24px;"><h3>Unable to generate receipt</h3><p>Please try again.</p></body></html>');
+        w.document.close();
+      } catch {}
     }
   };
 

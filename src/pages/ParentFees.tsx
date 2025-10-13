@@ -292,8 +292,16 @@ export const ParentFees: React.FC = () => {
 
 // Receipt printing logic
 function handlePrintReceipt(fee: any) {
-  // We'll fetch required data from local state via closures in component; for this module-level helper, re-query minimal info
+  // Open a window immediately to avoid popup blockers, then populate after fetches complete
   try {
+    const w = window.open('', '_blank');
+    if (!w) return;
+    try {
+      w.document.open();
+      w.document.write(`<!doctype html><html><head><meta charset="utf-8" /><title>Generating Receipt...</title></head><body style="font-family:Arial, sans-serif; padding:24px;"><p>Generating receipt...</p></body></html>`);
+      w.document.close();
+    } catch {}
+
     const userRaw = localStorage.getItem('user');
     const user = userRaw ? JSON.parse(userRaw) : {};
     const childId = (document.querySelector('select[aria-label="Select Child"]') as HTMLSelectElement)?.value || '';
@@ -385,13 +393,19 @@ function handlePrintReceipt(fee: any) {
         <script>window.print(); setTimeout(() => window.close(), 300);</script>
       </body>
       </html>`;
-      const w = window.open('', '_blank');
-      if (!w) return;
-      w.document.open();
-      w.document.write(html);
-      w.document.close();
+      try {
+        w.document.open();
+        w.document.write(html);
+        w.document.close();
+      } catch {}
     };
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    fetchAll();
+    fetchAll().catch(() => {
+      try {
+        w.document.open();
+        w.document.write('<!doctype html><html><head><meta charset="utf-8" /><title>Receipt Error</title></head><body style="font-family:Arial, sans-serif; padding:24px;"><h3>Unable to generate receipt</h3><p>Please try again.</p></body></html>');
+        w.document.close();
+      } catch {}
+    });
   } catch {}
 }
