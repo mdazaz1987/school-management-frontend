@@ -362,7 +362,7 @@ export const TimetableFormImproved: React.FC = () => {
                     >
                       <option value="">Select Class</option>
                       {classes.map(c => (
-                        <option key={c.id} value={c.id}>{c.className || c.name}</option>
+                        <option key={c.id} value={c.id}>{c.name|| c.className}{c.section}</option>
                       ))}
                     </Form.Select>
                   </Form.Group>
