@@ -31,6 +31,7 @@ export const StudentQuizzes: React.FC = () => {
     submissionId: string;
     attemptNo: number;
     expiresAt?: string;
+    expiresAtMs?: number;
     quiz: any;
   } | null>(null);
   const [answers, setAnswers] = useState<Record<string, number[]>>({});
@@ -61,12 +62,12 @@ export const StudentQuizzes: React.FC = () => {
 
   // Timer handling
   useEffect(() => {
-    if (!current?.expiresAt) {
+    if (!current?.expiresAt && !current?.expiresAtMs) {
       if (timerRef.current) window.clearInterval(timerRef.current);
       setRemainingSeconds(null);
       return;
     }
-    const end = new Date(current.expiresAt).getTime();
+    const end = (current.expiresAtMs ?? (current.expiresAt ? new Date(current.expiresAt).getTime() : 0));
     const tick = () => {
       const now = Date.now();
       const sec = Math.max(0, Math.floor((end - now) / 1000));
@@ -102,6 +103,7 @@ export const StudentQuizzes: React.FC = () => {
         submissionId: payload.submissionId,
         attemptNo: payload.attemptNo,
         expiresAt: payload.expiresAt,
+        expiresAtMs: (payload as any).expiresAtEpochMs,
         quiz: payload.quiz,
       });
       // Initialize answers map with empty arrays

@@ -8,7 +8,7 @@ export const studentQuizService = {
     return apiService.get(`/students/${studentId}/quizzes?${query.toString()}`);
   },
 
-  async start(studentId: string, quizId: string): Promise<{ submissionId: string; attemptNo: number; expiresAt?: string; quiz: any }> {
+  async start(studentId: string, quizId: string): Promise<{ submissionId: string; attemptNo: number; expiresAt?: string; expiresAtEpochMs?: number; quiz: any }> {
     return apiService.post(`/students/${studentId}/quizzes/${quizId}/start`, {});
   },
 
