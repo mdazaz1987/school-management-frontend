@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Row, Col, Card, Table, Badge, Button, Alert, Spinner, ProgressBar, Form } from 'react-bootstrap';
+import { Row, Col, Card, Table, Badge, Button, Alert, Spinner, ProgressBar, Form, Modal } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
@@ -39,6 +39,8 @@ export const StudentQuizzes: React.FC = () => {
   const timerRef = useRef<number | null>(null);
   const hadPositiveTimeRef = useRef<boolean>(false);
 
+  const [resultsModal, setResultsModal] = useState<{ show: boolean; quiz?: any; rows: Array<{ attemptNo: number; score: number; totalPoints: number; passed?: boolean; submittedAt?: string }>}>({ show: false, rows: [] });
+
   const myStudentId = useMemo(() => (student?.id as string | undefined), [student]);
 
   useEffect(() => {
@@ -59,6 +61,19 @@ export const StudentQuizzes: React.FC = () => {
     init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.email]);
+
+  const openResults = async (q: any) => {
+    if (!myStudentId) return;
+    try {
+      setLoading(true); setError('');
+      const rows = await studentQuizService.getResults(myStudentId, q.id);
+      setResultsModal({ show: true, quiz: q, rows: rows || [] });
+    } catch (e: any) {
+      setError(e?.response?.data?.message || 'Failed to load results');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Timer handling
   useEffect(() => {
@@ -206,9 +221,16 @@ export const StudentQuizzes: React.FC = () => {
                           <td>{q.dueDate ? new Date(q.dueDate).toLocaleDateString() : '-'}</td>
                           <td>{attemptText}</td>
                           <td>
-                            <Button size="sm" variant="primary" disabled={reachedMax} onClick={() => startQuiz(q)}>
-                              <i className="bi bi-play-fill me-1"></i> {actionLabel}
-                            </Button>
+                            <div className="d-flex gap-2">
+                              <Button size="sm" variant="primary" disabled={reachedMax} onClick={() => startQuiz(q)}>
+                                <i className="bi bi-play-fill me-1"></i> {actionLabel}
+                              </Button>
+                              {attempts > 0 && (
+                                <Button size="sm" variant="outline-secondary" onClick={() => openResults(q)}>
+                                  <i className="bi bi-clipboard-data me-1"></i> View Results
+                                </Button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       );
@@ -285,6 +307,47 @@ export const StudentQuizzes: React.FC = () => {
           )}
         </Col>
       </Row>
+
+      {/* Results Modal */}
+      <Modal show={resultsModal.show} onHide={() => setResultsModal({ show: false, rows: [] })}>
+        <Modal.Header closeButton>
+          <Modal.Title>Results{resultsModal.quiz ? ` • ${resultsModal.quiz.title}` : ''}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {resultsModal.rows.length === 0 ? (
+            <div className="text-muted">No attempts found.</div>
+          ) : (
+            <Table responsive size="sm">
+              <thead>
+                <tr>
+                  <th>Attempt</th>
+                  <th>Score</th>
+                  <th>Status</th>
+                  <th>Submitted</th>
+                </tr>
+              </thead>
+              <tbody>
+                {resultsModal.rows.map((r, i) => (
+                  <tr key={i}>
+                    <td>#{r.attemptNo}</td>
+                    <td><strong>{r.score}</strong> / {r.totalPoints}</td>
+                    <td>{r.passed === undefined ? '-' : r.passed ? <Badge bg="success">Passed</Badge> : <Badge bg="danger">Failed</Badge>}</td>
+                    <td>{r.submittedAt ? new Date(r.submittedAt as any).toLocaleString() : '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setResultsModal({ show: false, rows: [] })}>Close</Button>
+          {resultsModal.rows.length > 0 && (
+            <Button variant="outline-primary" onClick={() => window.print()}>
+              <i className="bi bi-printer me-2"></i> Print Certificate
+            </Button>
+          )}
+        </Modal.Footer>
+      </Modal>
     </Layout>
   );
 };

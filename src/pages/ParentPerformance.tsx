@@ -21,7 +21,7 @@ export const ParentPerformance: React.FC = () => {
 
   const [subjectPerformance, setSubjectPerformance] = useState<Array<{ subject: string; percentage: number; obtained: number; totalMarks: number }>>([]);
   const [overallAverage, setOverallAverage] = useState<number>(0);
-  const [assignments, setAssignments] = useState<Array<{ title: string; subject: string; status: string; marks?: string }>>([]);
+  const [assignments, setAssignments] = useState<Array<{ title: string; subject: string; status: string; marks?: string; type?: string }>>([]);
 
   useEffect(() => {
     const loadChildren = async () => {
@@ -62,7 +62,7 @@ export const ParentPerformance: React.FC = () => {
           const s = it.submission;
           const marks = s && s.marksObtained != null && a && a.maxMarks != null ? `${s.marksObtained}/${a.maxMarks}` : undefined;
           const status = s ? s.status : 'PENDING';
-          return { title: a?.title || 'Assignment', subject: a?.subject || '-', status, marks };
+          return { title: a?.title || 'Assignment', subject: a?.subject || '-', status, marks, type: a?.type };
         });
         setAssignments(mapped);
       } catch (e: any) {
@@ -189,6 +189,39 @@ export const ParentPerformance: React.FC = () => {
                               </Badge>
                             </td>
                             <td>{assignment.marks || '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </Table>
+                  )}
+                </Tab>
+
+                <Tab eventKey="quizzes" title="Quizzes & Tests">
+                  {assignments.filter(a => a.type === 'QUIZ' || a.type === 'EXAM').length === 0 ? (
+                    <div className="text-center text-muted py-4">No quizzes/tests found</div>
+                  ) : (
+                    <Table responsive hover>
+                      <thead>
+                        <tr>
+                          <th>Title</th>
+                          <th>Subject</th>
+                          <th>Type</th>
+                          <th>Status</th>
+                          <th>Marks</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {assignments.filter(a => a.type === 'QUIZ' || a.type === 'EXAM').map((q, idx) => (
+                          <tr key={idx}>
+                            <td>{q.title}</td>
+                            <td><Badge bg="secondary">{q.subject}</Badge></td>
+                            <td><Badge bg={q.type === 'EXAM' ? 'warning' : 'info'}>{q.type}</Badge></td>
+                            <td>
+                              <Badge bg={q.status === 'GRADED' ? 'success' : q.status === 'SUBMITTED' ? 'info' : 'warning'}>
+                                {q.status}
+                              </Badge>
+                            </td>
+                            <td>{q.marks || '-'}</td>
                           </tr>
                         ))}
                       </tbody>

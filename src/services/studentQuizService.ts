@@ -15,4 +15,8 @@ export const studentQuizService = {
   async submit(studentId: string, quizId: string, submissionId: string, payload: { answers: Array<{ questionId: string; selected: number[]; timeSpentSeconds?: number }> }): Promise<any> {
     return apiService.post(`/students/${studentId}/quizzes/${quizId}/submit/${submissionId}`, payload);
   },
+
+  async getResults(studentId: string, quizId: string): Promise<Array<{ attemptNo: number; score: number; totalPoints: number; passed?: boolean; submittedAt?: string }>> {
+    return apiService.get(`/students/${studentId}/quizzes/${quizId}/results`);
+  },
 };

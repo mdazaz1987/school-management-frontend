@@ -154,6 +154,7 @@ export const TeacherQuizTest: React.FC = () => {
 
   const handleEdit = (item: any) => {
     setEditingItem(item);
+    // Initialize with what we have quickly, then hydrate from backend
     setFormData({
       title: item.title,
       description: '',
@@ -163,7 +164,43 @@ export const TeacherQuizTest: React.FC = () => {
       totalMarks: item.totalMarks,
       type: item.type || 'QUIZ'
     });
+    setQuizConfig({ showResultsImmediately: true });
+    setQuestions([]);
     setShowModal(true);
+    // Hydrate full details (quizConfig, questions, description, instructions)
+    (async () => {
+      try {
+        const full = await teacherService.getAssignmentDetail(item.id);
+        setFormData((prev) => ({
+          ...prev,
+          description: full?.description || full?.instructions || '',
+          classId: full?.classId || prev.classId,
+          subject: full?.subject || prev.subject,
+          dueDate: full?.dueDate || prev.dueDate,
+          totalMarks: full?.maxMarks ?? prev.totalMarks,
+          type: full?.type || prev.type,
+        }));
+        const cfg = full?.quizConfig || {};
+        setQuizConfig({
+          timeLimitMinutes: cfg.timeLimitMinutes,
+          optional: cfg.optional,
+          maxAttempts: cfg.maxAttempts,
+          passingMarks: cfg.passingMarks,
+          showResultsImmediately: cfg.showResultsImmediately !== false,
+        });
+        setQuestions((full?.questions || []).map((q: any) => ({
+          id: q.id,
+          type: q.type || 'SCQ',
+          text: q.text,
+          imageUrl: q.imageUrl,
+          options: q.options || [],
+          correctAnswers: q.correctAnswers || [],
+          points: q.points ?? 1,
+        })));
+      } catch (e) {
+        // keep minimal state if hydration fails
+      }
+    })();
   };
 
   const handleUpdate = async () => {

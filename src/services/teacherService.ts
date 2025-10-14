@@ -306,6 +306,10 @@ export const teacherService = {
     return apiService.put(`/teacher/assignments/${assignmentId}`, assignment);
   },
 
+  async getAssignmentDetail(assignmentId: string): Promise<any> {
+    return apiService.get(`/teacher/assignments/${assignmentId}`);
+  },
+
   // V2 assignment endpoints (teacher-scoped)
   async createAssignmentV2(teacherId: string, assignment: any): Promise<any> {
     return apiService.post(`/teachers/${teacherId}/assignments`, assignment);
