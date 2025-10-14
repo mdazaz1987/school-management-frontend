@@ -21,7 +21,7 @@ export const ParentPerformance: React.FC = () => {
 
   const [subjectPerformance, setSubjectPerformance] = useState<Array<{ subject: string; percentage: number; obtained: number; totalMarks: number }>>([]);
   const [overallAverage, setOverallAverage] = useState<number>(0);
-  const [assignments, setAssignments] = useState<Array<{ title: string; subject: string; status: string; marks?: string; type?: string }>>([]);
+  const [assignments, setAssignments] = useState<Array<{ title: string; subject: string; status: string; marks?: string; type?: string; percentage?: number; passed?: boolean }>>([]);
 
   useEffect(() => {
     const loadChildren = async () => {
@@ -60,9 +60,14 @@ export const ParentPerformance: React.FC = () => {
         const mapped = (list || []).map((it: any) => {
           const a = it.assignment || it;
           const s = it.submission;
-          const marks = s && s.marksObtained != null && a && a.maxMarks != null ? `${s.marksObtained}/${a.maxMarks}` : undefined;
+          const totalPoints = (a?.questions || []).reduce((acc: number, q: any) => acc + (q?.points ?? 1), 0);
+          const max = (a?.type === 'QUIZ' || a?.type === 'EXAM') ? (totalPoints || a?.maxMarks || 0) : (a?.maxMarks || 0);
+          const rawMarks = s?.marksObtained ?? s?.score;
+          const marks = rawMarks != null && max > 0 ? `${rawMarks}/${max}` : undefined;
+          const percentage = rawMarks != null && max > 0 ? Math.round((rawMarks * 10000) / max) / 100 : undefined;
           const status = s ? s.status : 'PENDING';
-          return { title: a?.title || 'Assignment', subject: a?.subject || '-', status, marks, type: a?.type };
+          const passed = s?.passed ?? (a?.quizConfig?.passingMarks != null && rawMarks != null ? rawMarks >= a.quizConfig.passingMarks : undefined);
+          return { title: a?.title || 'Assignment', subject: a?.subject || '-', status, marks, type: a?.type, percentage, passed };
         });
         setAssignments(mapped);
       } catch (e: any) {
@@ -208,6 +213,8 @@ export const ParentPerformance: React.FC = () => {
                           <th>Type</th>
                           <th>Status</th>
                           <th>Marks</th>
+                          <th>%</th>
+                          <th>Result</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -222,6 +229,14 @@ export const ParentPerformance: React.FC = () => {
                               </Badge>
                             </td>
                             <td>{q.marks || '-'}</td>
+                            <td>{q.percentage != null ? `${q.percentage}%` : '-'}</td>
+                            <td>
+                              {q.passed === undefined ? '-' : q.passed ? (
+                                <Badge bg="success"><i className="bi bi-trophy-fill me-1"></i>Passed</Badge>
+                              ) : (
+                                <Badge bg="danger">Failed</Badge>
+                              )}
+                            </td>
                           </tr>
                         ))}
                       </tbody>

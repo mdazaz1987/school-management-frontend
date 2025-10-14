@@ -19,4 +19,8 @@ export const studentQuizService = {
   async getResults(studentId: string, quizId: string): Promise<Array<{ attemptNo: number; score: number; totalPoints: number; passed?: boolean; submittedAt?: string }>> {
     return apiService.get(`/students/${studentId}/quizzes/${quizId}/results`);
   },
+
+  async getStats(studentId: string, quizId: string): Promise<{ totalPoints: number; participants: number; averageScore: number; topScore: number; myBest: number; rank: number; myPercentage?: number; topPercentage?: number; avgPercentage?: number; percentile?: number }>{
+    return apiService.get(`/students/${studentId}/quizzes/${quizId}/stats`);
+  },
 };

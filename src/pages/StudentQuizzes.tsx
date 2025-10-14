@@ -5,6 +5,7 @@ import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
 import { studentService } from '../services/studentService';
 import { studentQuizService } from '../services/studentQuizService';
+import { schoolService } from '../services/schoolService';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -39,7 +40,7 @@ export const StudentQuizzes: React.FC = () => {
   const timerRef = useRef<number | null>(null);
   const hadPositiveTimeRef = useRef<boolean>(false);
 
-  const [resultsModal, setResultsModal] = useState<{ show: boolean; quiz?: any; rows: Array<{ attemptNo: number; score: number; totalPoints: number; passed?: boolean; submittedAt?: string }>}>({ show: false, rows: [] });
+  const [resultsModal, setResultsModal] = useState<{ show: boolean; quiz?: any; rows: Array<{ attemptNo: number; score: number; totalPoints: number; passed?: boolean; submittedAt?: string }>; stats?: any; school?: any }>({ show: false, rows: [] });
 
   const myStudentId = useMemo(() => (student?.id as string | undefined), [student]);
 
@@ -66,8 +67,17 @@ export const StudentQuizzes: React.FC = () => {
     if (!myStudentId) return;
     try {
       setLoading(true); setError('');
-      const rows = await studentQuizService.getResults(myStudentId, q.id);
-      setResultsModal({ show: true, quiz: q, rows: rows || [] });
+      const [rows, stats, school] = await Promise.all([
+        studentQuizService.getResults(myStudentId, q.id),
+        studentQuizService.getStats(myStudentId, q.id).catch(() => null),
+        (async () => {
+          try {
+            const me = await studentService.getStudentByEmail(user?.email || '');
+            return me?.schoolId ? await schoolService.getPublicBasic(me.schoolId) : null;
+          } catch { return null; }
+        })()
+      ]);
+      setResultsModal({ show: true, quiz: q, rows: rows || [], stats: stats || null, school: school || null });
     } catch (e: any) {
       setError(e?.response?.data?.message || 'Failed to load results');
     } finally {
@@ -309,11 +319,37 @@ export const StudentQuizzes: React.FC = () => {
       </Row>
 
       {/* Results Modal */}
-      <Modal show={resultsModal.show} onHide={() => setResultsModal({ show: false, rows: [] })}>
+      <Modal show={resultsModal.show} onHide={() => setResultsModal({ show: false, rows: [] })} size="lg">
         <Modal.Header closeButton>
           <Modal.Title>Results{resultsModal.quiz ? ` • ${resultsModal.quiz.title}` : ''}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
+          {/* Summary */}
+          {resultsModal.stats && (
+            <Card className="border-0 shadow-sm mb-3">
+              <Card.Body>
+                <Row className="align-items-center">
+                  <Col md={8}>
+                    <div className="d-flex align-items-center gap-3">
+                      <div className="display-6 mb-0">
+                        {resultsModal.stats.rank === 1 ? <i className="bi bi-trophy-fill text-warning"></i> : <i className="bi bi-award text-primary"></i>}
+                      </div>
+                      <div>
+                        <div className="fw-bold">Your Best: {Math.round(resultsModal.stats.myBest)}/{resultsModal.stats.totalPoints} ({resultsModal.stats.myPercentage ? Math.round(resultsModal.stats.myPercentage) : 0}%)</div>
+                        <div className="text-muted small">Rank #{resultsModal.stats.rank} of {resultsModal.stats.participants} • Avg {resultsModal.stats.avgPercentage ? Math.round(resultsModal.stats.avgPercentage) : 0}% • Top {resultsModal.stats.topPercentage ? Math.round(resultsModal.stats.topPercentage) : 0}%</div>
+                      </div>
+                    </div>
+                  </Col>
+                  <Col md={4} className="text-end">
+                    <Badge bg={resultsModal.stats.myPercentage >= (resultsModal.quiz?.quizConfig?.passingMarks ? (100 * resultsModal.quiz.quizConfig.passingMarks) / (resultsModal.stats.totalPoints || 1) : 0) ? 'success' : 'danger'}>
+                      {resultsModal.stats.myPercentage >= (resultsModal.quiz?.quizConfig?.passingMarks ? (100 * resultsModal.quiz.quizConfig.passingMarks) / (resultsModal.stats.totalPoints || 1) : 0) ? 'Passed' : 'Failed'}
+                    </Badge>
+                  </Col>
+                </Row>
+              </Card.Body>
+            </Card>
+          )}
+
           {resultsModal.rows.length === 0 ? (
             <div className="text-muted">No attempts found.</div>
           ) : (

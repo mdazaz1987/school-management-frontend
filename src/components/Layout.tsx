@@ -18,6 +18,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   // Branding state
   const [brandName, setBrandName] = useState<string>('School Management System');
   const [brandLogo, setBrandLogo] = useState<string | undefined>(undefined);
+  const [lang, setLang] = useState<string>(() => localStorage.getItem('lang') || 'en');
 
   useEffect(() => {
     const loadBranding = async () => {
@@ -33,6 +34,21 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     };
     loadBranding();
   }, [user]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('lang', lang);
+    } catch {}
+    try {
+      const el = document.documentElement;
+      el.setAttribute('lang', lang);
+      if (lang === 'ur') {
+        el.setAttribute('dir', 'rtl');
+      } else {
+        el.setAttribute('dir', 'ltr');
+      }
+    } catch {}
+  }, [lang]);
 
   const handleLogout = () => {
     logout();
@@ -55,6 +71,20 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           <Navbar.Collapse id="basic-navbar-nav">
             <Nav className="ms-auto align-items-center">
               <NotificationBell />
+              <NavDropdown
+                title={
+                  <span>
+                    <i className="bi bi-translate me-2"></i>
+                    {lang === 'en' ? 'English' : lang === 'hi' ? 'हिंदी' : 'اردو'}
+                  </span>
+                }
+                id="lang-dropdown"
+                align="end"
+              >
+                <NavDropdown.Item active={lang === 'en'} onClick={() => setLang('en')}>English</NavDropdown.Item>
+                <NavDropdown.Item active={lang === 'hi'} onClick={() => setLang('hi')}>हिंदी</NavDropdown.Item>
+                <NavDropdown.Item active={lang === 'ur'} onClick={() => setLang('ur')}>اردو</NavDropdown.Item>
+              </NavDropdown>
               <NavDropdown
                 title={
                   <span title={`Theme: ${theme} (${effectiveTheme})`}>
