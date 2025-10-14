@@ -1,5 +1,5 @@
 import apiService from './api';
-import { School } from '../types';
+import { School, SchoolConfiguration } from '../types';
 
 export const schoolService = {
   async getById(id: string): Promise<School> {
@@ -36,7 +36,7 @@ export const schoolService = {
     branding?: any;
     address?: { street?: string; city?: string; state?: string; zipCode?: string };
     contactInfo?: { phone?: string; email?: string; website?: string };
-    configuration?: { academicYear?: string; currency?: string; timezone?: string; gstin?: string; gstRate?: number; principalName?: string; principalSignatureUrl?: string };
+    configuration?: SchoolConfiguration;
   }> {
     return apiService.get(`/schools/${id}/public`);
   },

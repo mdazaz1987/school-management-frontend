@@ -36,6 +36,7 @@ export const StudentQuizzes: React.FC = () => {
   const [answers, setAnswers] = useState<Record<string, number[]>>({});
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
   const timerRef = useRef<number | null>(null);
+  const hadPositiveTimeRef = useRef<boolean>(false);
 
   const myStudentId = useMemo(() => (student?.id as string | undefined), [student]);
 
@@ -70,8 +71,18 @@ export const StudentQuizzes: React.FC = () => {
       const now = Date.now();
       const sec = Math.max(0, Math.floor((end - now) / 1000));
       setRemainingSeconds(sec);
+      if (sec > 0) {
+        hadPositiveTimeRef.current = true;
+      }
       if (sec <= 0) {
         if (timerRef.current) window.clearInterval(timerRef.current);
+        // If the timer was already expired at start, do NOT auto-submit empty answers
+        if (!hadPositiveTimeRef.current) {
+          setError('This attempt appears to have already expired. Please try starting the quiz again.');
+          setCurrent(null);
+          setAnswers({});
+          return;
+        }
         handleSubmit();
       }
     };
@@ -97,6 +108,7 @@ export const StudentQuizzes: React.FC = () => {
       const initAns: Record<string, number[]> = {};
       (payload.quiz?.questions || []).forEach((qq: any) => { if (qq?.id) initAns[qq.id] = []; });
       setAnswers(initAns);
+      hadPositiveTimeRef.current = false;
     } catch (e: any) {
       setError(e?.response?.data?.error || e?.response?.data?.message || 'Failed to start quiz');
     } finally {
@@ -179,10 +191,11 @@ export const StudentQuizzes: React.FC = () => {
                   </thead>
                   <tbody>
                     {(quizzes || []).map((q) => {
-                      const already = q.alreadySubmitted;
                       const attempts = Number(q.attempts || 0);
                       const max = q.maxAttempts ?? null;
                       const attemptText = max ? `${attempts}/${max}` : `${attempts}`;
+                      const reachedMax = max !== null && attempts >= max;
+                      const actionLabel = attempts > 0 && !reachedMax ? 'Re-attempt' : 'Start';
                       return (
                         <tr key={q.id}>
                           <td><strong>{q.title}</strong></td>
@@ -191,8 +204,8 @@ export const StudentQuizzes: React.FC = () => {
                           <td>{q.dueDate ? new Date(q.dueDate).toLocaleDateString() : '-'}</td>
                           <td>{attemptText}</td>
                           <td>
-                            <Button size="sm" variant="primary" disabled={already || (max && attempts >= max)} onClick={() => startQuiz(q)}>
-                              <i className="bi bi-play-fill me-1"></i> {already ? 'Completed' : 'Start'}
+                            <Button size="sm" variant="primary" disabled={reachedMax} onClick={() => startQuiz(q)}>
+                              <i className="bi bi-play-fill me-1"></i> {actionLabel}
                             </Button>
                           </td>
                         </tr>

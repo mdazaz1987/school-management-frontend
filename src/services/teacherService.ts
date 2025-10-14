@@ -388,4 +388,39 @@ export const teacherService = {
   async rejectLeaveApplication(leaveId: string, reason: string): Promise<any> {
     return apiService.put(`/teacher/leave/${leaveId}/reject`, { reason });
   },
+
+  // Teacher Leave (new)
+  async applyLeave(data: { startDate: string; endDate: string; reason: string; leaveType: 'PRIVILEGE' | 'SICK' | 'OTHER' }): Promise<any> {
+    return apiService.post('/teacher/leave/apply', data);
+  },
+
+  async myLeaveApplications(): Promise<any[]> {
+    return apiService.get('/teacher/leave/my-applications');
+  },
+
+  async getLeaveBalances(): Promise<{ allowedPrivilege: number; allowedSick: number; usedPrivilege: number; usedSick: number }> {
+    return apiService.get('/teacher/leave/balances');
+  },
+
+  // Principal endpoints (current teacher must be principal)
+  async principalPending(): Promise<any[]> {
+    return apiService.get('/principal/teacher/leave/pending');
+  },
+  async principalApprove(leaveId: string, comments?: string): Promise<any> {
+    return apiService.put(`/principal/teacher/leave/${leaveId}/approve`, { comments });
+  },
+  async principalReject(leaveId: string, reason: string): Promise<any> {
+    return apiService.put(`/principal/teacher/leave/${leaveId}/reject`, { reason });
+  },
+
+  // Admin endpoints
+  async adminPending(schoolId: string): Promise<any[]> {
+    return apiService.get(`/admin/teacher/leave/pending`, { schoolId });
+  },
+  async adminApprove(leaveId: string, comments?: string): Promise<any> {
+    return apiService.put(`/admin/teacher/leave/${leaveId}/approve`, { comments });
+  },
+  async adminReject(leaveId: string, reason: string): Promise<any> {
+    return apiService.put(`/admin/teacher/leave/${leaveId}/reject`, { reason });
+  },
 };

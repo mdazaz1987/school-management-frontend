@@ -226,6 +226,7 @@ export const studentService = {
       aadhaarNumber: options.student.aadhaarNumber,
       apaarId: options.student.apaarId,
       birthCertificateNumber: (options.student as any).birthCertificateNumber,
+      customFields: (options.student as any).customFields || undefined,
     };
 
     const userPayload: any = {
@@ -288,6 +289,7 @@ export const studentService = {
       aadhaarNumber: data.aadhaarNumber,
       apaarId: data.apaarId,
       birthCertificateNumber: (data as any).birthCertificateNumber,
+      customFields: (data as any).customFields,
     };
     const resp = await apiService.patch<Student>(`/students/${id}`, payload);
     return normalizeStudent(resp as any);
@@ -519,6 +521,22 @@ export const studentService = {
     // use raw axios instance for multipart
     const axios = apiService.getAxiosInstance();
     const response = await axios.post(`/students/${studentId}/documents/${type}` as any, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
+  /** Upload a student's profile photograph (admin/teacher) */
+  async uploadStudentPhoto(studentId: string, file: File): Promise<{
+    success: boolean;
+    message: string;
+    fileId?: string;
+    url?: string;
+  }> {
+    const form = new FormData();
+    form.append('file', file);
+    const axios = apiService.getAxiosInstance();
+    const response = await axios.post(`/students/${studentId}/photo` as any, form, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return response.data;

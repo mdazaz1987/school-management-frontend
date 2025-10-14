@@ -68,6 +68,11 @@ export interface SchoolConfiguration {
   workingEndTime?: string;   // HH:mm
   defaultBreakStartTime?: string; // HH:mm
   defaultBreakEndTime?: string;   // HH:mm
+  holidays?: string[]; // ISO dates
+  teacherLeavePolicy?: {
+    privilegePerYear?: number;
+    sickPerYear?: number;
+  };
   // GST configuration
   gstin?: string;
   gstRate?: number;
@@ -124,6 +129,7 @@ export interface Student {
   aadhaarAttachmentId?: string;
   apaarAttachmentId?: string;
   birthCertificateAttachmentId?: string;
+  customFields?: Record<string, any>;
 }
 
 export interface StudentAddress {
@@ -213,6 +219,7 @@ export interface StudentCreateRequest {
   aadhaarNumber?: string;
   apaarId?: string;
   birthCertificateNumber?: string;
+  customFields?: Record<string, any>;
 }
 
 export interface StudentUpdateRequest {

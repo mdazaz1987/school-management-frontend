@@ -5,6 +5,7 @@ import { Sidebar } from '../components/Sidebar';
 import { timetableService } from '../services/timetableService';
 import { teacherService } from '../services/teacherService';
 import { classService } from '../services/classService';
+import { schoolService } from '../services/schoolService';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -21,6 +22,8 @@ const sidebarItems = [
 export const TeacherTimetable: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [schedule, setSchedule] = useState<any[]>([]);
+  const [isHoliday, setIsHoliday] = useState(false);
+  const [isOnLeave, setIsOnLeave] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -33,6 +36,15 @@ export const TeacherTimetable: React.FC = () => {
         const myProfile = await teacherService.getMyProfile().catch(() => null as any);
         const teacherId = myProfile?.id; // Teacher entity id
         const userId = me?.id; // User id (legacy may be stored in timetable)
+
+        // Holiday banner from public config
+        try {
+          if (schoolId) {
+            const sch = await schoolService.getPublicBasic(schoolId);
+            const holidays: string[] = (sch as any)?.configuration?.holidays || [];
+            setIsHoliday(holidays.includes(selectedDate));
+          }
+        } catch {}
 
         const all = await timetableService.list(schoolId ? { schoolId } : undefined);
         const day = new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
@@ -82,6 +94,23 @@ export const TeacherTimetable: React.FC = () => {
           }))
           .sort((a: any, b: any) => a.time.localeCompare(b.time));
         setSchedule(mapped);
+
+        // On-leave banner for selected date (ADMIN_APPROVED)
+        try {
+          const leaves = await teacherService.myLeaveApplications();
+          const dt = new Date(selectedDate);
+          const onLeave = (leaves || []).some((l: any) => {
+            if ((l.status || '').toString() !== 'ADMIN_APPROVED') return false;
+            const s = new Date(l.startDate);
+            const e = new Date(l.endDate);
+            // compare by date-only
+            const ds = new Date(s.getFullYear(), s.getMonth(), s.getDate());
+            const de = new Date(e.getFullYear(), e.getMonth(), e.getDate());
+            const dd = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
+            return dd >= ds && dd <= de;
+          });
+          setIsOnLeave(onLeave);
+        } catch {}
       } catch {
         setSchedule([]);
       }
@@ -155,6 +184,16 @@ export const TeacherTimetable: React.FC = () => {
                   <Badge bg="info" className="ms-2">{todaySchedule.length} classes</Badge>
                 )}
               </div>
+              {(isHoliday || isOnLeave) && (
+                <div className="mt-3">
+                  {isHoliday && (
+                    <Badge bg="warning" className="me-2"><i className="bi bi-sun me-1"></i>Holiday</Badge>
+                  )}
+                  {isOnLeave && (
+                    <Badge bg="danger"><i className="bi bi-person-dash me-1"></i>On Leave</Badge>
+                  )}
+                </div>
+              )}
             </Card.Body>
           </Card>
 

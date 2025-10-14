@@ -38,6 +38,7 @@ export const StudentForm: React.FC = () => {
   const [aadhaarFile, setAadhaarFile] = useState<File | null>(null);
   const [apaarFile, setApaarFile] = useState<File | null>(null);
   const [birthCertFile, setBirthCertFile] = useState<File | null>(null);
+  const [studentPhotoFile, setStudentPhotoFile] = useState<File | null>(null);
   
   const uploadSelectedDocuments = async (sid: string) => {
     const uploads: Promise<any>[] = [];
@@ -46,6 +47,9 @@ export const StudentForm: React.FC = () => {
     if (birthCertFile) uploads.push(studentService.uploadGovtIdDocument(sid, 'birth-certificate', birthCertFile));
     if (uploads.length > 0) {
       try { await Promise.all(uploads); } catch (err) { console.error('Document upload failed', err); }
+    }
+    if (studentPhotoFile) {
+      try { await studentService.uploadStudentPhoto(sid, studentPhotoFile); } catch (err) { console.error('Photo upload failed', err); }
     }
   };
 
@@ -125,6 +129,7 @@ export const StudentForm: React.FC = () => {
     aadhaarNumber: '',
     apaarId: '',
     birthCertificateNumber: '',
+    customFields: {},
   });
 
   const loadClasses = useCallback(async () => {
@@ -224,6 +229,7 @@ export const StudentForm: React.FC = () => {
         aadhaarNumber: student.aadhaarNumber || '',
         apaarId: student.apaarId || '',
         birthCertificateNumber: student.birthCertificateNumber || '',
+        customFields: (student as any).customFields || {},
       });
     } catch (err: any) {
       console.error('Error loading student:', err);
@@ -589,6 +595,20 @@ export const StudentForm: React.FC = () => {
                   <Row>
                     <Col md={6}>
                       <Form.Group className="mb-3">
+                        <Form.Label>Student Photograph</Form.Label>
+                        <Form.Control
+                          type="file"
+                          accept="image/*"
+                          onChange={(e: any) => setStudentPhotoFile(e.target.files?.[0] || null)}
+                        />
+                        <Form.Text className="text-muted">Upload passport-size photo (JPG/PNG, max 5MB).</Form.Text>
+                      </Form.Group>
+                    </Col>
+                  </Row>
+
+                  <Row>
+                    <Col md={6}>
+                      <Form.Group className="mb-3">
                         <Form.Label>Religion</Form.Label>
                         <Form.Control
                           type="text"
@@ -800,6 +820,22 @@ export const StudentForm: React.FC = () => {
                   <Row>
                     <Col md={6}>
                       <Form.Group className="mb-3">
+                        <Form.Label>Father's Aadhaar (optional)</Form.Label>
+                        <Form.Control
+                          type="text"
+                          value={(formData.customFields as any)?.fatherAadhaar || ''}
+                          onChange={(e) => setFormData(prev => ({ ...prev, customFields: { ...(prev.customFields || {}), fatherAadhaar: e.target.value } }))}
+                          placeholder="12 digit Aadhaar"
+                          maxLength={12}
+                        />
+                        <Form.Text className="text-muted">Enter 12 digits without spaces.</Form.Text>
+                      </Form.Group>
+                    </Col>
+                  </Row>
+
+                  <Row>
+                    <Col md={6}>
+                      <Form.Group className="mb-3">
                         <Form.Label>Father's Email</Form.Label>
                         <Form.Control
                           type="email"
@@ -846,6 +882,22 @@ export const StudentForm: React.FC = () => {
                           value={formData.motherPhone}
                           onChange={handleChange}
                         />
+                      </Form.Group>
+                    </Col>
+                  </Row>
+
+                  <Row>
+                    <Col md={6}>
+                      <Form.Group className="mb-3">
+                        <Form.Label>Mother's Aadhaar (optional)</Form.Label>
+                        <Form.Control
+                          type="text"
+                          value={(formData.customFields as any)?.motherAadhaar || ''}
+                          onChange={(e) => setFormData(prev => ({ ...prev, customFields: { ...(prev.customFields || {}), motherAadhaar: e.target.value } }))}
+                          placeholder="12 digit Aadhaar"
+                          maxLength={12}
+                        />
+                        <Form.Text className="text-muted">Enter 12 digits without spaces.</Form.Text>
                       </Form.Group>
                     </Col>
                   </Row>

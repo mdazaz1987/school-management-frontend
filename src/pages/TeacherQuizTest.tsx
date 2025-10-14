@@ -349,7 +349,7 @@ export const TeacherQuizTest: React.FC = () => {
                         <option value="">Select class...</option>
                         {classes.map((c) => (
                           <option key={c.id} value={c.id}>
-                            {c.className || `${c.grade || 'Class'}${c.section ? ' - ' + c.section : ''}`}
+                            {`${c.className || c.name || c.grade || 'Class'}${c.section ? ' - ' + c.section : ''}`}
                           </option>
                         ))}
                       </Form.Select>
@@ -438,14 +438,6 @@ export const TeacherQuizTest: React.FC = () => {
                       </Col>
                     </Row>
                   </Card.Body>
-                  <div className="px-3 pb-3 d-flex justify-content-end">
-                    <Button onClick={() => {
-                      const q: Question = { id: `q${Date.now()}`, type: 'SCQ', text: '', options: ['', '', '', ''], correctAnswers: [0], points: 1 };
-                      setQuestions(prev => [...prev, q]);
-                    }}>
-                      <i className="bi bi-plus-lg me-1"></i> Add Question
-                    </Button>
-                  </div>
                 </Card>
 
                 {/* Questions Builder */}
@@ -545,6 +537,14 @@ export const TeacherQuizTest: React.FC = () => {
                         </Card.Body>
                       </Card>
                     ))}
+                    <div className="d-flex justify-content-end mt-2">
+                      <Button onClick={() => {
+                        const q: Question = { id: `q${Date.now()}`, type: 'SCQ', text: '', options: ['', '', '', ''], correctAnswers: [0], points: 1 };
+                        setQuestions(prev => [...prev, q]);
+                      }}>
+                        <i className="bi bi-plus-lg me-1"></i> Add Question
+                      </Button>
+                    </div>
                   </Card.Body>
                 </Card>
 

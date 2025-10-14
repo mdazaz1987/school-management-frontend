@@ -5,6 +5,7 @@ import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
 import { timetableService } from '../services/timetableService';
 import { studentService } from '../services/studentService';
+import { schoolService } from '../services/schoolService';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -24,6 +25,7 @@ export const StudentTimetable: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [now, setNow] = useState(new Date());
+  const [isHolidayToday, setIsHolidayToday] = useState(false);
 
   useEffect(() => {
     loadTimetable();
@@ -42,6 +44,13 @@ export const StudentTimetable: React.FC = () => {
       const me = await studentService.getStudentByEmail(user?.email || '');
       const classId = (me as any).classId;
       const section = (me as any).section;
+      // Check holiday today using public school config
+      try {
+        const sch = await schoolService.getPublicBasic((me as any).schoolId || (user as any)?.schoolId);
+        const holidays: string[] = (sch as any)?.configuration?.holidays || [];
+        const todayIso = new Date().toISOString().slice(0,10);
+        setIsHolidayToday(holidays.includes(todayIso));
+      } catch {}
       let tt: any;
       try {
         tt = await timetableService.getByClass(classId, section);
@@ -118,6 +127,12 @@ export const StudentTimetable: React.FC = () => {
             <h2>My Timetable</h2>
             <p className="text-muted">Your weekly class schedule for Academic Year 2024-2025</p>
           </div>
+          {isHolidayToday && (
+            <Alert variant="warning" className="mb-4">
+              <i className="bi bi-sun me-2"></i>
+              Today is a declared holiday. Regular classes are not held.
+            </Alert>
+          )}
 
           <Alert variant="info" className="mb-4">
             <i className="bi bi-info-circle me-2"></i>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, Button, Table, Badge, ListGroup } from 'react-bootstrap';
+import { Row, Col, Card, Button, Table, Badge, ListGroup, Modal, Form, Alert } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
@@ -142,6 +142,11 @@ export const TeacherDashboard: React.FC = () => {
   }, []);
 
   const [recentSubmissions, setRecentSubmissions] = useState<any[]>([]);
+  const [leaveBalances, setLeaveBalances] = useState<{ allowedPrivilege: number; allowedSick: number; usedPrivilege: number; usedSick: number } | null>(null);
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [leaveForm, setLeaveForm] = useState({ startDate: '', endDate: '', reason: '', leaveType: 'PRIVILEGE' });
+  const [leaveError, setLeaveError] = useState('');
+  const [leaveSuccess, setLeaveSuccess] = useState('');
   useEffect(() => {
     const loadRecent = async () => {
       try {
@@ -161,6 +166,16 @@ export const TeacherDashboard: React.FC = () => {
     loadRecent();
   }, []);
 
+  useEffect(() => {
+    const loadBalances = async () => {
+      try {
+        const b = await teacherService.getLeaveBalances();
+        setLeaveBalances(b);
+      } catch {}
+    };
+    loadBalances();
+  }, []);
+
   return (
     <Layout>
       <Row>
@@ -175,6 +190,33 @@ export const TeacherDashboard: React.FC = () => {
 
           {/* Statistics Cards */}
           <Row className="mb-4">
+            {/* Leave Balances */}
+            <Col md={4} className="mb-3">
+              <Card className="border-0 shadow-sm h-100">
+                <Card.Header className="bg-white d-flex justify-content-between align-items-center">
+                  <h6 className="mb-0">Leave Balances</h6>
+                  <Button size="sm" variant="outline-primary" onClick={() => setShowLeaveModal(true)}>
+                    <i className="bi bi-plus-lg me-1"></i> Apply Leave
+                  </Button>
+                </Card.Header>
+                <Card.Body>
+                  {leaveBalances ? (
+                    <>
+                      <div className="d-flex justify-content-between mb-2">
+                        <span>Privilege</span>
+                        <strong>{Math.max(0, (leaveBalances.allowedPrivilege ?? 0) - (leaveBalances.usedPrivilege ?? 0))}/{leaveBalances.allowedPrivilege ?? 0} days</strong>
+                      </div>
+                      <div className="d-flex justify-content-between">
+                        <span>Sick</span>
+                        <strong>{Math.max(0, (leaveBalances.allowedSick ?? 0) - (leaveBalances.usedSick ?? 0))}/{leaveBalances.allowedSick ?? 0} days</strong>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-muted">Loading...</div>
+                  )}
+                </Card.Body>
+              </Card>
+            </Col>
             <Col md={2} className="mb-3">
               <Card className="stat-card border-0 shadow-sm text-center">
                 <Card.Body>
@@ -398,6 +440,63 @@ export const TeacherDashboard: React.FC = () => {
           </Row>
         </Col>
       </Row>
+
+      {/* Apply Leave Modal */}
+      <Modal show={showLeaveModal} onHide={() => setShowLeaveModal(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Apply for Leave</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {leaveError && <Alert variant="danger" onClose={() => setLeaveError('')} dismissible>{leaveError}</Alert>}
+          {leaveSuccess && <Alert variant="success" onClose={() => setLeaveSuccess('')} dismissible>{leaveSuccess}</Alert>}
+          <Row>
+            <Col md={6}>
+              <Form.Group className="mb-3">
+                <Form.Label>Start Date</Form.Label>
+                <Form.Control type="date" value={leaveForm.startDate} onChange={(e) => setLeaveForm({ ...leaveForm, startDate: e.target.value })} />
+              </Form.Group>
+            </Col>
+            <Col md={6}>
+              <Form.Group className="mb-3">
+                <Form.Label>End Date</Form.Label>
+                <Form.Control type="date" value={leaveForm.endDate} onChange={(e) => setLeaveForm({ ...leaveForm, endDate: e.target.value })} />
+              </Form.Group>
+            </Col>
+          </Row>
+          <Form.Group className="mb-3">
+            <Form.Label>Type</Form.Label>
+            <Form.Select value={leaveForm.leaveType} onChange={(e) => setLeaveForm({ ...leaveForm, leaveType: e.target.value })}>
+              <option value="PRIVILEGE">Privilege</option>
+              <option value="SICK">Sick</option>
+              <option value="OTHER">Other</option>
+            </Form.Select>
+          </Form.Group>
+          <Form.Group className="mb-3">
+            <Form.Label>Reason</Form.Label>
+            <Form.Control as="textarea" rows={3} value={leaveForm.reason} onChange={(e) => setLeaveForm({ ...leaveForm, reason: e.target.value })} />
+          </Form.Group>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowLeaveModal(false)}>Cancel</Button>
+          <Button variant="primary" onClick={async () => {
+            try {
+              setLeaveError('');
+              if (!leaveForm.startDate || !leaveForm.endDate) {
+                setLeaveError('Please select start and end dates');
+                return;
+              }
+              await teacherService.applyLeave({ startDate: leaveForm.startDate, endDate: leaveForm.endDate, reason: leaveForm.reason, leaveType: leaveForm.leaveType as any });
+              setLeaveSuccess('Leave application submitted');
+              const b = await teacherService.getLeaveBalances().catch(() => null);
+              if (b) setLeaveBalances(b);
+              setTimeout(() => setLeaveSuccess(''), 2500);
+              setShowLeaveModal(false);
+            } catch (e: any) {
+              setLeaveError(e?.response?.data?.message || 'Failed to apply for leave');
+            }
+          }}>Submit</Button>
+        </Modal.Footer>
+      </Modal>
     </Layout>
   );
 };
