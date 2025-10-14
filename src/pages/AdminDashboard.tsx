@@ -21,6 +21,7 @@ const sidebarItems = [
   { path: '/attendance', label: 'Attendance', icon: 'bi-calendar-check' },
   { path: '/notifications', label: 'Notifications', icon: 'bi-bell' },
   { path: '/settings', label: 'Settings', icon: 'bi-gear' },
+  { path: '/admin/reports', label: 'Admin Reports', icon: 'bi-file-earmark-bar-graph' },
 ];
 
 export const AdminDashboard: React.FC = () => {

@@ -59,6 +59,7 @@ import { ContactSupport } from './pages/ContactSupport';
 import { TeacherStudents } from './pages/TeacherStudents';
 import { AdminFinanceTools } from './pages/AdminFinanceTools';
 import { AdminNotificationTools } from './pages/AdminNotificationTools';
+import { AdminReports } from './pages/AdminReports';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactElement }> = ({ children }) => {
@@ -365,6 +366,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <AdminNotificationTools />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/reports"
+            element={
+              <ProtectedRoute>
+                <AdminReports />
               </ProtectedRoute>
             }
           />
