@@ -276,8 +276,8 @@ export const StudentDetail: React.FC = () => {
                     )}
                     {student.apaarId && (
                       <Col md={6}>
-                        <strong>APAAR ID:</strong>
-                        <p className="mb-0">{student.apaarId}</p>
+                        <strong>ADHAAR ID:</strong>
+                        <p className="mb-0">{student.aadhaarNumber}</p>
                         {(student as any).apaarAttachmentId && id && (
                           <div className="mt-1">
                             <a
