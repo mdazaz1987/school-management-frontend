@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { studentService } from '../services/studentService';
 import { studentQuizService } from '../services/studentQuizService';
 import { schoolService } from '../services/schoolService';
+import { useLang } from '../contexts/LangContext';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -41,6 +42,7 @@ export const StudentQuizzes: React.FC = () => {
   const hadPositiveTimeRef = useRef<boolean>(false);
 
   const [resultsModal, setResultsModal] = useState<{ show: boolean; quiz?: any; rows: Array<{ attemptNo: number; score: number; totalPoints: number; passed?: boolean; submittedAt?: string }>; stats?: any; school?: any }>({ show: false, rows: [] });
+  const { t } = useLang();
 
   const myStudentId = useMemo(() => (student?.id as string | undefined), [student]);
 
@@ -321,7 +323,7 @@ export const StudentQuizzes: React.FC = () => {
       {/* Results Modal */}
       <Modal show={resultsModal.show} onHide={() => setResultsModal({ show: false, rows: [] })} size="lg">
         <Modal.Header closeButton>
-          <Modal.Title>Results{resultsModal.quiz ? ` • ${resultsModal.quiz.title}` : ''}</Modal.Title>
+          <Modal.Title>{t('student.quizzes.results')}{resultsModal.quiz ? ` • ${resultsModal.quiz.title}` : ''}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           {/* Summary */}
@@ -356,10 +358,10 @@ export const StudentQuizzes: React.FC = () => {
             <Table responsive size="sm">
               <thead>
                 <tr>
-                  <th>Attempt</th>
-                  <th>Score</th>
-                  <th>Status</th>
-                  <th>Submitted</th>
+                  <th>{t('student.quizzes.attempt')}</th>
+                  <th>{t('student.quizzes.score')}</th>
+                  <th>{t('student.quizzes.status')}</th>
+                  <th>{t('student.quizzes.submitted')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -376,10 +378,10 @@ export const StudentQuizzes: React.FC = () => {
           )}
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setResultsModal({ show: false, rows: [] })}>Close</Button>
+          <Button variant="secondary" onClick={() => setResultsModal({ show: false, rows: [] })}>{t('common.close')}</Button>
           {resultsModal.rows.length > 0 && (
             <Button variant="outline-primary" onClick={() => window.print()}>
-              <i className="bi bi-printer me-2"></i> Print Certificate
+              <i className="bi bi-printer me-2"></i> {t('common.print_certificate')}
             </Button>
           )}
         </Modal.Footer>

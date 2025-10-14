@@ -21,6 +21,7 @@ import { StudentDetail } from './pages/StudentDetail';
 import { DebugAuth } from './pages/DebugAuth';
 import './App.css';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { LangProvider } from './contexts/LangContext';
 import { SubjectList } from './pages/SubjectList';
 import { SubjectForm } from './pages/SubjectForm';
 import { ExamList } from './pages/ExamList';
@@ -108,9 +109,10 @@ const DashboardRouter: React.FC = () => {
 
 function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <Router>
+    <LangProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -644,9 +646,10 @@ function App() {
             }
           />
         </Routes>
-        </Router>
-      </AuthProvider>
-    </ThemeProvider>
+          </Router>
+        </AuthProvider>
+      </ThemeProvider>
+    </LangProvider>
   );
 }
 

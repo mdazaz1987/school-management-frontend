@@ -5,6 +5,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import { NotificationBell } from './NotificationBell';
 import { schoolService } from '../services/schoolService';
+import { useLang } from '../contexts/LangContext';
 
 interface LayoutProps {
   children: ReactNode;
@@ -18,7 +19,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   // Branding state
   const [brandName, setBrandName] = useState<string>('School Management System');
   const [brandLogo, setBrandLogo] = useState<string | undefined>(undefined);
-  const [lang, setLang] = useState<string>(() => localStorage.getItem('lang') || 'en');
+  const { lang, setLang, t } = useLang();
 
   useEffect(() => {
     const loadBranding = async () => {
@@ -35,20 +36,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     loadBranding();
   }, [user]);
 
-  useEffect(() => {
-    try {
-      localStorage.setItem('lang', lang);
-    } catch {}
-    try {
-      const el = document.documentElement;
-      el.setAttribute('lang', lang);
-      if (lang === 'ur') {
-        el.setAttribute('dir', 'rtl');
-      } else {
-        el.setAttribute('dir', 'ltr');
-      }
-    } catch {}
-  }, [lang]);
+  // dir/lang are handled inside LangProvider
 
   const handleLogout = () => {
     logout();
@@ -75,21 +63,21 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 title={
                   <span>
                     <i className="bi bi-translate me-2"></i>
-                    {lang === 'en' ? 'English' : lang === 'hi' ? 'हिंदी' : 'اردو'}
+                    {lang === 'en' ? t('common.english') : lang === 'hi' ? t('common.hindi') : t('common.urdu')}
                   </span>
                 }
                 id="lang-dropdown"
                 align="end"
               >
-                <NavDropdown.Item active={lang === 'en'} onClick={() => setLang('en')}>English</NavDropdown.Item>
-                <NavDropdown.Item active={lang === 'hi'} onClick={() => setLang('hi')}>हिंदी</NavDropdown.Item>
-                <NavDropdown.Item active={lang === 'ur'} onClick={() => setLang('ur')}>اردو</NavDropdown.Item>
+                <NavDropdown.Item active={lang === 'en'} onClick={() => setLang('en')}>{t('common.english')}</NavDropdown.Item>
+                <NavDropdown.Item active={lang === 'hi'} onClick={() => setLang('hi')}>{t('common.hindi')}</NavDropdown.Item>
+                <NavDropdown.Item active={lang === 'ur'} onClick={() => setLang('ur')}>{t('common.urdu')}</NavDropdown.Item>
               </NavDropdown>
               <NavDropdown
                 title={
                   <span title={`Theme: ${theme} (${effectiveTheme})`}>
                     <i className={`bi ${effectiveTheme === 'dark' ? 'bi-moon-stars' : 'bi-brightness-high'} me-2`}></i>
-                    Theme
+                    {t('common.theme')}
                   </span>
                 }
                 id="theme-dropdown"

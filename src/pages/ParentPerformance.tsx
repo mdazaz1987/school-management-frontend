@@ -3,6 +3,7 @@ import { Row, Col, Card, Table, Form, Badge, ProgressBar, Alert, Spinner, Tabs, 
 import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { parentService } from '../services/parentService';
+import { useLang } from '../contexts/LangContext';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -14,6 +15,7 @@ const sidebarItems = [
 ];
 
 export const ParentPerformance: React.FC = () => {
+  const { t } = useLang();
   const [children, setChildren] = useState<Array<{ id: string; name: string; className?: string }>>([]);
   const [selectedChild, setSelectedChild] = useState<string>('');
   const [loading, setLoading] = useState(false);
@@ -89,14 +91,14 @@ export const ParentPerformance: React.FC = () => {
         </Col>
         <Col md={10}>
           <div className="mb-4">
-            <h2>Academic Performance</h2>
-            <p className="text-muted">Track your children's academic progress</p>
+            <h2>{t('parent.performance.title')}</h2>
+            <p className="text-muted">{t('parent.performance.subtitle')}</p>
           </div>
 
           <Card className="border-0 shadow-sm mb-4">
             <Card.Body>
               <Form.Group>
-                <Form.Label>Select Child</Form.Label>
+                <Form.Label>{t('parent.performance.select_child')}</Form.Label>
                 <Form.Select value={selectedChild} onChange={(e) => setSelectedChild(e.target.value)}>
                   {children.map(child => (
                     <option key={child.id} value={child.id}>{child.name}{child.className ? ` - ${child.className}` : ''}</option>
@@ -112,7 +114,7 @@ export const ParentPerformance: React.FC = () => {
                 <Card.Body>
                   <i className="bi bi-star-fill fs-1 text-warning mb-2"></i>
                   <h3>{overallPercentage}%</h3>
-                  <p className="text-muted mb-0">Overall Average</p>
+                  <p className="text-muted mb-0">{t('parent.performance.overall_average')}</p>
                 </Card.Body>
               </Card>
             </Col>
@@ -121,7 +123,7 @@ export const ParentPerformance: React.FC = () => {
                 <Card.Body>
                   <i className="bi bi-trophy-fill fs-1 text-success mb-2"></i>
                   <h3>—</h3>
-                  <p className="text-muted mb-0">Class Rank</p>
+                  <p className="text-muted mb-0">{t('parent.performance.class_rank')}</p>
                 </Card.Body>
               </Card>
             </Col>
@@ -130,7 +132,7 @@ export const ParentPerformance: React.FC = () => {
                 <Card.Body>
                   <i className="bi bi-graph-up fs-1 text-primary mb-2"></i>
                   <h3>{overallPercentage >= 85 ? 'Excellent' : overallPercentage >= 70 ? 'Good' : 'Needs Attention'}</h3>
-                  <p className="text-muted mb-0">Progress</p>
+                  <p className="text-muted mb-0">{t('parent.performance.progress')}</p>
                 </Card.Body>
               </Card>
             </Col>
@@ -139,9 +141,9 @@ export const ParentPerformance: React.FC = () => {
           <Card className="border-0 shadow-sm">
             <Card.Body>
               <Tabs defaultActiveKey="subjects" className="mb-3">
-                <Tab eventKey="subjects" title="Subject-wise Performance">
+                <Tab eventKey="subjects" title={t('parent.performance.subject_wise')}>
                   {subjectPerformance.length === 0 ? (
-                    <div className="text-center text-muted py-4">No performance data available</div>
+                    <div className="text-center text-muted py-4">{t('parent.performance.no_data')}</div>
                   ) : (
                     <Row>
                       {subjectPerformance.map((subject, index) => (
@@ -166,21 +168,21 @@ export const ParentPerformance: React.FC = () => {
                   )}
                 </Tab>
                 
-                <Tab eventKey="exams" title="Exam Results">
-                  <div className="text-center text-muted py-4">No exam data available</div>
+                <Tab eventKey="exams" title={t('parent.performance.exams')}>
+                  <div className="text-center text-muted py-4">{t('parent.performance.no_data')}</div>
                 </Tab>
 
-                <Tab eventKey="assignments" title="Assignments">
+                <Tab eventKey="assignments" title={t('parent.performance.assignments')}>
                   {assignments.length === 0 ? (
-                    <div className="text-center text-muted py-4">No assignments found</div>
+                    <div className="text-center text-muted py-4">{t('parent.performance.no_assignments')}</div>
                   ) : (
                     <Table responsive hover>
                       <thead>
                         <tr>
-                          <th>Title</th>
-                          <th>Subject</th>
-                          <th>Status</th>
-                          <th>Marks</th>
+                          <th>{t('table.title')}</th>
+                          <th>{t('table.subject')}</th>
+                          <th>{t('table.status')}</th>
+                          <th>{t('table.marks')}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -201,20 +203,20 @@ export const ParentPerformance: React.FC = () => {
                   )}
                 </Tab>
 
-                <Tab eventKey="quizzes" title="Quizzes & Tests">
+                <Tab eventKey="quizzes" title={t('parent.performance.quizzes')}>
                   {assignments.filter(a => a.type === 'QUIZ' || a.type === 'EXAM').length === 0 ? (
-                    <div className="text-center text-muted py-4">No quizzes/tests found</div>
+                    <div className="text-center text-muted py-4">{t('parent.performance.no_quizzes')}</div>
                   ) : (
                     <Table responsive hover>
                       <thead>
                         <tr>
-                          <th>Title</th>
-                          <th>Subject</th>
-                          <th>Type</th>
-                          <th>Status</th>
-                          <th>Marks</th>
-                          <th>%</th>
-                          <th>Result</th>
+                          <th>{t('table.title')}</th>
+                          <th>{t('table.subject')}</th>
+                          <th>{t('table.type')}</th>
+                          <th>{t('table.status')}</th>
+                          <th>{t('table.marks')}</th>
+                          <th>{t('table.percent')}</th>
+                          <th>{t('table.result')}</th>
                         </tr>
                       </thead>
                       <tbody>
