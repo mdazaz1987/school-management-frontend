@@ -37,6 +37,7 @@ import { CreateNotification } from './pages/CreateNotification';
 import { AttendancePage } from './pages/Attendance';
 import { StudentAssignments } from './pages/StudentAssignments';
 import { StudentExams } from './pages/StudentExams';
+import { StudentQuizzes } from './pages/StudentQuizzes';
 import { StudentAttendance } from './pages/StudentAttendance';
 import { StudentTimetable } from './pages/StudentTimetable';
 import { StudentFeePayment } from './pages/StudentFeePayment';
@@ -460,6 +461,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <StudentAssignments />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student/quizzes"
+            element={
+              <ProtectedRoute>
+                <StudentQuizzes />
               </ProtectedRoute>
             }
           />

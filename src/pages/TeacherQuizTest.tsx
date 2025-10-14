@@ -438,18 +438,20 @@ export const TeacherQuizTest: React.FC = () => {
                       </Col>
                     </Row>
                   </Card.Body>
+                  <div className="px-3 pb-3 d-flex justify-content-end">
+                    <Button onClick={() => {
+                      const q: Question = { id: `q${Date.now()}`, type: 'SCQ', text: '', options: ['', '', '', ''], correctAnswers: [0], points: 1 };
+                      setQuestions(prev => [...prev, q]);
+                    }}>
+                      <i className="bi bi-plus-lg me-1"></i> Add Question
+                    </Button>
+                  </div>
                 </Card>
 
                 {/* Questions Builder */}
                 <Card className="border-0 shadow-sm mb-3">
                   <Card.Header className="bg-white d-flex justify-content-between align-items-center">
                     <strong>Questions</strong>
-                    <Button size="sm" onClick={() => {
-                      const q: Question = { id: `q${Date.now()}`, type: 'SCQ', text: '', options: ['', '', '', ''], correctAnswers: [0], points: 1 };
-                      setQuestions(prev => [...prev, q]);
-                    }}>
-                      <i className="bi bi-plus-lg me-1"></i> Add Question
-                    </Button>
                   </Card.Header>
                   <Card.Body>
                     {questions.length === 0 && <div className="text-muted">No questions added</div>}

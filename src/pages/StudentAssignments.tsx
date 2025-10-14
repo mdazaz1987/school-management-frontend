@@ -147,6 +147,8 @@ export const StudentAssignments: React.FC = () => {
 
   // Tabs filtering
   const filteredAssignments = assignments.filter(a => {
+    // Exclude quizzes/tests; they live in StudentQuizzes page
+    if (a.type === 'QUIZ' || a.type === 'EXAM') return false;
     if (activeTab === 'pending') return a.status === 'pending';
     if (activeTab === 'submitted') return a.status === 'submitted';
     if (activeTab === 'graded') return a.status === 'graded';

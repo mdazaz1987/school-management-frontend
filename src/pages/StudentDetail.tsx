@@ -13,11 +13,14 @@ export const StudentDetail: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [maskedAadhaar, setMaskedAadhaar] = useState<string | null>(null);
   const apiBase = process.env.REACT_APP_API_URL || '';
 
   useEffect(() => {
     if (id) {
       loadStudent(id);
+      // Load masked Aadhaar separately (server never returns full value in main payload)
+      studentService.getMaskedAadhaar(id).then(setMaskedAadhaar).catch(() => setMaskedAadhaar(null));
     }
   }, [id]);
 
@@ -246,7 +249,7 @@ export const StudentDetail: React.FC = () => {
         </Row>
 
         {/* Government IDs */}
-        {(aadhaarValue || student.apaarId || birthCertValue || aadhaarAttachmentId || (student as any).apaarAttachmentId || birthCertAttachmentId) && (
+        {(maskedAadhaar || aadhaarValue || student.apaarId || birthCertValue || aadhaarAttachmentId || (student as any).apaarAttachmentId || birthCertAttachmentId) && (
           <Row className="mb-4">
             <Col md={12}>
               <Card className="border-0 shadow-sm">
@@ -256,10 +259,10 @@ export const StudentDetail: React.FC = () => {
                 </Card.Header>
                 <Card.Body>
                   <Row>
-                    {aadhaarValue && (
+                    {(maskedAadhaar || aadhaarValue) && (
                       <Col md={6}>
                         <strong>Aadhaar ID:</strong>
-                        <p className="mb-0">{maskAadhaar(aadhaarValue)}</p>
+                        <p className="mb-0">{maskedAadhaar || maskAadhaar(aadhaarValue)}</p>
                         {aadhaarAttachmentId && id && (
                           <div className="mt-1">
                             <a

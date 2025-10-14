@@ -104,6 +104,18 @@ export const studentService = {
   },
 
   /**
+   * Get masked Aadhaar value for a student (admin returns full via different endpoint; this always returns masked or null)
+   */
+  async getMaskedAadhaar(id: string): Promise<string | null> {
+    try {
+      const data = await apiService.get<{ maskedAadhaar: string | null }>(`/students/${id}/aadhaar/masked`);
+      return (data as any)?.maskedAadhaar ?? null;
+    } catch {
+      return null;
+    }
+  },
+
+  /**
    * Get student by admission number
    */
   async getStudentByAdmissionNumber(admissionNumber: string): Promise<Student> {
