@@ -5,6 +5,7 @@ import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
 import { teacherService } from '../services/teacherService';
 import { subjectService } from '../services/subjectService';
+import { classService } from '../services/classService';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -68,12 +69,19 @@ export const TeacherQuizTest: React.FC = () => {
   const loadData = async () => {
     setLoading(true); setError('');
     try {
-      const [cls, subs] = await Promise.all([
-        teacherService.getMyClasses(),
-        user?.schoolId ? subjectService.getAllSubjects({ schoolId: user.schoolId }) : Promise.resolve([])
-      ]);
-      
-      setClasses(cls);
+      let cls: any[] = [];
+      try {
+        cls = await teacherService.getMyClasses();
+      } catch { cls = []; }
+      if ((!cls || cls.length === 0) && user?.schoolId) {
+        try {
+          const all = await classService.getAllClasses({ schoolId: user.schoolId });
+          cls = (all || []).filter((c: any) => c && (c as any).isActive !== false);
+        } catch {}
+      }
+      const subs = user?.schoolId ? await subjectService.getAllSubjects({ schoolId: user.schoolId }) : [];
+
+      setClasses(cls || []);
       setSubjects(subs || []);
       
       const list = await teacherService.getMyAssignments();
