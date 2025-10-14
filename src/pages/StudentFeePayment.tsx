@@ -12,6 +12,7 @@ import { resolveUrl } from '../services/api';
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
   { path: '/student/assignments', label: 'Assignments', icon: 'bi-file-text' },
+  { path: '/student/quizzes', label: 'Quizzes & Tests', icon: 'bi-clipboard-check' },
   { path: '/student/exams', label: 'Exams & Results', icon: 'bi-clipboard-check' },
   { path: '/student/attendance', label: 'My Attendance', icon: 'bi-calendar-check' },
   { path: '/student/timetable', label: 'Timetable', icon: 'bi-calendar3' },
