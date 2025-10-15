@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { teacherService } from '../services/teacherService';
 import { classService } from '../services/classService';
 import { timetableService } from '../services/timetableService';
+import { useLang } from '../contexts/LangContext';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -21,6 +22,7 @@ const sidebarItems = [
 export const TeacherDashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { t } = useLang();
   const [stats, setStats] = useState({
     myClasses: 0,
     totalStudents: 0,
@@ -184,8 +186,8 @@ export const TeacherDashboard: React.FC = () => {
         </Col>
         <Col md={10}>
           <div className="mb-4">
-            <h2>Teacher Dashboard</h2>
-            <p className="text-muted">Welcome, {user?.firstName}! Ready for today's classes?</p>
+            <h2>{t('teacher.dashboard.title')}</h2>
+            <p className="text-muted">{t('teacher.dashboard.welcome').replace('{name}', user?.firstName || '')}</p>
           </div>
 
           {/* Statistics Cards */}
@@ -194,25 +196,25 @@ export const TeacherDashboard: React.FC = () => {
             <Col md={4} className="mb-3">
               <Card className="border-0 shadow-sm h-100">
                 <Card.Header className="bg-white d-flex justify-content-between align-items-center">
-                  <h6 className="mb-0">Leave Balances</h6>
+                  <h6 className="mb-0">{t('teacher.dashboard.leave_balances')}</h6>
                   <Button size="sm" variant="outline-primary" onClick={() => setShowLeaveModal(true)}>
-                    <i className="bi bi-plus-lg me-1"></i> Apply Leave
+                    <i className="bi bi-plus-lg me-1"></i> {t('teacher.dashboard.apply_leave')}
                   </Button>
                 </Card.Header>
                 <Card.Body>
                   {leaveBalances ? (
                     <>
                       <div className="d-flex justify-content-between mb-2">
-                        <span>Privilege</span>
+                        <span>{t('teacher.dashboard.privilege')}</span>
                         <strong>{Math.max(0, (leaveBalances.allowedPrivilege ?? 0) - (leaveBalances.usedPrivilege ?? 0))}/{leaveBalances.allowedPrivilege ?? 0} days</strong>
                       </div>
                       <div className="d-flex justify-content-between">
-                        <span>Sick</span>
+                        <span>{t('teacher.dashboard.sick')}</span>
                         <strong>{Math.max(0, (leaveBalances.allowedSick ?? 0) - (leaveBalances.usedSick ?? 0))}/{leaveBalances.allowedSick ?? 0} days</strong>
                       </div>
                     </>
                   ) : (
-                    <div className="text-muted">Loading...</div>
+                    <div className="text-muted">{t('common.loading')}</div>
                   )}
                 </Card.Body>
               </Card>
@@ -222,7 +224,7 @@ export const TeacherDashboard: React.FC = () => {
                 <Card.Body>
                   <i className="bi bi-door-open fs-1 text-primary mb-2"></i>
                   <h3 className="mb-1">{stats.myClasses}</h3>
-                  <small className="text-muted">My Classes</small>
+                  <small className="text-muted">{t('teacher.dashboard.my_classes')}</small>
                 </Card.Body>
               </Card>
             </Col>
@@ -231,7 +233,7 @@ export const TeacherDashboard: React.FC = () => {
                 <Card.Body>
                   <i className="bi bi-people fs-1 text-success mb-2"></i>
                   <h3 className="mb-1">{stats.totalStudents}</h3>
-                  <small className="text-muted">Students</small>
+                  <small className="text-muted">{t('teacher.dashboard.students')}</small>
                 </Card.Body>
               </Card>
             </Col>
@@ -240,7 +242,7 @@ export const TeacherDashboard: React.FC = () => {
                 <Card.Body>
                   <i className="bi bi-file-text fs-1 text-warning mb-2"></i>
                   <h3 className="mb-1">{stats.pendingAssignments}</h3>
-                  <small className="text-muted">Assignments</small>
+                  <small className="text-muted">{t('teacher.dashboard.assignments')}</small>
                 </Card.Body>
               </Card>
             </Col>
@@ -249,7 +251,7 @@ export const TeacherDashboard: React.FC = () => {
                 <Card.Body>
                   <i className="bi bi-star fs-1 text-danger mb-2"></i>
                   <h3 className="mb-1">{stats.pendingGrading}</h3>
-                  <small className="text-muted">To Grade</small>
+                  <small className="text-muted">{t('teacher.dashboard.to_grade')}</small>
                 </Card.Body>
               </Card>
             </Col>
@@ -258,7 +260,7 @@ export const TeacherDashboard: React.FC = () => {
                 <Card.Body>
                   <i className="bi bi-calendar3 fs-1 text-info mb-2"></i>
                   <h3 className="mb-1">{stats.todayClasses}</h3>
-                  <small className="text-muted">Today</small>
+                  <small className="text-muted">{t('teacher.dashboard.today')}</small>
                 </Card.Body>
               </Card>
             </Col>
@@ -267,7 +269,7 @@ export const TeacherDashboard: React.FC = () => {
                 <Card.Body>
                   <i className="bi bi-percent fs-1 text-success mb-2"></i>
                   <h3 className="mb-1">{stats.attendance}%</h3>
-                  <small className="text-muted">Attendance</small>
+                  <small className="text-muted">{t('teacher.dashboard.attendance')}</small>
                 </Card.Body>
               </Card>
             </Col>
@@ -278,8 +280,8 @@ export const TeacherDashboard: React.FC = () => {
             <Col md={6} className="mb-3">
               <Card className="border-0 shadow-sm h-100">
                 <Card.Header className="bg-white d-flex justify-content-between align-items-center">
-                  <h5 className="mb-0">Today's Schedule</h5>
-                  <Badge bg="primary">{todaySchedule.length} Classes</Badge>
+                  <h5 className="mb-0">{t('teacher.dashboard.todays_schedule')}</h5>
+                  <Badge bg="primary">{todaySchedule.length} {t('teacher.dashboard.classes_count')}</Badge>
                 </Card.Header>
                 <Card.Body className="p-0">
                   {/* Blink style for current class */}
@@ -312,7 +314,7 @@ export const TeacherDashboard: React.FC = () => {
                             disabled={!schedule.isCurrent}
                             onClick={() => navigate(`/teacher/attendance?classId=${encodeURIComponent(schedule.classId)}&date=${encodeURIComponent(new Date().toISOString().split('T')[0])}&period=${encodeURIComponent(schedule.period || '')}&subject=${encodeURIComponent(schedule.subject || '')}`)}
                           >
-                            Start Class
+                            {t('teacher.dashboard.start_class')}
                           </Button>
                         </div>
                       </ListGroup.Item>
@@ -326,7 +328,7 @@ export const TeacherDashboard: React.FC = () => {
             <Col md={6} className="mb-3">
               <Card className="border-0 shadow-sm">
                 <Card.Header className="bg-white">
-                  <h5 className="mb-0">Quick Actions</h5>
+                  <h5 className="mb-0">{t('teacher.dashboard.quick_actions')}</h5>
                 </Card.Header>
                 <Card.Body>
                   <div className="d-grid gap-2">
@@ -336,7 +338,7 @@ export const TeacherDashboard: React.FC = () => {
                       onClick={() => navigate('/teacher/attendance')}
                     >
                       <i className="bi bi-calendar-check me-2"></i>
-                      Mark Attendance
+                      {t('teacher.dashboard.mark_attendance')}
                     </Button>
                     <Button 
                       variant="success" 
@@ -344,7 +346,7 @@ export const TeacherDashboard: React.FC = () => {
                       onClick={() => navigate('/teacher/assignments')}
                     >
                       <i className="bi bi-file-plus me-2"></i>
-                      Create Assignment
+                      {t('teacher.dashboard.create_assignment')}
                     </Button>
                     <Button 
                       variant="info" 
@@ -352,7 +354,7 @@ export const TeacherDashboard: React.FC = () => {
                       onClick={() => navigate('/teacher/grading')}
                     >
                       <i className="bi bi-star me-2"></i>
-                      Grade Submissions
+                      {t('teacher.dashboard.grade_submissions')}
                     </Button>
                     <Button 
                       variant="warning" 
@@ -360,7 +362,7 @@ export const TeacherDashboard: React.FC = () => {
                       onClick={() => navigate('/notifications')}
                     >
                       <i className="bi bi-megaphone me-2"></i>
-                      Send Announcement
+                      {t('teacher.dashboard.send_announcement')}
                     </Button>
                   </div>
                 </Card.Body>
@@ -373,25 +375,25 @@ export const TeacherDashboard: React.FC = () => {
             <Col md={12}>
               <Card className="border-0 shadow-sm">
                 <Card.Header className="bg-white d-flex justify-content-between align-items-center">
-                  <h5 className="mb-0">Recent Submissions</h5>
+                  <h5 className="mb-0">{t('teacher.dashboard.recent_submissions')}</h5>
                   <Button 
                     variant="link" 
                     size="sm"
                     onClick={() => navigate('/teacher/grading')}
                   >
-                    View All
+                    {t('common.view_all')}
                   </Button>
                 </Card.Header>
                 <Card.Body className="p-0">
                   <Table hover className="mb-0">
                     <thead>
                       <tr>
-                        <th>Student</th>
-                        <th>Assignment</th>
-                        <th>Class</th>
-                        <th>Submitted</th>
-                        <th>Status</th>
-                        <th>Action</th>
+                        <th>{t('table.student')}</th>
+                        <th>{t('table.assignment')}</th>
+                        <th>{t('table.class')}</th>
+                        <th>{t('table.submitted')}</th>
+                        <th>{t('table.status')}</th>
+                        <th>{t('table.action')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -418,7 +420,7 @@ export const TeacherDashboard: React.FC = () => {
                                 size="sm"
                                 onClick={() => navigate('/teacher/grading')}
                               >
-                                Grade
+                                {t('teacher.dashboard.grade_submissions')}
                               </Button>
                             ) : (
                               <Button 
@@ -426,7 +428,7 @@ export const TeacherDashboard: React.FC = () => {
                                 size="sm"
                                 onClick={() => navigate('/teacher/grading')}
                               >
-                                View
+                                {t('common.view')}
                               </Button>
                             )}
                           </td>
@@ -444,7 +446,7 @@ export const TeacherDashboard: React.FC = () => {
       {/* Apply Leave Modal */}
       <Modal show={showLeaveModal} onHide={() => setShowLeaveModal(false)}>
         <Modal.Header closeButton>
-          <Modal.Title>Apply for Leave</Modal.Title>
+          <Modal.Title>{t('teacher.dashboard.apply_leave')}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           {leaveError && <Alert variant="danger" onClose={() => setLeaveError('')} dismissible>{leaveError}</Alert>}
@@ -452,32 +454,32 @@ export const TeacherDashboard: React.FC = () => {
           <Row>
             <Col md={6}>
               <Form.Group className="mb-3">
-                <Form.Label>Start Date</Form.Label>
+                <Form.Label>{t('student.dashboard.start_date')}</Form.Label>
                 <Form.Control type="date" value={leaveForm.startDate} onChange={(e) => setLeaveForm({ ...leaveForm, startDate: e.target.value })} />
               </Form.Group>
             </Col>
             <Col md={6}>
               <Form.Group className="mb-3">
-                <Form.Label>End Date</Form.Label>
+                <Form.Label>{t('student.dashboard.end_date')}</Form.Label>
                 <Form.Control type="date" value={leaveForm.endDate} onChange={(e) => setLeaveForm({ ...leaveForm, endDate: e.target.value })} />
               </Form.Group>
             </Col>
           </Row>
           <Form.Group className="mb-3">
-            <Form.Label>Type</Form.Label>
+            <Form.Label>{t('student.dashboard.leave_type')}</Form.Label>
             <Form.Select value={leaveForm.leaveType} onChange={(e) => setLeaveForm({ ...leaveForm, leaveType: e.target.value })}>
-              <option value="PRIVILEGE">Privilege</option>
-              <option value="SICK">Sick</option>
-              <option value="OTHER">Other</option>
+              <option value="PRIVILEGE">{t('teacher.dashboard.privilege')}</option>
+              <option value="SICK">{t('teacher.dashboard.sick')}</option>
+              <option value="OTHER">{t('student.dashboard.other')}</option>
             </Form.Select>
           </Form.Group>
           <Form.Group className="mb-3">
-            <Form.Label>Reason</Form.Label>
+            <Form.Label>{t('student.dashboard.reason')}</Form.Label>
             <Form.Control as="textarea" rows={3} value={leaveForm.reason} onChange={(e) => setLeaveForm({ ...leaveForm, reason: e.target.value })} />
           </Form.Group>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowLeaveModal(false)}>Cancel</Button>
+          <Button variant="secondary" onClick={() => setShowLeaveModal(false)}>{t('common.cancel')}</Button>
           <Button variant="primary" onClick={async () => {
             try {
               setLeaveError('');
@@ -494,7 +496,7 @@ export const TeacherDashboard: React.FC = () => {
             } catch (e: any) {
               setLeaveError(e?.response?.data?.message || 'Failed to apply for leave');
             }
-          }}>Submit</Button>
+          }}>{t('common.submit')}</Button>
         </Modal.Footer>
       </Modal>
     </Layout>

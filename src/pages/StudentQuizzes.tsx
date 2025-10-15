@@ -106,7 +106,7 @@ export const StudentQuizzes: React.FC = () => {
         if (timerRef.current) window.clearInterval(timerRef.current);
         // If the timer was already expired at start, do NOT auto-submit empty answers
         if (!hadPositiveTimeRef.current) {
-          setError('This attempt appears to have already expired. Please try starting the quiz again.');
+          setError(t('student.quizzes.expired'));
           setCurrent(null);
           setAnswers({});
           return;
@@ -169,7 +169,7 @@ export const StudentQuizzes: React.FC = () => {
       const score = res?.score ?? 0;
       const total = res?.totalPoints ?? 0;
       const passed = res?.passed;
-      setSuccess(`Submitted. Score: ${score}/${total}${passed !== undefined ? passed ? ' (Passed)' : ' (Failed)' : ''}`);
+      setSuccess(`Submitted. Score: ${score}/${total}${passed !== undefined ? (passed ? ` (${t('result.passed')})` : ` (${t('result.failed')})`) : ''}`);
       setCurrent(null);
       setAnswers({});
       // Refresh list
@@ -193,8 +193,8 @@ export const StudentQuizzes: React.FC = () => {
         </Col>
         <Col md={10}>
           <div className="mb-4">
-            <h2>Quizzes & Tests</h2>
-            <p className="text-muted">Start and submit your online quizzes and tests</p>
+            <h2>{t('student.quizzes.title')}</h2>
+            <p className="text-muted">{t('student.quizzes.subtitle')}</p>
           </div>
 
           {error && <Alert variant="danger" dismissible onClose={() => setError('')}>{error}</Alert>}
@@ -210,12 +210,12 @@ export const StudentQuizzes: React.FC = () => {
                 <Table responsive hover>
                   <thead>
                     <tr>
-                      <th>Title</th>
-                      <th>Subject</th>
-                      <th>Type</th>
-                      <th>Due</th>
-                      <th>Attempts</th>
-                      <th>Action</th>
+                      <th>{t('table.title')}</th>
+                      <th>{t('table.subject')}</th>
+                      <th>{t('student.quizzes.type')}</th>
+                      <th>{t('student.quizzes.due')}</th>
+                      <th>{t('student.quizzes.attempts')}</th>
+                      <th>{t('table.action')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -224,7 +224,7 @@ export const StudentQuizzes: React.FC = () => {
                       const max = q.maxAttempts ?? null;
                       const attemptText = max ? `${attempts}/${max}` : `${attempts}`;
                       const reachedMax = max !== null && attempts >= max;
-                      const actionLabel = attempts > 0 && !reachedMax ? 'Re-attempt' : 'Start';
+                      const actionLabel = attempts > 0 && !reachedMax ? t('student.quizzes.reattempt') : t('student.quizzes.start');
                       return (
                         <tr key={q.id}>
                           <td><strong>{q.title}</strong></td>
@@ -239,7 +239,7 @@ export const StudentQuizzes: React.FC = () => {
                               </Button>
                               {attempts > 0 && (
                                 <Button size="sm" variant="outline-secondary" onClick={() => openResults(q)}>
-                                  <i className="bi bi-clipboard-data me-1"></i> View Results
+                                  <i className="bi bi-clipboard-data me-1"></i> {t('student.quizzes.view_results')}
                                 </Button>
                               )}
                             </div>
@@ -263,7 +263,7 @@ export const StudentQuizzes: React.FC = () => {
                 <div>
                   {remainingSeconds !== null && (
                     <div className="text-end">
-                      <div className="small text-muted">Time Remaining</div>
+                      <div className="small text-muted">{t('student.quizzes.time_remaining')}</div>
                       <h5 className={remainingSeconds <= 30 ? 'text-danger mb-0' : 'mb-0'}>
                         {Math.floor(remainingSeconds / 60)}:{String(remainingSeconds % 60).padStart(2, '0')}
                       </h5>
@@ -286,7 +286,7 @@ export const StudentQuizzes: React.FC = () => {
                               <div className="mb-2"><img src={q.imageUrl} alt="question" style={{ maxWidth: '100%', borderRadius: 6 }} /></div>
                             )}
                           </div>
-                          <Badge bg={isMCQ ? 'warning' : 'info'}>{isMCQ ? 'MCQ' : 'SCQ'}</Badge>
+                          <Badge bg={isMCQ ? 'warning' : 'info'}>{isMCQ ? t('student.quizzes.mcq') : t('student.quizzes.scq')}</Badge>
                         </div>
                         <div className="mt-2">
                           <Row>
@@ -309,9 +309,9 @@ export const StudentQuizzes: React.FC = () => {
                   );
                 })}
                 <div className="d-flex justify-content-end gap-2">
-                  <Button variant="secondary" onClick={() => setCurrent(null)}>Cancel</Button>
+                  <Button variant="secondary" onClick={() => setCurrent(null)}>{t('student.quizzes.cancel')}</Button>
                   <Button variant="primary" onClick={handleSubmit} disabled={loading}>
-                    <i className="bi bi-check2-circle me-1"></i> Submit
+                    <i className="bi bi-check2-circle me-1"></i> {t('student.quizzes.submit')}
                   </Button>
                 </div>
               </Card.Body>
@@ -344,7 +344,7 @@ export const StudentQuizzes: React.FC = () => {
                   </Col>
                   <Col md={4} className="text-end">
                     <Badge bg={resultsModal.stats.myPercentage >= (resultsModal.quiz?.quizConfig?.passingMarks ? (100 * resultsModal.quiz.quizConfig.passingMarks) / (resultsModal.stats.totalPoints || 1) : 0) ? 'success' : 'danger'}>
-                      {resultsModal.stats.myPercentage >= (resultsModal.quiz?.quizConfig?.passingMarks ? (100 * resultsModal.quiz.quizConfig.passingMarks) / (resultsModal.stats.totalPoints || 1) : 0) ? 'Passed' : 'Failed'}
+                      {resultsModal.stats.myPercentage >= (resultsModal.quiz?.quizConfig?.passingMarks ? (100 * resultsModal.quiz.quizConfig.passingMarks) / (resultsModal.stats.totalPoints || 1) : 0) ? t('result.passed') : t('result.failed')}
                     </Badge>
                   </Col>
                 </Row>
@@ -353,7 +353,7 @@ export const StudentQuizzes: React.FC = () => {
           )}
 
           {resultsModal.rows.length === 0 ? (
-            <div className="text-muted">No attempts found.</div>
+            <div className="text-muted">{t('student.quizzes.no_attempts')}</div>
           ) : (
             <Table responsive size="sm">
               <thead>
@@ -369,7 +369,7 @@ export const StudentQuizzes: React.FC = () => {
                   <tr key={i}>
                     <td>#{r.attemptNo}</td>
                     <td><strong>{r.score}</strong> / {r.totalPoints}</td>
-                    <td>{r.passed === undefined ? '-' : r.passed ? <Badge bg="success">Passed</Badge> : <Badge bg="danger">Failed</Badge>}</td>
+                    <td>{r.passed === undefined ? '-' : r.passed ? <Badge bg="success">{t('result.passed')}</Badge> : <Badge bg="danger">{t('result.failed')}</Badge>}</td>
                     <td>{r.submittedAt ? new Date(r.submittedAt as any).toLocaleString() : '-'}</td>
                   </tr>
                 ))}

@@ -5,6 +5,7 @@ import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
 import { parentService } from '../services/parentService';
 import { useNavigate } from 'react-router-dom';
+import { useLang } from '../contexts/LangContext';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -18,6 +19,7 @@ const sidebarItems = [
 export const ParentDashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { t } = useLang();
   const [children, setChildren] = useState<Array<{
     id: string;
     name: string;
@@ -154,8 +156,8 @@ export const ParentDashboard: React.FC = () => {
         </Col>
         <Col md={10}>
           <div className="mb-4">
-            <h2>Parent Dashboard</h2>
-            <p className="text-muted">Welcome, {user?.firstName}! Track your children's progress.</p>
+            <h2>{t('parent.dashboard.title')}</h2>
+            <p className="text-muted">{t('parent.dashboard.welcome').replace('{name}', user?.firstName || '')}</p>
           </div>
 
           {error && (
@@ -184,14 +186,14 @@ export const ParentDashboard: React.FC = () => {
                         <div className="text-center p-3 bg-light rounded">
                           <i className="bi bi-calendar-check fs-3 text-success mb-2"></i>
                           <h4 className="mb-0">{child.attendance}%</h4>
-                          <small className="text-muted">Attendance</small>
+                          <small className="text-muted">{t('parent.dashboard.attendance')}</small>
                         </div>
                       </Col>
                       <Col xs={6}>
                         <div className="text-center p-3 bg-light rounded">
                           <i className="bi bi-star fs-3 text-primary mb-2"></i>
                           <h4 className="mb-0">{child.averageGrade}%</h4>
-                          <small className="text-muted">Average Grade</small>
+                          <small className="text-muted">{t('parent.dashboard.average_grade')}</small>
                         </div>
                       </Col>
                     </Row>
@@ -201,7 +203,7 @@ export const ParentDashboard: React.FC = () => {
                           <i className="bi bi-clipboard-check text-info me-2"></i>
                           <div>
                             <strong>{child.upcomingExams}</strong>
-                            <small className="d-block text-muted">Upcoming Exams</small>
+                            <small className="d-block text-muted">{t('parent.dashboard.upcoming_exams')}</small>
                           </div>
                         </div>
                       </Col>
@@ -210,7 +212,7 @@ export const ParentDashboard: React.FC = () => {
                           <i className={`bi bi-cash text-${child.pendingFees > 0 ? 'danger' : 'success'} me-2`}></i>
                           <div>
                             <strong>₹{child.pendingFees}</strong>
-                            <small className="d-block text-muted">Pending Fees</small>
+                            <small className="d-block text-muted">{t('parent.dashboard.pending_fees')}</small>
                           </div>
                         </div>
                       </Col>
@@ -218,7 +220,7 @@ export const ParentDashboard: React.FC = () => {
                   </Card.Body>
                   <Card.Footer className="bg-white">
                     <Button variant="outline-primary" size="sm" className="w-100" onClick={() => navigate(`/parent/attendance?child=${child.id}`)}>
-                      View Details
+                      {t('parent.dashboard.view_details')}
                     </Button>
                   </Card.Footer>
                 </Card>
@@ -231,12 +233,12 @@ export const ParentDashboard: React.FC = () => {
             <Col md={8} className="mb-3">
               <Card className="border-0 shadow-sm h-100">
                 <Card.Header className="bg-white d-flex justify-content-between align-items-center">
-                  <h5 className="mb-0">Recent Activities</h5>
-                  <Button variant="link" size="sm">View All</Button>
+                  <h5 className="mb-0">{t('parent.dashboard.recent_activities')}</h5>
+                  <Button variant="link" size="sm">{t('common.view_all')}</Button>
                 </Card.Header>
                 <Card.Body className="p-0">
                   {recentActivities.length === 0 ? (
-                    <div className="text-center text-muted py-4">No recent activities</div>
+                    <div className="text-center text-muted py-4">{t('parent.dashboard.no_recent_activities')}</div>
                   ) : (
                     <ListGroup variant="flush">
                       {recentActivities.map((activity, index) => (
@@ -265,11 +267,11 @@ export const ParentDashboard: React.FC = () => {
             <Col md={4} className="mb-3">
               <Card className="border-0 shadow-sm h-100">
                 <Card.Header className="bg-white">
-                  <h5 className="mb-0">Pending Leave Approvals</h5>
+                  <h5 className="mb-0">{t('parent.dashboard.pending_leave_approvals')}</h5>
                 </Card.Header>
                 <Card.Body className="p-0">
                   {pendingLeaves.length === 0 ? (
-                    <div className="text-center text-muted py-4">No pending requests</div>
+                    <div className="text-center text-muted py-4">{t('parent.dashboard.no_pending_requests')}</div>
                   ) : (
                     <ListGroup variant="flush">
                       {pendingLeaves.map((l: any) => (
@@ -301,11 +303,11 @@ export const ParentDashboard: React.FC = () => {
             <Col md={4} className="mb-3">
               <Card className="border-0 shadow-sm h-100">
                 <Card.Header className="bg-white">
-                  <h5 className="mb-0">Upcoming Events</h5>
+                  <h5 className="mb-0">{t('parent.dashboard.upcoming_events')}</h5>
                 </Card.Header>
                 <Card.Body className="p-0">
                   {upcomingEvents.length === 0 ? (
-                    <div className="text-center text-muted py-4">No upcoming events</div>
+                    <div className="text-center text-muted py-4">{t('parent.dashboard.no_upcoming_events')}</div>
                   ) : (
                     <ListGroup variant="flush">
                       {upcomingEvents.map((event, index) => (
@@ -336,7 +338,7 @@ export const ParentDashboard: React.FC = () => {
             <Col md={12}>
               <Card className="border-0 shadow-sm">
                 <Card.Header className="bg-white">
-                  <h5 className="mb-0">Children Performance Comparison</h5>
+                  <h5 className="mb-0">{t('parent.dashboard.children_performance_comparison')}</h5>
                 </Card.Header>
                 <Card.Body>
                   {children.map((child) => (

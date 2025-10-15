@@ -234,9 +234,9 @@ export const ParentPerformance: React.FC = () => {
                             <td>{q.percentage != null ? `${q.percentage}%` : '-'}</td>
                             <td>
                               {q.passed === undefined ? '-' : q.passed ? (
-                                <Badge bg="success"><i className="bi bi-trophy-fill me-1"></i>Passed</Badge>
+                                <Badge bg="success"><i className="bi bi-trophy-fill me-1"></i>{t('result.passed')}</Badge>
                               ) : (
-                                <Badge bg="danger">Failed</Badge>
+                                <Badge bg="danger">{t('result.failed')}</Badge>
                               )}
                             </td>
                           </tr>
