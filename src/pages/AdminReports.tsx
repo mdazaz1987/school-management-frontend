@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Row, Col, Card, Form, Button, Table, Alert } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import reportService from '../services/reportService';
 import { useLang } from '../contexts/LangContext';
+import { classService } from '../services/classService';
+import { schoolService } from '../services/schoolService';
+import { School, SchoolClass } from '../types';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -27,9 +30,26 @@ export const AdminReports: React.FC = () => {
   const [teacherStats, setTeacherStats] = useState<any | null>(null);
   const [financeSummary, setFinanceSummary] = useState<any | null>(null);
 
+  const [classes, setClasses] = useState<SchoolClass[]>([]);
+  const [schools, setSchools] = useState<School[]>([]);
+
   const onChange = (set: any) => (e: React.ChangeEvent<HTMLInputElement>) => {
     set((prev: any) => ({ ...prev, [e.target.name]: e.target.value }));
   };
+
+  useEffect(() => {
+    const init = async () => {
+      try {
+        const [cls, sch] = await Promise.all([
+          classService.getAllClasses().catch(() => []),
+          schoolService.list().catch(() => []),
+        ]);
+        setClasses(cls || []);
+        setSchools(sch || []);
+      } catch {}
+    };
+    init();
+  }, []);
 
   const fetchClassStats = async () => {
     setLoading(true); setError('');
@@ -37,7 +57,7 @@ export const AdminReports: React.FC = () => {
       const data = await reportService.getClassStats(classParams);
       setClassStats(data);
     } catch (e: any) {
-      setError(e?.response?.data?.message || 'Failed to fetch class stats');
+      setError(e?.response?.data?.message || t('error.failed_to_fetch_class_stats'));
     } finally {
       setLoading(false);
     }
@@ -49,7 +69,7 @@ export const AdminReports: React.FC = () => {
       const data = await reportService.getTeacherStats(teacherParams);
       setTeacherStats(data);
     } catch (e: any) {
-      setError(e?.response?.data?.message || 'Failed to fetch teacher stats');
+      setError(e?.response?.data?.message || t('error.failed_to_fetch_teacher_stats'));
     } finally {
       setLoading(false);
     }
@@ -61,7 +81,7 @@ export const AdminReports: React.FC = () => {
       const data = await reportService.getFinanceSummary(financeParams);
       setFinanceSummary(data);
     } catch (e: any) {
-      setError(e?.response?.data?.message || 'Failed to fetch finance summary');
+      setError(e?.response?.data?.message || t('error.failed_to_fetch_finance_summary'));
     } finally {
       setLoading(false);
     }
@@ -76,7 +96,7 @@ export const AdminReports: React.FC = () => {
         <Col md={10}>
           <div className="mb-4">
             <h2>{t('nav.admin_reports')}</h2>
-            <p className="text-muted">Download Class, Teacher and Finance summaries (CSV). Excel/PDF coming next.</p>
+            <p className="text-muted">{t('admin.reports.subtitle')}</p>
           </div>
 
           {error && <Alert variant="danger" onClose={() => setError('')} dismissible>{error}</Alert>}
@@ -84,14 +104,24 @@ export const AdminReports: React.FC = () => {
           <Row>
             <Col md={12} className="mb-4">
               <Card className="border-0 shadow-sm">
-                <Card.Header className="bg-white"><strong>Class-wise Statistics</strong></Card.Header>
+                <Card.Header className="bg-white"><strong>{t('admin.reports.class_stats')}</strong></Card.Header>
                 <Card.Body>
                   <Row className="g-3">
                     <Col md={3}>
-                      <Form.Control name="classId" placeholder="Class ID" value={classParams.classId} onChange={onChange(setClassParams)} />
+                      <Form.Select name="classId" value={classParams.classId} onChange={(e) => setClassParams(prev => ({ ...prev, classId: e.target.value }))}>
+                        <option value="">{t('admin.reports.select_class')}</option>
+                        {(classes || []).filter(c => !classParams.schoolId || c.schoolId === classParams.schoolId).map((c) => (
+                          <option key={c.id} value={c.id}>{c.className || c.name || c.id}</option>
+                        ))}
+                      </Form.Select>
                     </Col>
                     <Col md={3}>
-                      <Form.Control name="schoolId" placeholder="School ID (optional)" value={classParams.schoolId || ''} onChange={onChange(setClassParams)} />
+                      <Form.Select name="schoolId" value={classParams.schoolId || ''} onChange={(e) => setClassParams(prev => ({ ...prev, schoolId: e.target.value }))}>
+                        <option value="">{t('admin.reports.select_school')}</option>
+                        {(schools || []).map((s) => (
+                          <option key={s.id} value={s.id}>{s.name || s.id}</option>
+                        ))}
+                      </Form.Select>
                     </Col>
                     <Col md={3}>
                       <Form.Control type="date" name="from" value={classParams.from || ''} onChange={onChange(setClassParams)} />
@@ -101,8 +131,8 @@ export const AdminReports: React.FC = () => {
                     </Col>
                   </Row>
                   <div className="d-flex gap-2 mt-3">
-                    <Button onClick={fetchClassStats} disabled={loading || !classParams.classId}>Fetch</Button>
-                    <Button variant="outline-secondary" onClick={() => reportService.downloadClassStatsCsv(classParams)} disabled={!classParams.classId}>Download CSV</Button>
+                    <Button onClick={fetchClassStats} disabled={loading || !classParams.classId}>{t('common.fetch')}</Button>
+                    <Button variant="outline-secondary" onClick={() => reportService.downloadClassStatsCsv(classParams)} disabled={!classParams.classId}>{t('common.download_csv')}</Button>
                   </div>
                   {classStats && (
                     <div className="mt-3">
@@ -121,14 +151,19 @@ export const AdminReports: React.FC = () => {
 
             <Col md={12} className="mb-4">
               <Card className="border-0 shadow-sm">
-                <Card.Header className="bg-white"><strong>Teacher Report</strong></Card.Header>
+                <Card.Header className="bg-white"><strong>{t('admin.reports.teacher_report')}</strong></Card.Header>
                 <Card.Body>
                   <Row className="g-3">
                     <Col md={3}>
-                      <Form.Control name="teacherId" placeholder="Teacher ID" value={teacherParams.teacherId} onChange={onChange(setTeacherParams)} />
+                      <Form.Control name="teacherId" placeholder={t('admin.reports.teacher_id_placeholder')} value={teacherParams.teacherId} onChange={onChange(setTeacherParams)} />
                     </Col>
                     <Col md={3}>
-                      <Form.Control name="schoolId" placeholder="School ID (optional)" value={teacherParams.schoolId || ''} onChange={onChange(setTeacherParams)} />
+                      <Form.Select name="schoolId" value={teacherParams.schoolId || ''} onChange={(e) => setTeacherParams(prev => ({ ...prev, schoolId: e.target.value }))}>
+                        <option value="">{t('admin.reports.select_school')}</option>
+                        {(schools || []).map((s) => (
+                          <option key={s.id} value={s.id}>{s.name || s.id}</option>
+                        ))}
+                      </Form.Select>
                     </Col>
                     <Col md={3}>
                       <Form.Control type="date" name="from" value={teacherParams.from || ''} onChange={onChange(setTeacherParams)} />
@@ -138,8 +173,8 @@ export const AdminReports: React.FC = () => {
                     </Col>
                   </Row>
                   <div className="d-flex gap-2 mt-3">
-                    <Button onClick={fetchTeacherStats} disabled={loading || !teacherParams.teacherId}>Fetch</Button>
-                    <Button variant="outline-secondary" onClick={() => reportService.downloadTeacherStatsCsv(teacherParams)} disabled={!teacherParams.teacherId}>Download CSV</Button>
+                    <Button onClick={fetchTeacherStats} disabled={loading || !teacherParams.teacherId}>{t('common.fetch')}</Button>
+                    <Button variant="outline-secondary" onClick={() => reportService.downloadTeacherStatsCsv(teacherParams)} disabled={!teacherParams.teacherId}>{t('common.download_csv')}</Button>
                   </div>
                   {teacherStats && (
                     <div className="mt-3">
@@ -158,11 +193,16 @@ export const AdminReports: React.FC = () => {
 
             <Col md={12} className="mb-4">
               <Card className="border-0 shadow-sm">
-                <Card.Header className="bg-white"><strong>Finance Summary</strong></Card.Header>
+                <Card.Header className="bg-white"><strong>{t('admin.reports.finance_summary')}</strong></Card.Header>
                 <Card.Body>
                   <Row className="g-3">
                     <Col md={4}>
-                      <Form.Control name="schoolId" placeholder="School ID" value={financeParams.schoolId} onChange={onChange(setFinanceParams)} />
+                      <Form.Select name="schoolId" value={financeParams.schoolId} onChange={(e) => setFinanceParams(prev => ({ ...prev, schoolId: e.target.value }))}>
+                        <option value="">{t('admin.reports.select_school')}</option>
+                        {(schools || []).map((s) => (
+                          <option key={s.id} value={s.id}>{s.name || s.id}</option>
+                        ))}
+                      </Form.Select>
                     </Col>
                     <Col md={4}>
                       <Form.Control type="date" name="from" value={financeParams.from || ''} onChange={onChange(setFinanceParams)} />
@@ -172,8 +212,8 @@ export const AdminReports: React.FC = () => {
                     </Col>
                   </Row>
                   <div className="d-flex gap-2 mt-3">
-                    <Button onClick={fetchFinanceSummary} disabled={loading || !financeParams.schoolId}>Fetch</Button>
-                    <Button variant="outline-secondary" onClick={() => reportService.downloadFinanceSummaryCsv(financeParams)} disabled={!financeParams.schoolId}>Download CSV</Button>
+                    <Button onClick={fetchFinanceSummary} disabled={loading || !financeParams.schoolId}>{t('common.fetch')}</Button>
+                    <Button variant="outline-secondary" onClick={() => reportService.downloadFinanceSummaryCsv(financeParams)} disabled={!financeParams.schoolId}>{t('common.download_csv')}</Button>
                   </div>
                   {financeSummary && (
                     <div className="mt-3">

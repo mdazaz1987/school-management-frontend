@@ -19,6 +19,10 @@ const en: Dict = {
   'common.apply_leave': 'Apply for Leave',
   'common.details': 'View Details',
   'common.days': 'days',
+  'common.fetch': 'Fetch',
+  'common.download_csv': 'Download CSV',
+  'common.add': 'Add',
+  'common.remove': 'Remove',
 
   // Table headers (generic)
   'table.assignment': 'Assignment',
@@ -33,6 +37,9 @@ const en: Dict = {
   'status.late': 'Late',
   'status.excused': 'Excused',
   'status.half_day': 'Half Day',
+  'status.graded': 'Graded',
+  'status.submitted': 'Submitted',
+  'status.pending': 'Pending',
 
   // Timetable
   'timetable.break': 'Break',
@@ -88,6 +95,12 @@ const en: Dict = {
   'teacher.dashboard.leave_submitted': 'Leave application submitted',
   'teacher.dashboard.select_dates': 'Please select start and end dates',
 
+  'settings.school.holidays.title': 'Holidays',
+  'settings.school.holidays.populate_defaults': 'Populate default Indian Holidays',
+  'settings.school.leave_policy.title': 'Teacher Leave Policy',
+  'settings.school.leave_policy.privilege_per_year': 'Privilege per year',
+  'settings.school.leave_policy.sick_per_year': 'Sick per year',
+
   // Parent Dashboard
   'parent.dashboard.title': 'Parent Dashboard',
   'parent.dashboard.welcome': "Welcome, {name}! Track your children's progress.",
@@ -116,6 +129,11 @@ const en: Dict = {
   'error.failed_to_submit_quiz': 'Failed to submit quiz',
   'error.failed_to_approve_leave': 'Failed to approve leave',
   'error.failed_to_reject_leave': 'Failed to reject leave',
+  'error.failed_to_fetch_class_stats': 'Failed to fetch class stats',
+  'error.failed_to_fetch_teacher_stats': 'Failed to fetch teacher stats',
+  'error.failed_to_fetch_finance_summary': 'Failed to fetch finance summary',
+  'error.failed_to_load_children': 'Failed to load children',
+  'error.failed_to_load_performance': 'Failed to load performance',
 
   'time.just_now': 'Just now',
   'time.mins_ago': '{mins} mins ago',
@@ -151,6 +169,18 @@ const en: Dict = {
   'nav.finance_tools': 'Finance Tools',
   'nav.notification_tools': 'Notification Tools',
   'nav.admin_reports': 'Admin Reports',
+
+  'admin.reports.subtitle': 'Download Class, Teacher and Finance summaries (CSV). Excel/PDF coming next.',
+  'admin.reports.class_stats': 'Class-wise Statistics',
+  'admin.reports.teacher_report': 'Teacher Report',
+  'admin.reports.finance_summary': 'Finance Summary',
+  'admin.reports.select_class': 'Select Class',
+  'admin.reports.select_school': 'Select School',
+  'admin.reports.teacher_id_placeholder': 'Teacher ID',
+
+  'parent.performance.rating.excellent': 'Excellent',
+  'parent.performance.rating.good': 'Good',
+  'parent.performance.rating.needs_attention': 'Needs Attention',
 
   'parent.performance.title': 'Academic Performance',
   'parent.performance.subtitle': "Track your children's academic progress",
@@ -231,6 +261,10 @@ const hi: Dict = {
   'common.apply_leave': 'छुट्टी के लिए आवेदन करें',
   'common.details': 'विवरण देखें',
   'common.days': 'दिन',
+  'common.fetch': 'प्राप्त करें',
+  'common.download_csv': 'CSV डाउनलोड करें',
+  'common.add': 'जोड़ें',
+  'common.remove': 'हटाएं',
 
   // Table headers (generic)
   'table.assignment': 'असाइनमेंट',
@@ -245,6 +279,9 @@ const hi: Dict = {
   'status.late': 'देर',
   'status.excused': 'माफ',
   'status.half_day': 'आधा दिन',
+  'status.graded': 'मूल्यांकित',
+  'status.submitted': 'जमा किया',
+  'status.pending': 'लंबित',
 
   // Timetable
   'timetable.break': 'विराम',
@@ -300,6 +337,12 @@ const hi: Dict = {
   'teacher.dashboard.leave_submitted': 'छुट्टी आवेदन जमा किया गया',
   'teacher.dashboard.select_dates': 'कृपया प्रारंभ और समाप्ति तिथियाँ चुनें',
 
+  'settings.school.holidays.title': 'अवकाश',
+  'settings.school.holidays.populate_defaults': 'डिफ़ॉल्ट भारतीय अवकाश जोड़ें',
+  'settings.school.leave_policy.title': 'शिक्षक अवकाश नीति',
+  'settings.school.leave_policy.privilege_per_year': 'प्रति वर्ष विशेषाधिकार',
+  'settings.school.leave_policy.sick_per_year': 'प्रति वर्ष बीमारी',
+
   // Parent Dashboard
   'parent.dashboard.title': 'अभिभावक डैशबोर्ड',
   'parent.dashboard.welcome': 'स्वागत है, {name}! बच्चों की प्रगति देखें।',
@@ -328,6 +371,11 @@ const hi: Dict = {
   'error.failed_to_submit_quiz': 'क्विज़ जमा करने में विफल',
   'error.failed_to_approve_leave': 'छुट्टी स्वीकृत करने में विफल',
   'error.failed_to_reject_leave': 'छुट्टी अस्वीकार करने में विफल',
+  'error.failed_to_fetch_class_stats': 'कक्षा आँकड़े प्राप्त करने में विफल',
+  'error.failed_to_fetch_teacher_stats': 'शिक्षक आँकड़े प्राप्त करने में विफल',
+  'error.failed_to_fetch_finance_summary': 'वित्त सारांश प्राप्त करने में विफल',
+  'error.failed_to_load_children': 'बच्चों को लोड करने में विफल',
+  'error.failed_to_load_performance': 'प्रदर्शन लोड करने में विफल',
 
   'time.just_now': 'अभी',
   'time.mins_ago': '{mins} मिनट पहले',
@@ -363,6 +411,17 @@ const hi: Dict = {
   'nav.finance_tools': 'वित्त उपकरण',
   'nav.notification_tools': 'सूचना उपकरण',
   'nav.admin_reports': 'एडमिन रिपोर्ट्स',
+
+  'admin.reports.subtitle': 'कक्षा, शिक्षक और वित्त सारांश (CSV) डाउनलोड करें। एक्सेल/पीडीएफ जल्द ही।',
+  'admin.reports.class_stats': 'कक्षा-वार सांख्यिकी',
+  'admin.reports.teacher_report': 'शिक्षक रिपोर्ट',
+  'admin.reports.finance_summary': 'वित्त सारांश',
+  'admin.reports.select_class': 'कक्षा चुनें',
+  'admin.reports.select_school': 'स्कूल चुनें',
+  'admin.reports.teacher_id_placeholder': 'शिक्षक ID',
+  'parent.performance.rating.excellent': 'उत्कृष्ट',
+  'parent.performance.rating.good': 'अच्छा',
+  'parent.performance.rating.needs_attention': 'ध्यान आवश्यक',
 
   'parent.performance.title': 'शैक्षणिक प्रदर्शन',
   'parent.performance.subtitle': 'अपने बच्चों की प्रगति देखें',
@@ -443,6 +502,10 @@ const ur: Dict = {
   'common.apply_leave': 'چھٹی کی درخواست',
   'common.details': 'تفصیلات دیکھیں',
   'common.days': 'دن',
+  'common.fetch': 'حاصل کریں',
+  'common.download_csv': 'CSV ڈاؤن لوڈ کریں',
+  'common.add': 'شامل کریں',
+  'common.remove': 'ہٹائیں',
 
   // Table headers (generic)
   'table.assignment': 'اسائنمنٹ',
@@ -512,6 +575,12 @@ const ur: Dict = {
   'teacher.dashboard.leave_submitted': 'چھٹی کی درخواست جمع ہو گئی',
   'teacher.dashboard.select_dates': 'براہ کرم آغاز اور اختتامی تاریخیں منتخب کریں',
 
+  'settings.school.holidays.title': 'چھٹیاں',
+  'settings.school.holidays.populate_defaults': 'ڈिफالٹ بھارتی چھٹیاں شامل کریں',
+  'settings.school.leave_policy.title': 'اساتذہ کی چھٹی پالیسی',
+  'settings.school.leave_policy.privilege_per_year': 'فی سال خصوصی چھٹیاں',
+  'settings.school.leave_policy.sick_per_year': 'فی سال بیماری کی چھٹیاں',
+
   // Parent Dashboard
   'parent.dashboard.title': 'والدین ڈیش بورڈ',
   'parent.dashboard.welcome': 'خوش آمدید، {name}! بچوں کی کارکردگی دیکھیں۔',
@@ -540,6 +609,11 @@ const ur: Dict = {
   'error.failed_to_submit_quiz': 'کوئز جمع کرنے میں ناکامی',
   'error.failed_to_approve_leave': 'چھٹی منظور کرنے میں ناکامی',
   'error.failed_to_reject_leave': 'چھٹی مسترد کرنے میں ناکامی',
+  'error.failed_to_fetch_class_stats': 'کلاس کے اعدادوشمار حاصل کرنے میں ناکامی',
+  'error.failed_to_fetch_teacher_stats': 'استاد کے اعدادوشمار حاصل کرنے میں ناکامی',
+  'error.failed_to_fetch_finance_summary': 'مالی خلاصہ حاصل کرنے میں ناکامی',
+  'error.failed_to_load_children': 'بچوں کو لوڈ کرنے میں ناکامی',
+  'error.failed_to_load_performance': 'کارکردگی لوڈ کرنے میں ناکامی',
 
   'time.just_now': 'ابھی',
   'time.mins_ago': '{mins} منٹ پہلے',
@@ -575,6 +649,18 @@ const ur: Dict = {
   'nav.finance_tools': 'مالیاتی ٹولز',
   'nav.notification_tools': 'اطلاعی ٹولز',
   'nav.admin_reports': 'ایڈمن رپورٹس',
+
+  'admin.reports.subtitle': 'کلاس، استاد اور مالی خلاصے (CSV) ڈاؤن لوڈ کریں۔ ایکسل/پی ڈی ایف جلد آرہے ہیں۔',
+  'admin.reports.class_stats': 'کلاس وار اعدادوشمار',
+  'admin.reports.teacher_report': 'استاد رپورٹ',
+  'admin.reports.finance_summary': 'مالی خلاصہ',
+  'admin.reports.select_class': 'کلاس منتخب کریں',
+  'admin.reports.select_school': 'اسکول منتخب کریں',
+  'admin.reports.teacher_id_placeholder': 'استاد ID',
+
+  'parent.performance.rating.excellent': 'بہترین',
+  'parent.performance.rating.good': 'اچھا',
+  'parent.performance.rating.needs_attention': 'توجہ درکار ہے',
 
   'parent.performance.title': 'تعلیمی کارکردگی',
   'parent.performance.subtitle': 'اپنے بچوں کی کارکردگی دیکھیں',

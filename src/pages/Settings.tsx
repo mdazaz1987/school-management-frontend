@@ -8,11 +8,13 @@ import { schoolService } from '../services/schoolService';
 import { useTheme } from '../contexts/ThemeContext';
 import apiService, { resolveUrl } from '../services/api';
 import { useNavigate } from 'react-router-dom';
+import { useLang } from '../contexts/LangContext';
 
 export const Settings: React.FC = () => {
   const { user } = useAuth();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
+  const { t } = useLang();
   const isAdmin = useMemo(() => (user?.roles || []).some(r => r === 'ADMIN' || r === 'ROLE_ADMIN'), [user?.roles]);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [activeTab, setActiveTab] = useState<'password' | 'notifications' | 'preferences' | 'school' | 'email'>('password');
@@ -71,6 +73,8 @@ export const Settings: React.FC = () => {
   const [emailLoading, setEmailLoading] = useState(false);
   const [emailSaving, setEmailSaving] = useState(false);
   const [testEmail, setTestEmail] = useState('');
+
+  const [newHolidayDate, setNewHolidayDate] = useState('');
 
   useEffect(() => {
     // keep Settings theme in sync with global ThemeContext
@@ -1028,6 +1032,139 @@ export const Settings: React.FC = () => {
                               configuration: { ...(prev.configuration || {}), employeeIdFormat: e.target.value },
                             }))}
                             placeholder="e.g., EMP-{YYYY}-{SEQ}"
+                          />
+                        </Form.Group>
+                      </Col>
+                    </Row>
+
+                    <Row>
+                      <Col md={12}>
+                        <h5 className="mt-3">{t('settings.school.holidays.title')}</h5>
+                      </Col>
+                    </Row>
+                    <Row className="align-items-end">
+                      <Col md={4} className="mb-3">
+                        <Form.Group>
+                          <Form.Label>{t('settings.school.holidays.title')}</Form.Label>
+                          <Form.Control
+                            type="date"
+                            value={newHolidayDate}
+                            onChange={(e) => setNewHolidayDate(e.target.value)}
+                          />
+                        </Form.Group>
+                      </Col>
+                      <Col md={8} className="mb-3 d-flex gap-2">
+                        <Button
+                          variant="outline-primary"
+                          onClick={() => {
+                            if (!newHolidayDate) return;
+                            setSchool(prev => ({
+                              ...prev,
+                              configuration: {
+                                ...(prev.configuration || {}),
+                                holidays: Array.from(new Set([...(prev.configuration?.holidays || []), newHolidayDate])).sort(),
+                              },
+                            }));
+                            setNewHolidayDate('');
+                          }}
+                        >
+                          {t('common.add')}
+                        </Button>
+                        <Button
+                          variant="outline-secondary"
+                          onClick={() => {
+                            const y = new Date().getFullYear();
+                            const defaults = [
+                              `${y}-01-26`,
+                              `${y}-05-01`,
+                              `${y}-08-15`,
+                              `${y}-10-02`,
+                              `${y}-12-25`,
+                            ];
+                            setSchool(prev => ({
+                              ...prev,
+                              configuration: {
+                                ...(prev.configuration || {}),
+                                holidays: Array.from(new Set([...(prev.configuration?.holidays || []), ...defaults])).sort(),
+                              },
+                            }));
+                          }}
+                        >
+                          {t('settings.school.holidays.populate_defaults')}
+                        </Button>
+                      </Col>
+                    </Row>
+                    <Row>
+                      <Col md={12} className="mb-3">
+                        <div className="d-flex flex-wrap gap-2">
+                          {(school.configuration?.holidays || []).map((d) => (
+                            <div key={d} className="d-flex align-items-center border rounded px-2 py-1">
+                              <span className="me-2">{d}</span>
+                              <Button
+                                size="sm"
+                                variant="outline-danger"
+                                onClick={() => setSchool(prev => ({
+                                  ...prev,
+                                  configuration: {
+                                    ...(prev.configuration || {}),
+                                    holidays: (prev.configuration?.holidays || []).filter(x => x !== d),
+                                  },
+                                }))}
+                              >
+                                {t('common.remove')}
+                              </Button>
+                            </div>
+                          ))}
+                          {!(school.configuration?.holidays || []).length && (
+                            <div className="text-muted">—</div>
+                          )}
+                        </div>
+                      </Col>
+                    </Row>
+
+                    <Row>
+                      <Col md={12}>
+                        <h5 className="mt-3">{t('settings.school.leave_policy.title')}</h5>
+                      </Col>
+                    </Row>
+                    <Row>
+                      <Col md={6} className="mb-3">
+                        <Form.Group>
+                          <Form.Label>{t('settings.school.leave_policy.privilege_per_year')}</Form.Label>
+                          <Form.Control
+                            type="number"
+                            min={0}
+                            value={school.configuration?.teacherLeavePolicy?.privilegePerYear ?? ''}
+                            onChange={(e) => setSchool(prev => ({
+                              ...prev,
+                              configuration: {
+                                ...(prev.configuration || {}),
+                                teacherLeavePolicy: {
+                                  ...(prev.configuration?.teacherLeavePolicy || {}),
+                                  privilegePerYear: Math.max(0, parseInt(e.target.value || '0', 10)),
+                                },
+                              },
+                            }))}
+                          />
+                        </Form.Group>
+                      </Col>
+                      <Col md={6} className="mb-3">
+                        <Form.Group>
+                          <Form.Label>{t('settings.school.leave_policy.sick_per_year')}</Form.Label>
+                          <Form.Control
+                            type="number"
+                            min={0}
+                            value={school.configuration?.teacherLeavePolicy?.sickPerYear ?? ''}
+                            onChange={(e) => setSchool(prev => ({
+                              ...prev,
+                              configuration: {
+                                ...(prev.configuration || {}),
+                                teacherLeavePolicy: {
+                                  ...(prev.configuration?.teacherLeavePolicy || {}),
+                                  sickPerYear: Math.max(0, parseInt(e.target.value || '0', 10)),
+                                },
+                              },
+                            }))}
                           />
                         </Form.Group>
                       </Col>

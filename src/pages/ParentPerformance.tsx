@@ -34,7 +34,7 @@ export const ParentPerformance: React.FC = () => {
         setChildren(items);
         if (!selectedChild && items.length) setSelectedChild(items[0].id);
       } catch (e: any) {
-        setError(e?.response?.data?.message || 'Failed to load children');
+        setError(e?.response?.data?.message || t('error.failed_to_load_children'));
       } finally {
         setLoading(false);
       }
@@ -73,7 +73,7 @@ export const ParentPerformance: React.FC = () => {
         });
         setAssignments(mapped);
       } catch (e: any) {
-        setError(e?.response?.data?.message || 'Failed to load performance');
+        setError(e?.response?.data?.message || t('error.failed_to_load_performance'));
       } finally {
         setLoading(false);
       }
@@ -131,7 +131,7 @@ export const ParentPerformance: React.FC = () => {
               <Card className="border-0 shadow-sm text-center">
                 <Card.Body>
                   <i className="bi bi-graph-up fs-1 text-primary mb-2"></i>
-                  <h3>{overallPercentage >= 85 ? 'Excellent' : overallPercentage >= 70 ? 'Good' : 'Needs Attention'}</h3>
+                  <h3>{overallPercentage >= 85 ? t('parent.performance.rating.excellent') : overallPercentage >= 70 ? t('parent.performance.rating.good') : t('parent.performance.rating.needs_attention')}</h3>
                   <p className="text-muted mb-0">{t('parent.performance.progress')}</p>
                 </Card.Body>
               </Card>
@@ -157,7 +157,7 @@ export const ParentPerformance: React.FC = () => {
                                 </Badge>
                               </div>
                               <div className="d-flex justify-content-between mb-2">
-                                <span className="text-muted">Marks: {subject.obtained}/{subject.totalMarks}</span>
+                                <span className="text-muted">{t('table.marks')}: {subject.obtained}/{subject.totalMarks}</span>
                               </div>
                               <ProgressBar now={subject.percentage} variant={subject.percentage >= 85 ? 'success' : subject.percentage >= 70 ? 'primary' : 'warning'} />
                             </Card.Body>
@@ -192,7 +192,7 @@ export const ParentPerformance: React.FC = () => {
                             <td><Badge bg="secondary">{assignment.subject}</Badge></td>
                             <td>
                               <Badge bg={assignment.status === 'GRADED' ? 'success' : assignment.status === 'SUBMITTED' ? 'info' : 'warning'}>
-                                {assignment.status}
+                                {assignment.status === 'GRADED' ? t('status.graded') : assignment.status === 'SUBMITTED' ? t('status.submitted') : t('status.pending')}
                               </Badge>
                             </td>
                             <td>{assignment.marks || '-'}</td>
@@ -224,10 +224,10 @@ export const ParentPerformance: React.FC = () => {
                           <tr key={idx}>
                             <td>{q.title}</td>
                             <td><Badge bg="secondary">{q.subject}</Badge></td>
-                            <td><Badge bg={q.type === 'EXAM' ? 'warning' : 'info'}>{q.type}</Badge></td>
+                            <td><Badge bg={q.type === 'EXAM' ? 'warning' : 'info'}>{q.type === 'EXAM' ? t('table.exam') : t('table.quiz')}</Badge></td>
                             <td>
                               <Badge bg={q.status === 'GRADED' ? 'success' : q.status === 'SUBMITTED' ? 'info' : 'warning'}>
-                                {q.status}
+                                {q.status === 'GRADED' ? t('status.graded') : q.status === 'SUBMITTED' ? t('status.submitted') : t('status.pending')}
                               </Badge>
                             </td>
                             <td>{q.marks || '-'}</td>
