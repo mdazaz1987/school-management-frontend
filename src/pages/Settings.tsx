@@ -742,22 +742,22 @@ export const Settings: React.FC = () => {
                     <Row>
                       <Col md={6} className="mb-3">
                         <Form.Group>
-                          <Form.Label>School ID</Form.Label>
+                          <Form.Label>{t('settings.school.school_id_label')}</Form.Label>
                           <Form.Control
                             type="text"
                             value={school.id || user?.schoolId || ''}
                             onChange={(e) => setSchool((prev) => ({ ...prev, id: e.target.value }))}
                             disabled={!!school.id || !!user?.schoolId}
-                            placeholder="Enter unique school ID (e.g., SCH001)"
+                            placeholder={t('settings.school.school_id_placeholder')}
                           />
                           <Form.Text className="text-muted">
-                            School ID can only be set once during first-time configuration
+                            {t('settings.school.school_id_help')}
                           </Form.Text>
                         </Form.Group>
                       </Col>
                       <Col md={6} className="mb-3">
                         <Form.Group>
-                          <Form.Label>School Name</Form.Label>
+                          <Form.Label>{t('settings.school.school_name_label')}</Form.Label>
                           <Form.Control
                             type="text"
                             value={school.name || ''}
@@ -768,7 +768,7 @@ export const Settings: React.FC = () => {
                       </Col>
                       <Col md={6} className="mb-3">
                         <Form.Group>
-                          <Form.Label>Logo URL</Form.Label>
+                          <Form.Label>{t('settings.school.logo_url_label')}</Form.Label>
                           <Form.Control
                             type="text"
                             value={school.logo || ''}
@@ -782,7 +782,7 @@ export const Settings: React.FC = () => {
                     <Row>
                       <Col md={6} className="mb-3">
                         <Form.Group>
-                          <Form.Label>Principal Name (for receipts)</Form.Label>
+                          <Form.Label>{t('settings.school.principal_name_label')}</Form.Label>
                           <Form.Control
                             type="text"
                             value={school.configuration?.principalName || ''}
@@ -790,17 +790,17 @@ export const Settings: React.FC = () => {
                               ...prev,
                               configuration: { ...(prev.configuration || {}), principalName: e.target.value },
                             }))}
-                            placeholder="e.g., Dr. A. B. Principal"
+                            placeholder={t('settings.school.example.principal_name')}
                           />
                         </Form.Group>
                       </Col>
                       <Col md={6} className="mb-3">
                         <Form.Group>
-                          <Form.Label>Principal Signature</Form.Label>
+                          <Form.Label>{t('settings.school.principal_signature_label')}</Form.Label>
                           <div className="d-flex align-items-center gap-2">
                             <Form.Control
                               type="text"
-                              placeholder="Signature Image URL"
+                              placeholder={t('settings.school.principal_signature_placeholder')}
                               value={school.configuration?.principalSignatureUrl || ''}
                               onChange={(e) => setSchool(prev => ({
                                 ...prev,
@@ -821,10 +821,10 @@ export const Settings: React.FC = () => {
                                     ...prev,
                                     configuration: { ...(prev.configuration || {}), principalSignatureUrl: url },
                                   }));
-                                  setSaveMessage('Signature uploaded');
+                                  setSaveMessage(t('settings.school.signature_uploaded'));
                                   setTimeout(() => setSaveMessage(''), 2000);
                                 } catch (err: any) {
-                                  setErrorMessage(err.response?.data?.message || 'Upload failed');
+                                  setErrorMessage(err.response?.data?.message || t('error.upload_failed'));
                                   setTimeout(() => setErrorMessage(''), 3000);
                                 }
                               }}
@@ -832,7 +832,7 @@ export const Settings: React.FC = () => {
                           </div>
                           {school.configuration?.principalSignatureUrl && (
                             <div className="mt-2">
-                              <small className="text-muted d-block mb-1">Preview:</small>
+                              <small className="text-muted d-block mb-1">{t('settings.school.preview')}</small>
                               {/* preview image */}
                               <img
                                 src={resolveUrl(String(school.configuration?.principalSignatureUrl || ''))}
@@ -850,7 +850,7 @@ export const Settings: React.FC = () => {
                     <Row>
                       <Col md={6} className="mb-3">
                         <Form.Group>
-                          <Form.Label>Phone</Form.Label>
+                          <Form.Label>{t('settings.school.contact.phone_label')}</Form.Label>
                           <Form.Control
                             type="text"
                             value={school.contactInfo?.phone || ''}
@@ -863,7 +863,7 @@ export const Settings: React.FC = () => {
                       </Col>
                       <Col md={6} className="mb-3">
                         <Form.Group>
-                          <Form.Label>Email</Form.Label>
+                          <Form.Label>{t('settings.school.contact.email_label')}</Form.Label>
                           <Form.Control
                             type="email"
                             value={school.contactInfo?.email || ''}
@@ -879,7 +879,7 @@ export const Settings: React.FC = () => {
                     <Row>
                       <Col md={6} className="mb-3">
                         <Form.Group>
-                          <Form.Label>Website</Form.Label>
+                          <Form.Label>{t('settings.school.contact.website_label')}</Form.Label>
                           <Form.Control
                             type="text"
                             value={school.contactInfo?.website || ''}
@@ -892,7 +892,7 @@ export const Settings: React.FC = () => {
                       </Col>
                       <Col md={6} className="mb-3">
                         <Form.Group>
-                          <Form.Label>Address (Street)</Form.Label>
+                          <Form.Label>{t('settings.school.address.street_label')}</Form.Label>
                           <Form.Control
                             type="text"
                             value={school.address?.street || ''}
@@ -908,7 +908,7 @@ export const Settings: React.FC = () => {
                     <Row>
                       <Col md={4} className="mb-3">
                         <Form.Group>
-                          <Form.Label>City</Form.Label>
+                          <Form.Label>{t('settings.school.address.city_label')}</Form.Label>
                           <Form.Control
                             type="text"
                             value={school.address?.city || ''}
@@ -921,7 +921,7 @@ export const Settings: React.FC = () => {
                       </Col>
                       <Col md={4} className="mb-3">
                         <Form.Group>
-                          <Form.Label>State</Form.Label>
+                          <Form.Label>{t('settings.school.address.state_label')}</Form.Label>
                           <Form.Control
                             type="text"
                             value={school.address?.state || ''}
@@ -934,7 +934,7 @@ export const Settings: React.FC = () => {
                       </Col>
                       <Col md={4} className="mb-3">
                         <Form.Group>
-                          <Form.Label>Zip Code</Form.Label>
+                          <Form.Label>{t('settings.school.address.zip_label')}</Form.Label>
                           <Form.Control
                             type="text"
                             value={school.address?.zipCode || ''}
@@ -950,7 +950,7 @@ export const Settings: React.FC = () => {
                     <Row>
                       <Col md={3} className="mb-3">
                         <Form.Group>
-                          <Form.Label>Academic Year</Form.Label>
+                          <Form.Label>{t('settings.school.config.academic_year_label')}</Form.Label>
                           <Form.Control
                             type="text"
                             value={school.configuration?.academicYear || ''}
@@ -958,13 +958,13 @@ export const Settings: React.FC = () => {
                               ...prev,
                               configuration: { ...(prev.configuration || {}), academicYear: e.target.value },
                             }))}
-                            placeholder="e.g., 2025-2026"
+                            placeholder={t('settings.school.example.academic_year')}
                           />
                         </Form.Group>
                       </Col>
                       <Col md={3} className="mb-3">
                         <Form.Group>
-                          <Form.Label>Grade System</Form.Label>
+                          <Form.Label>{t('settings.school.config.grade_system_label')}</Form.Label>
                           <Form.Control
                             type="text"
                             value={school.configuration?.gradeSystem || ''}
@@ -972,13 +972,13 @@ export const Settings: React.FC = () => {
                               ...prev,
                               configuration: { ...(prev.configuration || {}), gradeSystem: e.target.value },
                             }))}
-                            placeholder="e.g., Percentage"
+                            placeholder={t('settings.school.example.grade_system')}
                           />
                         </Form.Group>
                       </Col>
                       <Col md={3} className="mb-3">
                         <Form.Group>
-                          <Form.Label>Currency</Form.Label>
+                          <Form.Label>{t('settings.school.config.currency_label')}</Form.Label>
                           <Form.Control
                             type="text"
                             value={school.configuration?.currency || ''}
@@ -986,13 +986,13 @@ export const Settings: React.FC = () => {
                               ...prev,
                               configuration: { ...(prev.configuration || {}), currency: e.target.value },
                             }))}
-                            placeholder="e.g., INR"
+                            placeholder={t('settings.school.example.currency')}
                           />
                         </Form.Group>
                       </Col>
                       <Col md={3} className="mb-3">
                         <Form.Group>
-                          <Form.Label>Timezone</Form.Label>
+                          <Form.Label>{t('settings.school.config.timezone_label')}</Form.Label>
                           <Form.Control
                             type="text"
                             value={school.configuration?.timezone || ''}
@@ -1000,7 +1000,7 @@ export const Settings: React.FC = () => {
                               ...prev,
                               configuration: { ...(prev.configuration || {}), timezone: e.target.value },
                             }))}
-                            placeholder="e.g., Asia/Kolkata"
+                            placeholder={t('settings.school.example.timezone')}
                           />
                         </Form.Group>
                       </Col>
@@ -1009,7 +1009,7 @@ export const Settings: React.FC = () => {
                     <Row>
                       <Col md={6} className="mb-3">
                         <Form.Group>
-                          <Form.Label>Default Student ID Format</Form.Label>
+                          <Form.Label>{t('settings.school.config.student_id_format_label')}</Form.Label>
                           <Form.Control
                             type="text"
                             value={(school.configuration as any)?.studentIdFormat || ''}
@@ -1017,13 +1017,13 @@ export const Settings: React.FC = () => {
                               ...prev,
                               configuration: { ...(prev.configuration || {}), studentIdFormat: e.target.value },
                             }))}
-                            placeholder="e.g., STU-{YYYY}-{SEQ}"
+                            placeholder={t('settings.school.example.student_id_format')}
                           />
                         </Form.Group>
                       </Col>
                       <Col md={6} className="mb-3">
                         <Form.Group>
-                          <Form.Label>Default Employee ID Format</Form.Label>
+                          <Form.Label>{t('settings.school.config.employee_id_format_label')}</Form.Label>
                           <Form.Control
                             type="text"
                             value={(school.configuration as any)?.employeeIdFormat || ''}
@@ -1031,7 +1031,7 @@ export const Settings: React.FC = () => {
                               ...prev,
                               configuration: { ...(prev.configuration || {}), employeeIdFormat: e.target.value },
                             }))}
-                            placeholder="e.g., EMP-{YYYY}-{SEQ}"
+                            placeholder={t('settings.school.example.employee_id_format')}
                           />
                         </Form.Group>
                       </Col>
@@ -1175,12 +1175,12 @@ export const Settings: React.FC = () => {
                         {schoolSaving ? (
                           <>
                             <Spinner size="sm" animation="border" className="me-2" />
-                            Saving...
+                            {t('common.saving')}
                           </>
                         ) : (
                           <>
                             <i className="bi bi-check-lg me-2"></i>
-                            Save
+                            {t('common.save')}
                           </>
                         )}
                       </Button>
