@@ -355,7 +355,7 @@ export const Settings: React.FC = () => {
                 <Card.Header className="bg-white d-flex justify-content-between align-items-center">
                   <h5 className="mb-0">
                     <i className="bi bi-envelope-paper me-2"></i>
-                    Email Configuration
+                    {t('settings.email.title')}
                   </h5>
                   {emailLoading && <Spinner animation="border" size="sm" />}
                 </Card.Header>
@@ -371,10 +371,10 @@ export const Settings: React.FC = () => {
                         const payload = { ...emailConfig };
                         const saved = await apiService.put(`/admin/schools/${user.schoolId}/email-config`, payload);
                         setEmailConfig(saved as any);
-                        setSaveMessage('Email configuration saved');
+                        setSaveMessage(t('settings.email.save_success'));
                         setTimeout(() => setSaveMessage(''), 3000);
                       } catch (err: any) {
-                        setErrorMessage(err.response?.data?.message || 'Failed to save email configuration');
+                        setErrorMessage(err.response?.data?.message || t('settings.email.save_failed'));
                       } finally {
                         setEmailSaving(false);
                       }
@@ -383,7 +383,7 @@ export const Settings: React.FC = () => {
                     <Row>
                       <Col md={6} className="mb-3">
                         <Form.Group>
-                          <Form.Label>SMTP Host</Form.Label>
+                          <Form.Label>{t('settings.email.smtp_host')}</Form.Label>
                           <Form.Control
                             type="text"
                             value={emailConfig.smtpHost || ''}
@@ -393,7 +393,7 @@ export const Settings: React.FC = () => {
                       </Col>
                       <Col md={3} className="mb-3">
                         <Form.Group>
-                          <Form.Label>SMTP Port</Form.Label>
+                          <Form.Label>{t('settings.email.smtp_port')}</Form.Label>
                           <Form.Control
                             type="number"
                             value={emailConfig.smtpPort || 0}
@@ -403,7 +403,7 @@ export const Settings: React.FC = () => {
                       </Col>
                       <Col md={3} className="mb-3">
                         <Form.Group>
-                          <Form.Label>From Name</Form.Label>
+                          <Form.Label>{t('settings.email.from_name')}</Form.Label>
                           <Form.Control
                             type="text"
                             value={emailConfig.fromName || ''}
@@ -415,7 +415,7 @@ export const Settings: React.FC = () => {
                     <Row>
                       <Col md={6} className="mb-3">
                         <Form.Group>
-                          <Form.Label>SMTP Username</Form.Label>
+                          <Form.Label>{t('settings.email.smtp_username')}</Form.Label>
                           <Form.Control
                             type="text"
                             value={emailConfig.smtpUsername || ''}
@@ -425,7 +425,7 @@ export const Settings: React.FC = () => {
                       </Col>
                       <Col md={6} className="mb-3">
                         <Form.Group>
-                          <Form.Label>SMTP Password</Form.Label>
+                          <Form.Label>{t('settings.email.smtp_password')}</Form.Label>
                           <Form.Control
                             type="password"
                             value={emailConfig.smtpPassword || ''}
@@ -437,7 +437,7 @@ export const Settings: React.FC = () => {
                     <Row>
                       <Col md={6} className="mb-3">
                         <Form.Group>
-                          <Form.Label>From Email</Form.Label>
+                          <Form.Label>{t('settings.email.from_email_label')}</Form.Label>
                           <Form.Control
                             type="email"
                             value={emailConfig.fromEmail || ''}
@@ -449,14 +449,14 @@ export const Settings: React.FC = () => {
                         <Form.Check
                           type="switch"
                           id="enable-ssl"
-                          label="Enable SSL"
+                          label={t('settings.email.enable_ssl')}
                           checked={!!emailConfig.enableSSL}
                           onChange={(e) => setEmailConfig({ ...emailConfig, enableSSL: e.target.checked })}
                         />
                         <Form.Check
                           type="switch"
                           id="enable-tls"
-                          label="Enable TLS"
+                          label={t('settings.email.enable_tls')}
                           checked={!!emailConfig.enableTLS}
                           onChange={(e) => setEmailConfig({ ...emailConfig, enableTLS: e.target.checked })}
                         />
@@ -468,18 +468,18 @@ export const Settings: React.FC = () => {
                         {emailSaving ? (
                           <>
                             <Spinner size="sm" animation="border" className="me-2" />
-                            Saving...
+                            {t('common.saving')}
                           </>
                         ) : (
                           <>
                             <i className="bi bi-check-lg me-2"></i>
-                            Save Email Config
+                            {t('common.save')}
                           </>
                         )}
                       </Button>
                       <Form.Control
                         type="email"
-                        placeholder="Test email address"
+                        placeholder={t('settings.email.test_email_placeholder')}
                         value={testEmail}
                         onChange={(e) => setTestEmail(e.target.value)}
                         style={{ maxWidth: 280 }}
@@ -488,13 +488,13 @@ export const Settings: React.FC = () => {
                         if (!user?.schoolId || !testEmail) return;
                         try {
                           await apiService.post(`/admin/schools/${user.schoolId}/test-email`, { ...emailConfig, testEmail });
-                          setSaveMessage(`Test email sent to ${testEmail}`);
+                          setSaveMessage(`${t('settings.email.test_email_sent_to')} ${testEmail}`);
                           setTimeout(() => setSaveMessage(''), 3000);
                         } catch (err: any) {
-                          setErrorMessage(err.response?.data?.message || 'Failed to send test email');
+                          setErrorMessage(err.response?.data?.message || t('settings.email.test_email_failed'));
                         }
                       }}>
-                        Send Test Email
+                        {t('settings.email.send_test_email')}
                       </Button>
                     </div>
                   </Form>
