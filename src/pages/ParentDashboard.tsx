@@ -96,7 +96,10 @@ export const ParentDashboard: React.FC = () => {
         const toAgo = (iso: string) => {
           const d = new Date(iso); const now = new Date(); const diffMs = now.getTime() - d.getTime();
           const mins = Math.floor(diffMs / 60000); const hours = Math.floor(diffMs / 3600000); const days = Math.floor(diffMs / 86400000);
-          if (mins < 1) return 'Just now'; if (mins < 60) return `${mins} mins ago`; if (hours < 24) return `${hours} hours ago`; if (days < 7) return `${days} days ago`;
+          if (mins < 1) return t('time.just_now');
+          if (mins < 60) return t('time.mins_ago').replace('{mins}', String(mins));
+          if (hours < 24) return t('time.hours_ago').replace('{hours}', String(hours));
+          if (days < 7) return t('time.days_ago').replace('{days}', String(days));
           return d.toLocaleDateString();
         };
         setRecentActivities(flat.map((n: any) => ({
@@ -113,7 +116,7 @@ export const ParentDashboard: React.FC = () => {
           setPendingLeaves(Array.isArray(leaves) ? leaves : []);
         } catch {}
       } catch (e: any) {
-        setError(e?.response?.data?.message || 'Failed to load dashboard');
+        setError(e?.response?.data?.message || t('error.failed_to_load_dashboard'));
       } finally {
         setLoading(false);
       }
@@ -127,20 +130,20 @@ export const ParentDashboard: React.FC = () => {
       await parentService.approveLeaveApplication(id);
       setPendingLeaves(pendingLeaves.filter(l => l.id !== id));
     } catch (e: any) {
-      setError(e?.response?.data?.message || 'Failed to approve leave');
+      setError(e?.response?.data?.message || t('error.failed_to_approve_leave'));
     } finally {
       setLeaveActionBusy('');
     }
   };
 
   const handleRejectLeave = async (id: string) => {
-    const reason = window.prompt('Reason for rejection?') || 'Rejected by parent';
+    const reason = window.prompt(t('parent.dashboard.reason_rejection_prompt')) || t('parent.dashboard.rejected_by_parent');
     try {
       setLeaveActionBusy(id);
       await parentService.rejectLeaveApplication(id, reason);
       setPendingLeaves(pendingLeaves.filter(l => l.id !== id));
     } catch (e: any) {
-      setError(e?.response?.data?.message || 'Failed to reject leave');
+      setError(e?.response?.data?.message || t('error.failed_to_reject_leave'));
     } finally {
       setLeaveActionBusy('');
     }

@@ -206,11 +206,11 @@ export const TeacherDashboard: React.FC = () => {
                     <>
                       <div className="d-flex justify-content-between mb-2">
                         <span>{t('teacher.dashboard.privilege')}</span>
-                        <strong>{Math.max(0, (leaveBalances.allowedPrivilege ?? 0) - (leaveBalances.usedPrivilege ?? 0))}/{leaveBalances.allowedPrivilege ?? 0} days</strong>
+                        <strong>{Math.max(0, (leaveBalances.allowedPrivilege ?? 0) - (leaveBalances.usedPrivilege ?? 0))}/{leaveBalances.allowedPrivilege ?? 0} {t('common.days')}</strong>
                       </div>
                       <div className="d-flex justify-content-between">
                         <span>{t('teacher.dashboard.sick')}</span>
-                        <strong>{Math.max(0, (leaveBalances.allowedSick ?? 0) - (leaveBalances.usedSick ?? 0))}/{leaveBalances.allowedSick ?? 0} days</strong>
+                        <strong>{Math.max(0, (leaveBalances.allowedSick ?? 0) - (leaveBalances.usedSick ?? 0))}/{leaveBalances.allowedSick ?? 0} {t('common.days')}</strong>
                       </div>
                     </>
                   ) : (
@@ -484,17 +484,17 @@ export const TeacherDashboard: React.FC = () => {
             try {
               setLeaveError('');
               if (!leaveForm.startDate || !leaveForm.endDate) {
-                setLeaveError('Please select start and end dates');
+                setLeaveError(t('teacher.dashboard.select_dates'));
                 return;
               }
               await teacherService.applyLeave({ startDate: leaveForm.startDate, endDate: leaveForm.endDate, reason: leaveForm.reason, leaveType: leaveForm.leaveType as any });
-              setLeaveSuccess('Leave application submitted');
+              setLeaveSuccess(t('teacher.dashboard.leave_submitted'));
               const b = await teacherService.getLeaveBalances().catch(() => null);
               if (b) setLeaveBalances(b);
               setTimeout(() => setLeaveSuccess(''), 2500);
               setShowLeaveModal(false);
             } catch (e: any) {
-              setLeaveError(e?.response?.data?.message || 'Failed to apply for leave');
+              setLeaveError(e?.response?.data?.message || t('error.failed_to_apply_leave'));
             }
           }}>{t('common.submit')}</Button>
         </Modal.Footer>

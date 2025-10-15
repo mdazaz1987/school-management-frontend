@@ -18,6 +18,7 @@ const en: Dict = {
   'common.view_all': 'View All',
   'common.apply_leave': 'Apply for Leave',
   'common.details': 'View Details',
+  'common.days': 'days',
 
   // Table headers (generic)
   'table.assignment': 'Assignment',
@@ -59,6 +60,8 @@ const en: Dict = {
   'student.dashboard.reason': 'Reason',
   'student.dashboard.leave_info': 'Your leave application will be sent to your parent for approval, then forwarded to admin.',
   'student.dashboard.submit_application': 'Submit Application',
+  'student.dashboard.leave_submitted': 'Leave application submitted successfully!',
+  'student.dashboard.reason_placeholder': 'Explain the reason for your leave...',
 
   // Teacher Dashboard
   'teacher.dashboard.title': 'Teacher Dashboard',
@@ -82,6 +85,8 @@ const en: Dict = {
   'teacher.dashboard.send_announcement': 'Send Announcement',
   'teacher.dashboard.recent_submissions': 'Recent Submissions',
   'teacher.dashboard.start_class': 'Start Class',
+  'teacher.dashboard.leave_submitted': 'Leave application submitted',
+  'teacher.dashboard.select_dates': 'Please select start and end dates',
 
   // Parent Dashboard
   'parent.dashboard.title': 'Parent Dashboard',
@@ -98,6 +103,24 @@ const en: Dict = {
   'parent.dashboard.upcoming_events': 'Upcoming Events',
   'parent.dashboard.no_upcoming_events': 'No upcoming events',
   'parent.dashboard.children_performance_comparison': 'Children Performance Comparison',
+  'parent.dashboard.reason_rejection_prompt': 'Reason for rejection?',
+  'parent.dashboard.rejected_by_parent': 'Rejected by parent',
+
+  'error.fill_required_fields': 'Please fill all required fields',
+  'error.failed_to_submit_leave': 'Failed to submit leave application',
+  'error.failed_to_apply_leave': 'Failed to apply for leave',
+  'error.failed_to_load_dashboard': 'Failed to load dashboard',
+  'error.failed_to_load_quizzes': 'Failed to load quizzes',
+  'error.failed_to_start_quiz': 'Failed to start quiz',
+  'error.failed_to_load_results': 'Failed to load results',
+  'error.failed_to_submit_quiz': 'Failed to submit quiz',
+  'error.failed_to_approve_leave': 'Failed to approve leave',
+  'error.failed_to_reject_leave': 'Failed to reject leave',
+
+  'time.just_now': 'Just now',
+  'time.mins_ago': '{mins} mins ago',
+  'time.hours_ago': '{hours} hours ago',
+  'time.days_ago': '{days} days ago',
 
   // Navigation
   'nav.dashboard': 'Dashboard',
@@ -153,6 +176,10 @@ const en: Dict = {
   'table.student': 'Student',
   'table.class': 'Class',
   'table.submitted': 'Submitted',
+  'table.grade': 'Grade',
+  'table.date': 'Date',
+  'table.quiz': 'Quiz',
+  'table.exam': 'Exam',
 
   'result.passed': 'Passed',
   'result.failed': 'Failed',
@@ -178,6 +205,15 @@ const en: Dict = {
   'student.quizzes.expired': 'This attempt appears to have already expired. Please try starting the quiz again.',
   'student.quizzes.mcq': 'MCQ',
   'student.quizzes.scq': 'SCQ',
+  'student.quizzes.submitted_label': 'Submitted.',
+  'student.quizzes.score_label': 'Score',
+  'student.quizzes.option': 'Option {n}',
+  'student.quizzes.q_prefix': 'Q',
+  'student.quizzes.question_image': 'Question image',
+  'student.quizzes.your_best': 'Your Best',
+  'student.quizzes.rank_of': 'Rank #{rank} of {participants}',
+  'student.quizzes.avg': 'Avg {avg}%',
+  'student.quizzes.top': 'Top {top}%',
 };
 
 const hi: Dict = {
@@ -194,6 +230,7 @@ const hi: Dict = {
   'common.view_all': 'सभी देखें',
   'common.apply_leave': 'छुट्टी के लिए आवेदन करें',
   'common.details': 'विवरण देखें',
+  'common.days': 'दिन',
 
   // Table headers (generic)
   'table.assignment': 'असाइनमेंट',
@@ -235,6 +272,8 @@ const hi: Dict = {
   'student.dashboard.reason': 'कारण',
   'student.dashboard.leave_info': 'आपका आवेदन अभिभावक और फिर एडमिन को भेजा जाएगा।',
   'student.dashboard.submit_application': 'आवेदन जमा करें',
+  'student.dashboard.leave_submitted': 'छुट्टी आवेदन सफलतापूर्वक जमा किया गया!',
+  'student.dashboard.reason_placeholder': 'अपनी छुट्टी का कारण बताएं...',
 
   // Teacher Dashboard
   'teacher.dashboard.title': 'शिक्षक डैशबोर्ड',
@@ -258,6 +297,8 @@ const hi: Dict = {
   'teacher.dashboard.send_announcement': 'घोषणा भेजें',
   'teacher.dashboard.recent_submissions': 'हालिया सबमिशन',
   'teacher.dashboard.start_class': 'कक्षा शुरू करें',
+  'teacher.dashboard.leave_submitted': 'छुट्टी आवेदन जमा किया गया',
+  'teacher.dashboard.select_dates': 'कृपया प्रारंभ और समाप्ति तिथियाँ चुनें',
 
   // Parent Dashboard
   'parent.dashboard.title': 'अभिभावक डैशबोर्ड',
@@ -274,6 +315,24 @@ const hi: Dict = {
   'parent.dashboard.upcoming_events': 'आगामी कार्यक्रम',
   'parent.dashboard.no_upcoming_events': 'कोई आगामी कार्यक्रम नहीं',
   'parent.dashboard.children_performance_comparison': 'बच्चों का प्रदर्शन तुलना',
+  'parent.dashboard.reason_rejection_prompt': 'अस्वीकृति का कारण?',
+  'parent.dashboard.rejected_by_parent': 'अभिभावक द्वारा अस्वीकृत',
+
+  'error.fill_required_fields': 'कृपया सभी आवश्यक फ़ील्ड भरें',
+  'error.failed_to_submit_leave': 'छुट्टी आवेदन जमा करने में विफल',
+  'error.failed_to_apply_leave': 'छुट्टी के लिए आवेदन करने में विफल',
+  'error.failed_to_load_dashboard': 'डैशबोर्ड लोड करने में विफल',
+  'error.failed_to_load_quizzes': 'क्विज़ लोड करने में विफल',
+  'error.failed_to_start_quiz': 'क्विज़ शुरू करने में विफल',
+  'error.failed_to_load_results': 'परिणाम लोड करने में विफल',
+  'error.failed_to_submit_quiz': 'क्विज़ जमा करने में विफल',
+  'error.failed_to_approve_leave': 'छुट्टी स्वीकृत करने में विफल',
+  'error.failed_to_reject_leave': 'छुट्टी अस्वीकार करने में विफल',
+
+  'time.just_now': 'अभी',
+  'time.mins_ago': '{mins} मिनट पहले',
+  'time.hours_ago': '{hours} घंटे पहले',
+  'time.days_ago': '{days} दिन पहले',
 
   // Navigation
   'nav.dashboard': 'डैशबोर्ड',
@@ -329,6 +388,10 @@ const hi: Dict = {
   'table.student': 'छात्र',
   'table.class': 'कक्षा',
   'table.submitted': 'जमा किया',
+  'table.grade': 'ग्रेड',
+  'table.date': 'तारीख',
+  'table.quiz': 'क्विज़',
+  'table.exam': 'परीक्षा',
 
   'result.passed': 'उत्तीर्ण',
   'result.failed': 'अनुत्तीर्ण',
@@ -354,6 +417,15 @@ const hi: Dict = {
   'student.quizzes.expired': 'यह प्रयास पहले ही समाप्त हो चुका है। कृपया दोबारा शुरू करें।',
   'student.quizzes.mcq': 'बहुविकल्पी',
   'student.quizzes.scq': 'एकल विकल्प',
+  'student.quizzes.submitted_label': 'जमा किया।',
+  'student.quizzes.score_label': 'स्कोर',
+  'student.quizzes.option': 'विकल्प {n}',
+  'student.quizzes.q_prefix': 'प्रश्न ',
+  'student.quizzes.question_image': 'प्रश्न छवि',
+  'student.quizzes.your_best': 'आपका सर्वश्रेष्ठ',
+  'student.quizzes.rank_of': 'रैंक #{rank} में से {participants}',
+  'student.quizzes.avg': 'औसत {avg}%',
+  'student.quizzes.top': 'शीर्ष {top}%',
 };
 
 const ur: Dict = {
@@ -370,6 +442,7 @@ const ur: Dict = {
   'common.view_all': 'سب دیکھیں',
   'common.apply_leave': 'چھٹی کی درخواست',
   'common.details': 'تفصیلات دیکھیں',
+  'common.days': 'دن',
 
   // Table headers (generic)
   'table.assignment': 'اسائنمنٹ',
@@ -411,6 +484,8 @@ const ur: Dict = {
   'student.dashboard.reason': 'وجہ',
   'student.dashboard.leave_info': 'آپ کی درخواست والدین اور پھر منتظم کو بھیجی جائے گی۔',
   'student.dashboard.submit_application': 'درخواست جمع کریں',
+  'student.dashboard.leave_submitted': 'چھٹی کی درخواست کامیابی سے جمع ہو گئی!',
+  'student.dashboard.reason_placeholder': 'اپنی چھٹی کی وجہ بیان کریں...',
 
   // Teacher Dashboard
   'teacher.dashboard.title': 'اساتذہ ڈیش بورڈ',
@@ -434,6 +509,8 @@ const ur: Dict = {
   'teacher.dashboard.send_announcement': 'اعلان بھیجیں',
   'teacher.dashboard.recent_submissions': 'حالیہ جمع کرائیں',
   'teacher.dashboard.start_class': 'کلاس شروع کریں',
+  'teacher.dashboard.leave_submitted': 'چھٹی کی درخواست جمع ہو گئی',
+  'teacher.dashboard.select_dates': 'براہ کرم آغاز اور اختتامی تاریخیں منتخب کریں',
 
   // Parent Dashboard
   'parent.dashboard.title': 'والدین ڈیش بورڈ',
@@ -450,6 +527,24 @@ const ur: Dict = {
   'parent.dashboard.upcoming_events': 'آئندہ تقریبات',
   'parent.dashboard.no_upcoming_events': 'کوئی آئندہ تقریب نہیں',
   'parent.dashboard.children_performance_comparison': 'بچوں کی کارکردگی موازنہ',
+  'parent.dashboard.reason_rejection_prompt': 'رد کرنے کی وجہ؟',
+  'parent.dashboard.rejected_by_parent': 'والدین نے مسترد کیا',
+
+  'error.fill_required_fields': 'براہ کرم تمام لازمی خانے پُر کریں',
+  'error.failed_to_submit_leave': 'چھٹی کی درخواست جمع کرنے میں ناکامی',
+  'error.failed_to_apply_leave': 'چھٹی کی درخواست دینے میں ناکامی',
+  'error.failed_to_load_dashboard': 'ڈیش بورڈ لوڈ کرنے میں ناکامی',
+  'error.failed_to_load_quizzes': 'کوئز لوڈ کرنے میں ناکامی',
+  'error.failed_to_start_quiz': 'کوئز شروع کرنے میں ناکامی',
+  'error.failed_to_load_results': 'نتائج لوڈ کرنے میں ناکامی',
+  'error.failed_to_submit_quiz': 'کوئز جمع کرنے میں ناکامی',
+  'error.failed_to_approve_leave': 'چھٹی منظور کرنے میں ناکامی',
+  'error.failed_to_reject_leave': 'چھٹی مسترد کرنے میں ناکامی',
+
+  'time.just_now': 'ابھی',
+  'time.mins_ago': '{mins} منٹ پہلے',
+  'time.hours_ago': '{hours} گھنٹے پہلے',
+  'time.days_ago': '{days} دن پہلے',
 
   // Navigation
   'nav.dashboard': 'ڈیش بورڈ',
@@ -505,6 +600,10 @@ const ur: Dict = {
   'table.student': 'طالب علم',
   'table.class': 'کلاس',
   'table.submitted': 'جمع کیا گیا',
+  'table.grade': 'گریڈ',
+  'table.date': 'تاریخ',
+  'table.quiz': 'کوئز',
+  'table.exam': 'امتحان',
 
   'result.passed': 'کامیاب',
   'result.failed': 'ناکام',
@@ -530,6 +629,15 @@ const ur: Dict = {
   'student.quizzes.expired': 'یہ کوشش پہلے ہی ختم ہو چکی ہے۔ براہ کرم دوبارہ شروع کریں۔',
   'student.quizzes.mcq': 'MCQ',
   'student.quizzes.scq': 'SCQ',
+  'student.quizzes.submitted_label': 'جمع ہو گیا۔',
+  'student.quizzes.score_label': 'اسکور',
+  'student.quizzes.option': 'آپشن {n}',
+  'student.quizzes.q_prefix': 'سوال ',
+  'student.quizzes.question_image': 'سوال کی تصویر',
+  'student.quizzes.your_best': 'آپ کا بہترین',
+  'student.quizzes.rank_of': 'درجہ #{rank} میں سے {participants}',
+  'student.quizzes.avg': 'اوسط {avg}%',
+  'student.quizzes.top': 'سرفہرست {top}%',
 };
 
 const dicts: Record<Lang, Dict> = { en, hi, ur };

@@ -136,7 +136,7 @@ export const StudentDashboard: React.FC = () => {
           status: s.status,
         })));
       } catch (e: any) {
-        setError(e.response?.data?.message || 'Failed to load dashboard');
+        setError(e.response?.data?.message || t('error.failed_to_load_dashboard'));
       } finally {
         setLoading(false);
       }
@@ -337,8 +337,8 @@ export const StudentDashboard: React.FC = () => {
                         <th>{t('table.subject')}</th>
                         <th>{t('table.assignment')}</th>
                         <th>{t('table.marks')}</th>
-                        <th>Grade</th>
-                        <th>Date</th>
+                        <th>{t('table.grade')}</th>
+                        <th>{t('table.date')}</th>
                         <th>{t('table.action')}</th>
                       </tr>
                     </thead>
@@ -422,7 +422,7 @@ export const StudentDashboard: React.FC = () => {
                     rows={4}
                     value={leaveForm.reason}
                     onChange={(e) => setLeaveForm({ ...leaveForm, reason: e.target.value })}
-                    placeholder="Explain the reason for your leave..."
+                    placeholder={t('student.dashboard.reason_placeholder')}
                   />
                 </Form.Group>
 
@@ -438,7 +438,7 @@ export const StudentDashboard: React.FC = () => {
                 variant="primary" 
                 onClick={async () => {
                   if (!leaveForm.reason || !leaveForm.startDate || !leaveForm.endDate) {
-                    setError('Please fill all required fields');
+                    setError(t('error.fill_required_fields'));
                     return;
                   }
                   try {
@@ -450,9 +450,9 @@ export const StudentDashboard: React.FC = () => {
                       reason: '',
                       leaveType: 'SICK'
                     });
-                    alert('Leave application submitted successfully!');
+                    alert(t('student.dashboard.leave_submitted'));
                   } catch (e: any) {
-                    setError(e?.response?.data?.message || 'Failed to submit leave application');
+                    setError(e?.response?.data?.message || t('error.failed_to_submit_leave'));
                   }
                 }}
                 disabled={!leaveForm.reason || !leaveForm.startDate || !leaveForm.endDate}

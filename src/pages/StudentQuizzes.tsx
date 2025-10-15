@@ -56,7 +56,7 @@ export const StudentQuizzes: React.FC = () => {
         const list = await studentQuizService.list(s.id, { classId: s.classId, section: s.section });
         setQuizzes(list || []);
       } catch (e: any) {
-        setError(e?.response?.data?.message || 'Failed to load quizzes');
+        setError(e?.response?.data?.message || t('error.failed_to_load_quizzes'));
       } finally {
         setLoading(false);
       }
@@ -81,7 +81,7 @@ export const StudentQuizzes: React.FC = () => {
       ]);
       setResultsModal({ show: true, quiz: q, rows: rows || [], stats: stats || null, school: school || null });
     } catch (e: any) {
-      setError(e?.response?.data?.message || 'Failed to load results');
+      setError(e?.response?.data?.message || t('error.failed_to_load_results'));
     } finally {
       setLoading(false);
     }
@@ -139,7 +139,7 @@ export const StudentQuizzes: React.FC = () => {
       setAnswers(initAns);
       hadPositiveTimeRef.current = false;
     } catch (e: any) {
-      setError(e?.response?.data?.error || e?.response?.data?.message || 'Failed to start quiz');
+      setError(e?.response?.data?.error || e?.response?.data?.message || t('error.failed_to_start_quiz'));
     } finally {
       setLoading(false);
     }
@@ -169,7 +169,7 @@ export const StudentQuizzes: React.FC = () => {
       const score = res?.score ?? 0;
       const total = res?.totalPoints ?? 0;
       const passed = res?.passed;
-      setSuccess(`Submitted. Score: ${score}/${total}${passed !== undefined ? (passed ? ` (${t('result.passed')})` : ` (${t('result.failed')})`) : ''}`);
+      setSuccess(`${t('student.quizzes.submitted_label')} ${t('student.quizzes.score')}: ${score}/${total}${passed !== undefined ? (passed ? ` (${t('result.passed')})` : ` (${t('result.failed')})`) : ''}`);
       setCurrent(null);
       setAnswers({});
       // Refresh list
@@ -179,7 +179,7 @@ export const StudentQuizzes: React.FC = () => {
       }
       setTimeout(() => setSuccess(''), 4000);
     } catch (e: any) {
-      setError(e?.response?.data?.message || 'Failed to submit quiz');
+      setError(e?.response?.data?.message || t('error.failed_to_submit_quiz'));
     } finally {
       setLoading(false);
     }
@@ -229,7 +229,7 @@ export const StudentQuizzes: React.FC = () => {
                         <tr key={q.id}>
                           <td><strong>{q.title}</strong></td>
                           <td><Badge bg="secondary">{q.subject}</Badge></td>
-                          <td><Badge bg={q.type === 'EXAM' ? 'warning' : 'info'}>{q.type}</Badge></td>
+                          <td><Badge bg={q.type === 'EXAM' ? 'warning' : 'info'}>{q.type === 'EXAM' ? t('table.exam') : t('table.quiz')}</Badge></td>
                           <td>{q.dueDate ? new Date(q.dueDate).toLocaleDateString() : '-'}</td>
                           <td>{attemptText}</td>
                           <td>
@@ -258,7 +258,7 @@ export const StudentQuizzes: React.FC = () => {
               <Card.Header className="bg-white d-flex justify-content-between align-items-center">
                 <div>
                   <strong>{current.quiz?.title}</strong>
-                  <div className="text-muted small">{current.quiz?.subject} • Attempt #{current.attemptNo}</div>
+                  <div className="text-muted small">{current.quiz?.subject} • {t('student.quizzes.attempt')} #{current.attemptNo}</div>
                 </div>
                 <div>
                   {remainingSeconds !== null && (
@@ -281,9 +281,9 @@ export const StudentQuizzes: React.FC = () => {
                       <Card.Body>
                         <div className="d-flex justify-content-between align-items-start">
                           <div>
-                            <div className="mb-2"><strong>Q{idx + 1}.</strong> {q.text}</div>
+                            <div className="mb-2"><strong>{t('student.quizzes.q_prefix')}{idx + 1}.</strong> {q.text}</div>
                             {q.imageUrl && (
-                              <div className="mb-2"><img src={q.imageUrl} alt="question" style={{ maxWidth: '100%', borderRadius: 6 }} /></div>
+                              <div className="mb-2"><img src={q.imageUrl} alt={t('student.quizzes.question_image')} style={{ maxWidth: '100%', borderRadius: 6 }} /></div>
                             )}
                           </div>
                           <Badge bg={isMCQ ? 'warning' : 'info'}>{isMCQ ? t('student.quizzes.mcq') : t('student.quizzes.scq')}</Badge>
@@ -298,7 +298,7 @@ export const StudentQuizzes: React.FC = () => {
                                   ) : (
                                     <Form.Check type="radio" name={`q-${q.id || idx}`} checked={(selected[0] ?? -1) === oi} onChange={() => toggleSelect(q.id, oi, false)} />
                                   )}
-                                  <Form.Label className="mb-0">{opt || `Option ${oi + 1}`}</Form.Label>
+                                  <Form.Label className="mb-0">{opt || t('student.quizzes.option').replace('{n}', String(oi + 1))}</Form.Label>
                                 </div>
                               </Col>
                             ))}
@@ -337,8 +337,14 @@ export const StudentQuizzes: React.FC = () => {
                         {resultsModal.stats.rank === 1 ? <i className="bi bi-trophy-fill text-warning"></i> : <i className="bi bi-award text-primary"></i>}
                       </div>
                       <div>
-                        <div className="fw-bold">Your Best: {Math.round(resultsModal.stats.myBest)}/{resultsModal.stats.totalPoints} ({resultsModal.stats.myPercentage ? Math.round(resultsModal.stats.myPercentage) : 0}%)</div>
-                        <div className="text-muted small">Rank #{resultsModal.stats.rank} of {resultsModal.stats.participants} • Avg {resultsModal.stats.avgPercentage ? Math.round(resultsModal.stats.avgPercentage) : 0}% • Top {resultsModal.stats.topPercentage ? Math.round(resultsModal.stats.topPercentage) : 0}%</div>
+                        <div className="fw-bold">{t('student.quizzes.your_best')}: {Math.round(resultsModal.stats.myBest)}/{resultsModal.stats.totalPoints} ({resultsModal.stats.myPercentage ? Math.round(resultsModal.stats.myPercentage) : 0}%)</div>
+                        <div className="text-muted small">
+                          {t('student.quizzes.rank_of').replace('{rank}', String(resultsModal.stats.rank)).replace('{participants}', String(resultsModal.stats.participants))}
+                          {' • '}
+                          {t('student.quizzes.avg').replace('{avg}', String(resultsModal.stats.avgPercentage ? Math.round(resultsModal.stats.avgPercentage) : 0))}
+                          {' • '}
+                          {t('student.quizzes.top').replace('{top}', String(resultsModal.stats.topPercentage ? Math.round(resultsModal.stats.topPercentage) : 0))}
+                        </div>
                       </div>
                     </div>
                   </Col>
