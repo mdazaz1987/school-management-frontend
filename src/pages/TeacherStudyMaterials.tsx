@@ -173,6 +173,7 @@ export const TeacherStudyMaterials: React.FC = () => {
         maxMarks: 0,
         type: 'PRESENTATION',
         schoolId: user.schoolId,
+        assignedDate: new Date().toISOString().split('T')[0],
       };
       const updated = await teacherService.updateAssignment(editingMaterial.id, payload);
       if (attachmentFile && (editingMaterial?.id || updated?.id)) {

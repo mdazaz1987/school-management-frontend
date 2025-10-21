@@ -238,6 +238,35 @@ export const TimetableFormImproved: React.FC = () => {
     setSuccess('');
 
     try {
+      // Pre-submit validation: ensure each teacher is assigned to the chosen subject
+      const mappingErrors: string[] = [];
+      WORKING_DAYS.forEach(day => {
+        timeSlots.forEach((slot, index) => {
+          if (slot.type !== 'LECTURE') return;
+          const cell = timetableGrid[day]?.[index];
+          if (!cell || !cell.subjectId || !cell.teacherId) return;
+          const subj = subjects.find(s => s.id === cell.subjectId);
+          const teach = teachers.find(t => t.id === cell.teacherId);
+          if (!subj || !teach) return;
+          const subjectTeacherIds = (subj as any).teacherIds as string[] | undefined;
+          const teacherSubjectIds = (teach as any).subjectIds as string[] | undefined;
+          const okBySubject = Array.isArray(subjectTeacherIds) && subjectTeacherIds.length > 0
+            ? (subjectTeacherIds.includes(teach.id) || subjectTeacherIds.includes((teach as any).userId))
+            : false;
+          const okByTeacher = Array.isArray(teacherSubjectIds) && teacherSubjectIds.length > 0
+            ? teacherSubjectIds.includes(subj.id)
+            : false;
+          if (!(okBySubject || okByTeacher)) {
+            const tname = `${teach.firstName || ''} ${teach.lastName || ''}`.trim() || 'Teacher';
+            mappingErrors.push(`${day} ${slot.period}: ${tname} is not assigned to subject ${subj.name}`);
+          }
+        });
+      });
+      if (mappingErrors.length > 0) {
+        setError(`Invalid teacher-subject assignments:\n- ${mappingErrors.slice(0, 5).join('\n- ')}${mappingErrors.length > 5 ? '...' : ''}`);
+        setSaving(false);
+        return;
+      }
       // Convert grid to entries
       const entries: TimetableEntry[] = [];
       const classObjSubmit = classes.find(c => c.id === selectedClass);
@@ -577,12 +606,19 @@ export const TimetableFormImproved: React.FC = () => {
                                     const filtered = teachers
                                       .filter(t => isTeacherFree(t.id, day, slotIndex))
                                       .filter(t => {
-                                        // Subject-teacher constraint on UI as well
+                                        // Subject-teacher constraint (both directions)
                                         const subj = subjects.find(s => s.id === cell.subjectId);
                                         if (!subj) return true; // if no subject selected, show all
-                                        const ids = (subj as any).teacherIds as string[] | undefined;
-                                        if (!ids || ids.length === 0) return true; // unrestricted subject
-                                        return ids.includes(t.id) || ids.includes((t as any).userId);
+                                        const subjectTeacherIds = (subj as any).teacherIds as string[] | undefined;
+                                        const teacherSubjectIds = (t as any).subjectIds as string[] | undefined;
+                                        const bySubject = Array.isArray(subjectTeacherIds) && subjectTeacherIds.length > 0
+                                          ? (subjectTeacherIds.includes(t.id) || subjectTeacherIds.includes((t as any).userId))
+                                          : undefined;
+                                        const byTeacher = Array.isArray(teacherSubjectIds) && teacherSubjectIds.length > 0
+                                          ? teacherSubjectIds.includes(subj.id)
+                                          : undefined;
+                                        if (bySubject === undefined && byTeacher === undefined) return true; // no mapping info -> allow
+                                        return (bySubject === true) || (byTeacher === true);
                                       });
                                     const finalList = assignedTeacher && !filtered.some(t => t.id === assignedTeacher.id)
                                       ? [assignedTeacher, ...filtered]
@@ -621,12 +657,25 @@ export const TimetableFormImproved: React.FC = () => {
                                       }
                                       const names = new Set(roomsForCell.map(r => r.name));
                                       const options: JSX.Element[] = [];
-                                      if (defaultRoom && !names.has(defaultRoom)) {
-                                        options.push(
-                                          <option key="class-default-room" value={defaultRoom}>
-                                            Class Room: {defaultRoom}
-                                          </option>
-                                        );
+                                      if (defaultRoom) {
+                                        const parts = defaultRoom.split(',').map(s => s.trim()).filter(Boolean);
+                                        if (parts.length > 0) {
+                                          parts.forEach((pr, idx) => {
+                                            if (!names.has(pr)) {
+                                              options.push(
+                                                <option key={`class-default-room-${idx}`} value={pr}>
+                                                  Class Room: {pr}
+                                                </option>
+                                              );
+                                            }
+                                          });
+                                        } else if (!names.has(defaultRoom)) {
+                                          options.push(
+                                            <option key="class-default-room" value={defaultRoom}>
+                                              Class Room: {defaultRoom}
+                                            </option>
+                                          );
+                                        }
                                       }
                                       options.push(...roomsForCell.map(r => (
                                         <option key={r.id} value={r.name}>
@@ -636,15 +685,6 @@ export const TimetableFormImproved: React.FC = () => {
                                       return options;
                                     })()}
                                   </Form.Select>
-                                  {/* Custom room entry (supports multiple rooms comma-separated) */}
-                                  <Form.Control
-                                    size="sm"
-                                    type="text"
-                                    placeholder="Custom room(s) e.g., R101, Lab-2"
-                                    value={cell.room && !allRooms.some(r => r.name === cell.room) ? cell.room : ''}
-                                    onChange={(e) => updateCell(day, slotIndex, 'room', e.target.value)}
-                                    title="Enter one or more room names, separated by commas"
-                                  />
                                   {(cell.subjectId || cell.teacherId) && (
                                     <Button
                                       variant="outline-danger"

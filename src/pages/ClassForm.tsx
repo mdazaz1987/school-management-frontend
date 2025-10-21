@@ -271,14 +271,15 @@ export const ClassForm: React.FC = () => {
                 </Col>
                 <Col md={4}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Room Number</Form.Label>
+                    <Form.Label>Room(s)</Form.Label>
                     <Form.Control
                       type="text"
                       name="room"
                       value={formData.room}
                       onChange={handleChange}
-                      placeholder="e.g., 101"
+                      placeholder="e.g., 101, Lab-2"
                     />
+                    <Form.Text className="text-muted">You can enter multiple rooms separated by commas.</Form.Text>
                   </Form.Group>
                 </Col>
               </Row>
