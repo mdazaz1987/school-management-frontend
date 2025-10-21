@@ -125,9 +125,18 @@ export const TeacherStudyMaterials: React.FC = () => {
       };
       const created = await teacherService.createAssignment(payload);
       if (attachmentFile && created?.id) {
-        await teacherService.uploadAssignmentAttachment(created.id, attachmentFile);
+        try {
+          await teacherService.uploadAssignmentAttachment(created.id, attachmentFile);
+        } catch (e: any) {
+          const status = e?.response?.status;
+          const msg = e?.response?.data?.message || e?.message || '';
+          // If upload fails (e.g., 413), still keep the created material
+          setSuccess('Study material shared successfully (attachment upload failed).');
+          setError(status === 413 ? 'Attachment too large. Maximum allowed size is 10MB.' : (msg || 'Attachment upload failed'));
+        }
+      } else {
+        setSuccess('Study material shared successfully.');
       }
-      setSuccess('Study material shared successfully.');
       setShowModal(false);
       resetForm();
       await loadData();
@@ -168,9 +177,17 @@ export const TeacherStudyMaterials: React.FC = () => {
       const updated = await teacherService.updateAssignment(editingMaterial.id, payload);
       if (attachmentFile && (editingMaterial?.id || updated?.id)) {
         const id = editingMaterial?.id || updated?.id;
-        await teacherService.uploadAssignmentAttachment(id, attachmentFile);
+        try {
+          await teacherService.uploadAssignmentAttachment(id, attachmentFile);
+        } catch (e: any) {
+          const status = e?.response?.status;
+          const msg = e?.response?.data?.message || e?.message || '';
+          setSuccess('Study material updated (attachment upload failed).');
+          setError(status === 413 ? 'Attachment too large. Maximum allowed size is 10MB.' : (msg || 'Attachment upload failed'));
+        }
+      } else {
+        setSuccess('Study material updated successfully!');
       }
-      setSuccess('Study material updated successfully!');
       setShowModal(false);
       setEditingMaterial(null);
       resetForm();
@@ -356,6 +373,15 @@ export const TeacherStudyMaterials: React.FC = () => {
                     accept=".pdf,.doc,.docx,.ppt,.pptx,.png,.jpg,.jpeg,.txt,.zip"
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                       const file = e.target.files && e.target.files[0];
+                      if (file) {
+                        const max = 10 * 1024 * 1024; // 10MB
+                        if (file.size > max) {
+                          setError('File is too large. Maximum allowed size is 10MB.');
+                          e.currentTarget.value = '';
+                          setAttachmentFile(null);
+                          return;
+                        }
+                      }
                       setAttachmentFile(file || null);
                     }}
                   />

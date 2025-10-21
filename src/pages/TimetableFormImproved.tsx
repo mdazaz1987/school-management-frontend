@@ -530,12 +530,20 @@ export const TimetableFormImproved: React.FC = () => {
                         
                         const classObj = classes.find(c => c.id === selectedClass);
                         const classSubjectIds = (classObj?.subjects || []) as string[];
+                        // Base subjects available to the selected class
                         const subjectsForClass = subjects.filter(s => {
                           if (classSubjectIds && classSubjectIds.length > 0) return classSubjectIds.includes(s.id);
                           if (Array.isArray(s.classIds) && s.classIds.length > 0) return s.classIds.includes(selectedClass);
                           return true; // no mapping -> available to all
                         });
                         const key = `${day}-${slotIndex}`;
+                        // Enforce: a subject should not be repeated on the same day
+                        const selectedThisDay = new Set(
+                          Object.entries(timetableGrid[day] || {})
+                            .filter(([idx, c]) => Number(idx) !== slotIndex && !!(c as any)?.subjectId)
+                            .map(([, c]) => (c as any).subjectId as string)
+                        );
+                        const subjectsFilteredForDay = subjectsForClass.filter(s => !selectedThisDay.has(s.id) || s.id === (cell?.subjectId || ''));
 
                         return (
                           <td key={slotIndex} className="p-2">
@@ -552,7 +560,7 @@ export const TimetableFormImproved: React.FC = () => {
                                   onChange={(e) => updateCell(day, slotIndex, 'subjectId', e.target.value)}
                                 >
                                   <option value="">Select Subject</option>
-                                  {subjectsForClass.map(s => (
+                                  {subjectsFilteredForDay.map(s => (
                                     <option key={s.id} value={s.id}>{s.name}</option>
                                   ))}
                                 </Form.Select>
@@ -628,6 +636,15 @@ export const TimetableFormImproved: React.FC = () => {
                                       return options;
                                     })()}
                                   </Form.Select>
+                                  {/* Custom room entry (supports multiple rooms comma-separated) */}
+                                  <Form.Control
+                                    size="sm"
+                                    type="text"
+                                    placeholder="Custom room(s) e.g., R101, Lab-2"
+                                    value={cell.room && !allRooms.some(r => r.name === cell.room) ? cell.room : ''}
+                                    onChange={(e) => updateCell(day, slotIndex, 'room', e.target.value)}
+                                    title="Enter one or more room names, separated by commas"
+                                  />
                                   {(cell.subjectId || cell.teacherId) && (
                                     <Button
                                       variant="outline-danger"
