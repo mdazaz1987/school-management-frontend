@@ -21,6 +21,7 @@ const sidebarItems = [
   { path: '/student/timetable', label: 'Timetable', icon: 'bi-calendar3' },
   { path: '/student/fees', label: 'Fee Payment', icon: 'bi-cash-coin' },
   { path: '/student/notifications', label: 'Notifications', icon: 'bi-bell' },
+  { path: '/gallery', label: 'Photo Gallery', icon: 'bi-images' },
 ];
 
 export const StudentDashboard: React.FC = () => {

@@ -19,12 +19,14 @@ const sidebarItems = [
   { path: '/teacher/grading', label: 'Grading', icon: 'bi-star' },
   { path: '/teacher/timetable', label: 'My Timetable', icon: 'bi-calendar3' },
   { path: '/teacher/students', label: 'Students', icon: 'bi-people' },
+  { path: '/gallery', label: 'Photo Gallery', icon: 'bi-images' },
 ];
 
 export const TeacherDashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { t } = useLang();
+  const [isPrincipal, setIsPrincipal] = useState(false);
   const [stats, setStats] = useState({
     myClasses: 0,
     totalStudents: 0,
@@ -35,6 +37,9 @@ export const TeacherDashboard: React.FC = () => {
   });
 
   useEffect(() => {
+    // Determine if current teacher is principal
+    teacherService.getMyProfile().then((p) => setIsPrincipal(!!p?.isPrincipal)).catch(() => setIsPrincipal(false));
+
     const loadStats = async () => {
       try {
         const s = await teacherService.getDashboardStats();
@@ -348,6 +353,16 @@ export const TeacherDashboard: React.FC = () => {
                       <i className="bi bi-calendar-check me-2"></i>
                       {t('teacher.dashboard.mark_attendance')}
                     </Button>
+                    {isPrincipal && (
+                      <Button 
+                        variant="outline-secondary" 
+                        size="lg"
+                        onClick={() => navigate('/principal/approvals')}
+                      >
+                        <i className="bi bi-check2-square me-2"></i>
+                        {t('teacher.dashboard.principal_approvals') || 'Principal Approvals'}
+                      </Button>
+                    )}
                     <Button 
                       variant="success" 
                       size="lg"

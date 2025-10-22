@@ -303,6 +303,14 @@ export const AdminDashboard: React.FC = () => {
                       <i className="bi bi-calendar-event me-2"></i>
                       Manage School Calendar
                     </Button>
+                    <Button variant="outline-primary" size="lg" onClick={() => navigate('/admin/approvals')}>
+                      <i className="bi bi-check2-square me-2"></i>
+                      Leave Approvals
+                    </Button>
+                    <Button variant="outline-info" size="lg" onClick={() => navigate('/admin/gallery')}>
+                      <i className="bi bi-images me-2"></i>
+                      Manage Gallery
+                    </Button>
                   </div>
                 </Card.Body>
               </Card>

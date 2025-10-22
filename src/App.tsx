@@ -64,6 +64,8 @@ import { AdminReports } from './pages/AdminReports';
 import { AdminCalendar } from './pages/AdminCalendar';
 import { PrincipalApprovals } from './pages/PrincipalApprovals';
 import { AdminLeaveApprovals } from './pages/AdminLeaveApprovals';
+import { AdminGallery } from './pages/AdminGallery';
+import { Gallery } from './pages/Gallery';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactElement }> = ({ children }) => {
@@ -382,6 +384,14 @@ function App() {
             }
           />
           <Route
+            path="/admin/gallery"
+            element={
+              <ProtectedRoute>
+                <AdminGallery />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/admin/reports"
             element={
               <ProtectedRoute>
@@ -590,6 +600,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <ParentNotifications />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/gallery"
+            element={
+              <ProtectedRoute>
+                <Gallery />
               </ProtectedRoute>
             }
           />
