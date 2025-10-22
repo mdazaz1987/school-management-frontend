@@ -28,6 +28,7 @@ export const TeacherStudyMaterials: React.FC = () => {
   const [classes, setClasses] = useState<any[]>([]);
   const [subjects, setSubjects] = useState<any[]>([]);
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+  const [editAttachments, setEditAttachments] = useState<string[]>([]);
   
   const [formData, setFormData] = useState({
     title: '',
@@ -157,6 +158,15 @@ export const TeacherStudyMaterials: React.FC = () => {
       subject: material.subject,
       dueDate: material.dueDate,
     });
+    // Load attachments for this assignment
+    (async () => {
+      try {
+        const list = await teacherService.listAssignmentAttachments(material.id);
+        setEditAttachments(list || []);
+      } catch {
+        setEditAttachments([]);
+      }
+    })();
     setShowModal(true);
   };
 
@@ -225,6 +235,23 @@ export const TeacherStudyMaterials: React.FC = () => {
       dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     });
     setAttachmentFile(null);
+    setEditAttachments([]);
+  };
+
+  const downloadAttachment = async (assignmentId: string, filename: string) => {
+    try {
+      const blob = await teacherService.getAssignmentAttachmentBlob(assignmentId, filename);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error('Failed to download attachment', e);
+    }
   };
 
   return (

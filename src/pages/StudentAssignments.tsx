@@ -80,7 +80,7 @@ export const StudentAssignments: React.FC = () => {
           status, // include computed status so tabs filter works
           type: a.type || 'HOMEWORK',
         };
-      });
+      }).filter((a: any) => (a.type || '').toUpperCase() !== 'PRESENTATION');
 
       setAssignments(normalized);
     } catch (e: any) {

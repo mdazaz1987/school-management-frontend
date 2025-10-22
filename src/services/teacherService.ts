@@ -331,6 +331,20 @@ export const teacherService = {
     });
   },
 
+  // List teacher-provided attachments for an assignment
+  async listAssignmentAttachments(assignmentId: string): Promise<string[]> {
+    return apiService.get(`/assignments/${assignmentId}/attachments`);
+  },
+
+  // Download an attachment as Blob
+  async getAssignmentAttachmentBlob(assignmentId: string, filename: string): Promise<Blob> {
+    const axios = apiService.getAxiosInstance();
+    const resp = await axios.get(`/assignments/${assignmentId}/attachments/${encodeURIComponent(filename)}` as any, {
+      responseType: 'blob',
+    });
+    return resp.data as Blob;
+  },
+
   async getAssignmentSubmissions(assignmentId: string): Promise<any[]> {
     // Legacy endpoint if exists
     return apiService.get(`/teacher/assignments/${assignmentId}/submissions`);
