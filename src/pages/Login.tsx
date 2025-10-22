@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { useAuth } from '../contexts/AuthContext';
+import { Link } from 'react-router-dom';
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -89,7 +90,7 @@ export const Login: React.FC = () => {
                     />
                   </Form.Group>
 
-                  <Form.Group className="mb-4">
+                  <Form.Group className="mb-2">
                     <Form.Label>Password</Form.Label>
                     <Form.Control
                       type="password"
@@ -100,6 +101,10 @@ export const Login: React.FC = () => {
                       size="lg"
                     />
                   </Form.Group>
+
+                  <div className="d-flex justify-content-end mb-4">
+                    <Link to="/forgot-password">Forgot password?</Link>
+                  </div>
 
                   <Button
                     variant="primary"

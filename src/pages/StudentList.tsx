@@ -254,10 +254,16 @@ export const StudentList: React.FC = () => {
                               />
                             ) : (
                               <div 
-                                className="rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center me-2"
-                                style={{ width: '32px', height: '32px' }}
+                                className="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-2"
+                                style={{ width: '32px', height: '32px', fontWeight: 600 }}
+                                title={getFullName(student)}
                               >
-                                <i className="bi bi-person"></i>
+                                {(() => {
+                                  const name = getFullName(student).trim();
+                                  const parts = name ? name.split(/\s+/) : [];
+                                  const initials = (parts[0]?.[0] || '') + (parts[1]?.[0] || '');
+                                  return initials.toUpperCase() || 'S';
+                                })()}
                               </div>
                             )}
                             <div>

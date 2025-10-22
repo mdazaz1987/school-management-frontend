@@ -1,12 +1,19 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Row, Col, Card, Table, Button, Form, Modal, Badge, Alert } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
+import { useAuth } from '../contexts/AuthContext';
+import { teacherService } from '../services/teacherService';
+import { timetableService } from '../services/timetableService';
+import { classService } from '../services/classService';
+import { studentService } from '../services/studentService';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
   { path: '/teacher/my-classes', label: 'My Classes', icon: 'bi-door-open' },
   { path: '/teacher/assignments', label: 'Assignments', icon: 'bi-file-text' },
+  { path: '/teacher/study-materials', label: 'Study Materials', icon: 'bi-book' },
+  { path: '/teacher/quiz-test', label: 'Quiz & Tests', icon: 'bi-clipboard-check' },
   { path: '/teacher/attendance', label: 'Attendance', icon: 'bi-calendar-check' },
   { path: '/teacher/grading', label: 'Grading', icon: 'bi-star' },
   { path: '/teacher/timetable', label: 'My Timetable', icon: 'bi-calendar3' },
@@ -14,12 +21,16 @@ const sidebarItems = [
 ];
 
 export const TeacherGrading: React.FC = () => {
+  const { user } = useAuth();
+  const [classes, setClasses] = useState<any[]>([]);
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedType, setSelectedType] = useState('');
   const [selectedItem, setSelectedItem] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [viewOnly, setViewOnly] = useState(false);
   const [gradingStudent, setGradingStudent] = useState<any>(null);
   const [success, setSuccess] = useState('');
+  const [error, setError] = useState('');
 
   const [gradeData, setGradeData] = useState({
     marksObtained: '',
@@ -27,11 +38,69 @@ export const TeacherGrading: React.FC = () => {
     feedback: ''
   });
 
-  const [submissions, setSubmissions] = useState([
-    { id: '1', studentName: 'John Doe', rollNo: '101', status: 'pending', marks: null, grade: null },
-    { id: '2', studentName: 'Jane Smith', rollNo: '102', status: 'pending', marks: null, grade: null },
-    { id: '3', studentName: 'Mike Johnson', rollNo: '103', status: 'graded', marks: 85, grade: 'A' },
-  ]);
+  const [assignments, setAssignments] = useState<any[]>([]);
+  const [submissions, setSubmissions] = useState<any[]>([]);
+  const [teacherAttachments, setTeacherAttachments] = useState<string[]>([]);
+  const [submissionPreview, setSubmissionPreview] = useState<{ attachments: string[]; content?: string }>({ attachments: [], content: '' });
+
+  useEffect(() => {
+    const init = async () => {
+      try {
+        const base = await teacherService.getMyClasses();
+        const stored = localStorage.getItem('user');
+        const me = stored ? JSON.parse(stored) : {};
+        const schoolId = me?.schoolId;
+        const myProfile = await teacherService.getMyProfile().catch(() => null as any);
+        const teacherId = myProfile?.id;
+        const userId = me?.id;
+        const tts = await timetableService.list(schoolId ? { schoolId } : undefined).catch(() => [] as any[]);
+        const classIdsFromTT = Array.from(new Set((tts || [])
+          .flatMap((t: any) => (t.entries || []).some((e: any) => (teacherId && e.teacherId === teacherId) || (userId && e.teacherId === userId)) ? [t.classId] : [])
+        ));
+        const existingIds = new Set((base || []).map((c: any) => c.id));
+        const missingIds = classIdsFromTT.filter((id) => !existingIds.has(id));
+        const fetchedMissing = await Promise.all(missingIds.map(async (id) => {
+          try { return await classService.getClassById(id); } catch { return null; }
+        }));
+        setClasses([...(base || []), ...fetchedMissing.filter(Boolean) as any[]]);
+      } catch {}
+      await loadAssignments();
+    };
+    init();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  const loadAssignments = async () => {
+    setError('');
+    try {
+      const list = await teacherService.getMyAssignments();
+      setAssignments(list || []);
+    } catch (e: any) {
+      setError(e?.response?.data?.message || 'Failed to load assignments');
+    }
+  };
+
+  const loadSubmissions = async (assignmentId: string) => {
+    if (!assignmentId) return;
+    setError('');
+    try {
+      const list = await teacherService.getAssignmentSubmissions(assignmentId);
+      const normalized = (list || []).map((s: any) => ({
+        id: s.id,
+        studentName: s.studentName || s.student?.name || s.studentId,
+        rollNo: s.rollNo || s.student?.rollNumber || '-',
+        status: (s.status || '').toLowerCase() === 'graded' ? 'graded' : (s.status || 'submitted'),
+        marks: s.marksObtained ?? s.marks ?? null,
+        grade: s.grade || null,
+        attachments: s.attachments || [],
+        content: s.content,
+      }));
+      setSubmissions(normalized);
+      try { setTeacherAttachments(await studentService.listAssignmentAttachments(assignmentId)); } catch { setTeacherAttachments([]); }
+    } catch (e: any) {
+      setError(e?.response?.data?.message || 'Failed to load submissions');
+    }
+  };
 
   const handleGrade = (student: any) => {
     setGradingStudent(student);
@@ -40,18 +109,29 @@ export const TeacherGrading: React.FC = () => {
       grade: student.grade || '',
       feedback: ''
     });
+    setSubmissionPreview({ attachments: student.attachments || [], content: student.content });
+    setViewOnly(false);
     setShowModal(true);
   };
 
-  const handleSubmitGrade = () => {
-    setSubmissions(submissions.map(s =>
-      s.id === gradingStudent.id
-        ? { ...s, status: 'graded', marks: Number(gradeData.marksObtained), grade: gradeData.grade }
-        : s
-    ));
-    setSuccess(`Grade submitted for ${gradingStudent.studentName}. Student and parents notified.`);
-    setShowModal(false);
-    setTimeout(() => setSuccess(''), 3000);
+  const handleView = (student: any) => {
+    setGradingStudent(student);
+    setSubmissionPreview({ attachments: student.attachments || [], content: student.content });
+    setViewOnly(true);
+    setShowModal(true);
+  };
+
+  const handleSubmitGrade = async () => {
+    if (!selectedItem || !gradingStudent) return;
+    try {
+      await teacherService.gradeSubmission(gradingStudent.id, Number(gradeData.marksObtained), gradeData.feedback);
+      await loadSubmissions(selectedItem);
+      setSuccess(`Grade submitted for ${gradingStudent.studentName}.`);
+      setShowModal(false);
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (e: any) {
+      setError(e?.response?.data?.message || 'Failed to submit grade');
+    }
   };
 
   const calculateGrade = (marks: number) => {
@@ -85,9 +165,11 @@ export const TeacherGrading: React.FC = () => {
                     <Form.Label><strong>Class/Section</strong></Form.Label>
                     <Form.Select value={selectedClass} onChange={(e) => setSelectedClass(e.target.value)}>
                       <option value="">All Classes</option>
-                      <option value="Grade 10-A">Grade 10-A</option>
-                      <option value="Grade 10-B">Grade 10-B</option>
-                      <option value="Grade 11-A">Grade 11-A</option>
+                      {classes.map((c: any) => (
+                        <option key={c.id} value={c.id}>
+                          {(c.className || c.grade || c.name || 'Class') + (c.section ? ' - ' + c.section : '')}
+                        </option>
+                      ))}
                     </Form.Select>
                   </Form.Group>
                 </Col>
@@ -104,11 +186,15 @@ export const TeacherGrading: React.FC = () => {
                 <Col md={6}>
                   <Form.Group className="mb-3">
                     <Form.Label><strong>Exam/Assignment</strong></Form.Label>
-                    <Form.Select value={selectedItem} onChange={(e) => setSelectedItem(e.target.value)}>
+                    <Form.Select value={selectedItem} onChange={async (e) => {
+                      const id = e.target.value; setSelectedItem(id); if (id) await loadSubmissions(id);
+                    }}>
                       <option value="">Select item...</option>
-                      <option value="1">Math Assignment 5</option>
-                      <option value="2">Mid-Term Exam - Mathematics</option>
-                      <option value="3">Physics Lab Report</option>
+                      {(assignments || [])
+                        .filter((a: any) => !selectedClass || a.classId === selectedClass)
+                        .map((a: any) => (
+                          <option key={a.id} value={a.id}>{a.title || a.name}</option>
+                        ))}
                     </Form.Select>
                   </Form.Group>
                 </Col>
@@ -119,8 +205,8 @@ export const TeacherGrading: React.FC = () => {
           {selectedItem && (
             <Card className="border-0 shadow-sm">
               <Card.Header className="bg-white">
-                <h5 className="mb-0">Submissions - Math Assignment 5</h5>
-                <small className="text-muted">Total Marks: 100</small>
+                <h5 className="mb-0">Submissions</h5>
+                <small className="text-muted">Grading</small>
               </Card.Header>
               <Card.Body>
                 <Table responsive hover>
@@ -151,14 +237,25 @@ export const TeacherGrading: React.FC = () => {
                           </Badge>
                         </td>
                         <td>
-                          <Button
-                            variant={submission.status === 'graded' ? 'outline-primary' : 'primary'}
-                            size="sm"
-                            onClick={() => handleGrade(submission)}
-                          >
-                            <i className="bi bi-pencil me-1"></i>
-                            {submission.status === 'graded' ? 'Edit' : 'Grade'}
-                          </Button>
+                          <div className="d-flex gap-2">
+                            <Button
+                              variant="outline-secondary"
+                              size="sm"
+                              onClick={() => handleView(submission)}
+                              title="View submission"
+                            >
+                              <i className="bi bi-eye me-1"></i>
+                              View
+                            </Button>
+                            <Button
+                              variant={submission.status === 'graded' ? 'outline-primary' : 'primary'}
+                              size="sm"
+                              onClick={() => handleGrade(submission)}
+                            >
+                              <i className="bi bi-pencil me-1"></i>
+                              {submission.status === 'graded' ? 'Edit' : 'Grade'}
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -170,7 +267,7 @@ export const TeacherGrading: React.FC = () => {
 
           <Modal show={showModal} onHide={() => setShowModal(false)}>
             <Modal.Header closeButton>
-              <Modal.Title>Grade Submission</Modal.Title>
+              <Modal.Title>{viewOnly ? 'View Submission' : 'Grade Submission'}</Modal.Title>
             </Modal.Header>
             <Modal.Body>
               {gradingStudent && (
@@ -179,6 +276,74 @@ export const TeacherGrading: React.FC = () => {
                     <strong>Student:</strong> {gradingStudent.studentName} ({gradingStudent.rollNo})
                   </Alert>
 
+                  {/* Submission preview */}
+                  {(submissionPreview.content || (submissionPreview.attachments || []).length > 0) && (
+                    <Card className="border-0 shadow-sm mb-3">
+                      <Card.Header className="bg-white"><strong>Submission</strong></Card.Header>
+                      <Card.Body>
+                        {submissionPreview.content && (
+                          <div className="mb-3">
+                            <div className="text-muted mb-1">Text</div>
+                            <div className="p-2 bg-light rounded" style={{ whiteSpace: 'pre-wrap' }}>{submissionPreview.content}</div>
+                          </div>
+                        )}
+                        {(submissionPreview.attachments || []).length > 0 && (
+                          <div>
+                            <div className="text-muted mb-1">Attachments</div>
+                            <ul className="mb-0">
+                              {submissionPreview.attachments.map((f, idx) => (
+                                <li key={idx}>
+                                  {/^https?:\/\//i.test(String(f)) ? (
+                                    <a href={String(f)} target="_blank" rel="noreferrer">
+                                      <i className="bi bi-paperclip me-1"></i>{String(f)}
+                                    </a>
+                                  ) : (
+                                    <Button variant="link" className="p-0" onClick={async () => {
+                                      try {
+                                        const blob = await teacherService.getSubmissionAttachmentBlob(selectedItem, gradingStudent.id, f);
+                                        const url = window.URL.createObjectURL(blob);
+                                        window.open(url, '_blank');
+                                        setTimeout(() => window.URL.revokeObjectURL(url), 10000);
+                                      } catch {}
+                                    }}>
+                                      <i className="bi bi-paperclip me-1"></i>{String(f)}
+                                    </Button>
+                                  )}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </Card.Body>
+                    </Card>
+                  )}
+
+                  {/* Teacher attachments */}
+                  {(teacherAttachments || []).length > 0 && (
+                    <Card className="border-0 shadow-sm mb-3">
+                      <Card.Header className="bg-white"><strong>Assignment Attachments</strong></Card.Header>
+                      <Card.Body>
+                        <ul className="mb-0">
+                          {teacherAttachments.map((f) => (
+                            <li key={f}>
+                              <Button variant="link" className="p-0" onClick={async () => {
+                                try {
+                                  const blob = await studentService.getAssignmentAttachmentBlob(selectedItem, f);
+                                  const url = window.URL.createObjectURL(blob);
+                                  window.open(url, '_blank');
+                                  setTimeout(() => window.URL.revokeObjectURL(url), 10000);
+                                } catch {}
+                              }}>
+                                <i className="bi bi-paperclip me-1"></i>{f}
+                              </Button>
+                            </li>
+                          ))}
+                        </ul>
+                      </Card.Body>
+                    </Card>
+                  )}
+
+                  {!viewOnly && (
                   <Form>
                     <Form.Group className="mb-3">
                       <Form.Label>Marks Obtained (out of 100) *</Form.Label>
@@ -224,18 +389,25 @@ export const TeacherGrading: React.FC = () => {
                       Student and parents will be notified about the grade
                     </Alert>
                   </Form>
+                  )}
                 </>
               )}
             </Modal.Body>
             <Modal.Footer>
-              <Button variant="secondary" onClick={() => setShowModal(false)}>Cancel</Button>
-              <Button
-                variant="primary"
-                onClick={handleSubmitGrade}
-                disabled={!gradeData.marksObtained || !gradeData.grade}
-              >
-                Submit Grade
-              </Button>
+              {viewOnly ? (
+                <Button variant="secondary" onClick={() => setShowModal(false)}>Close</Button>
+              ) : (
+                <>
+                  <Button variant="secondary" onClick={() => setShowModal(false)}>Cancel</Button>
+                  <Button
+                    variant="primary"
+                    onClick={handleSubmitGrade}
+                    disabled={!gradeData.marksObtained || !gradeData.grade}
+                  >
+                    Submit Grade
+                  </Button>
+                </>
+              )}
             </Modal.Footer>
           </Modal>
         </Col>

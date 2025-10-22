@@ -5,7 +5,6 @@ import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
 import { teacherService } from '../services/teacherService';
 import { subjectService } from '../services/subjectService';
-import { classService } from '../services/classService';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -19,41 +18,38 @@ const sidebarItems = [
   { path: '/teacher/students', label: 'Students', icon: 'bi-people' },
 ];
 
-export const TeacherAssignments: React.FC = () => {
+export const TeacherStudyMaterials: React.FC = () => {
   const { user } = useAuth();
   const [showModal, setShowModal] = useState(false);
-  const [editingAssignment, setEditingAssignment] = useState<any>(null);
+  const [editingMaterial, setEditingMaterial] = useState<any>(null);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [classes, setClasses] = useState<any[]>([]);
   const [subjects, setSubjects] = useState<any[]>([]);
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+  const [editAttachments, setEditAttachments] = useState<string[]>([]);
   
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     classId: '',
     subject: '',
-    dueDate: '',
-    totalMarks: 100,
-    type: 'HOMEWORK'
+    dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
   });
 
-  const [assignments, setAssignments] = useState<any[]>([]);
+  const [materials, setMaterials] = useState<any[]>([]);
 
-  // Subjects filtered by selected class
   const filteredSubjects = useMemo(() => {
     if (!formData.classId) return subjects || [];
     try {
-      // If class has an explicit subjects list, prefer that
       const classObj = (classes || []).find((c: any) => c.id === formData.classId);
       const classSubjectIds: string[] = (classObj?.subjects || []) as any;
       return (subjects || []).filter((s: any) => {
         if (classSubjectIds && classSubjectIds.length > 0) return classSubjectIds.includes(s.id);
         const list = s.classIds || s.classIDs || s.classes || [];
         if (Array.isArray(list) && list.length > 0) return list.includes(formData.classId);
-        return true; // global
+        return true; // no mapping -> global
       });
     } catch {
       return subjects || [];
@@ -61,49 +57,41 @@ export const TeacherAssignments: React.FC = () => {
   }, [subjects, classes, formData.classId]);
 
   useEffect(() => {
-    loadClassesAndAssignments();
+    loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
-  const loadClassesAndAssignments = async () => {
+  const loadData = async () => {
     setLoading(true); setError('');
     try {
-      // Load teacher's assigned classes and subjects
       let cls: any[] = [];
       try {
         cls = await teacherService.getMyClasses();
-      } catch {
-        cls = [];
-      }
+      } catch { cls = []; }
       if ((!cls || cls.length === 0) && user?.schoolId) {
         try {
-          const all = await classService.getAllClasses({ schoolId: user.schoolId });
+          const all = await (await import('../services/classService')).classService.getAllClasses({ schoolId: user.schoolId });
           cls = (all || []).filter((c: any) => c && (c as any).isActive !== false);
         } catch {}
       }
       const subs = user?.schoolId ? await subjectService.getAllSubjects({ schoolId: user.schoolId }) : [];
-
       setClasses(cls || []);
       setSubjects(subs || []);
       
-      // Load assignments via session-based endpoint (filter to HOMEWORK and PROJECT only)
       const list = await teacherService.getMyAssignments();
-      const filtered = (list || []).filter((a: any) => a.type === 'HOMEWORK' || a.type === 'PROJECT' || !a.type);
       const nameMap = new Map<string, string>((cls || []).map((c: any) => [c.id, (c.name || c.className || `${c.grade || 'Class'}${c.section ? ' - ' + c.section : ''}`)]));
-      const normalized = (filtered || []).map((a: any) => ({
+      // Filter to PRESENTATION type only
+      const filtered = (list || []).filter((a: any) => a.type === 'PRESENTATION');
+      const normalized = filtered.map((a: any) => ({
         id: a.id,
         title: a.title,
         classId: a.classId,
         class: nameMap.get(a.classId) || a.className || a.classId,
         subject: a.subject || a.subjectName,
         dueDate: a.dueDate,
-        totalMarks: a.maxMarks || a.totalMarks,
-        type: a.type || 'HOMEWORK',
-        submissions: a.submissionsCount || 0,
-        totalStudents: a.totalStudents || 0,
         status: a.isActive === false ? 'inactive' : 'active'
       }));
-      setAssignments(normalized);
+      setMaterials(normalized);
     } catch (e: any) {
       setError(e?.response?.data?.message || 'Failed to load data');
       console.error('Load error:', e);
@@ -112,7 +100,6 @@ export const TeacherAssignments: React.FC = () => {
     }
   };
 
-  // Reset subject selection when class changes and current subject isn't valid for the class
   useEffect(() => {
     if (!formData.classId || filteredSubjects.length === 0) return;
     const valid = filteredSubjects.some((s: any) => (s.name || s.code) === formData.subject);
@@ -132,44 +119,59 @@ export const TeacherAssignments: React.FC = () => {
         classId: formData.classId,
         subject: formData.subject,
         dueDate: formData.dueDate,
-        maxMarks: formData.totalMarks,
-        type: formData.type || 'HOMEWORK',
+        maxMarks: 0,
+        type: 'PRESENTATION',
         schoolId: user.schoolId,
         assignedDate: new Date().toISOString().split('T')[0],
       };
       const created = await teacherService.createAssignment(payload);
-      // Optional attachment upload
       if (attachmentFile && created?.id) {
-        await teacherService.uploadAssignmentAttachment(created.id, attachmentFile);
+        try {
+          await teacherService.uploadAssignmentAttachment(created.id, attachmentFile);
+        } catch (e: any) {
+          const status = e?.response?.status;
+          const msg = e?.response?.data?.message || e?.message || '';
+          // If upload fails (e.g., 413), still keep the created material
+          setSuccess('Study material shared successfully (attachment upload failed).');
+          setError(status === 413 ? 'Attachment too large. Maximum allowed size is 10MB.' : (msg || 'Attachment upload failed'));
+        }
+      } else {
+        setSuccess('Study material shared successfully.');
       }
-      setSuccess('Assignment created successfully.');
       setShowModal(false);
       resetForm();
-      await loadClassesAndAssignments();
+      await loadData();
       setTimeout(() => setSuccess(''), 3000);
     } catch (e: any) {
-      setError(e?.response?.data?.message || 'Failed to create assignment');
+      setError(e?.response?.data?.message || 'Failed to share study material');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleEdit = (assignment: any) => {
-    setEditingAssignment(assignment);
+  const handleEdit = (material: any) => {
+    setEditingMaterial(material);
     setFormData({
-      title: assignment.title,
+      title: material.title,
       description: '',
-      classId: assignment.classId || '',
-      subject: assignment.subject,
-      dueDate: assignment.dueDate,
-      totalMarks: assignment.totalMarks,
-      type: assignment.type || 'HOMEWORK'
+      classId: material.classId || '',
+      subject: material.subject,
+      dueDate: material.dueDate,
     });
+    // Load attachments for this assignment
+    (async () => {
+      try {
+        const list = await teacherService.listAssignmentAttachments(material.id);
+        setEditAttachments(list || []);
+      } catch {
+        setEditAttachments([]);
+      }
+    })();
     setShowModal(true);
   };
 
   const handleUpdate = async () => {
-    if (!user?.id || !editingAssignment || !user?.schoolId) return;
+    if (!user?.id || !editingMaterial || !user?.schoolId) return;
     try {
       setLoading(true); setError('');
       const payload: any = {
@@ -178,38 +180,47 @@ export const TeacherAssignments: React.FC = () => {
         classId: formData.classId,
         subject: formData.subject,
         dueDate: formData.dueDate,
-        maxMarks: formData.totalMarks,
-        type: formData.type || 'HOMEWORK',
+        maxMarks: 0,
+        type: 'PRESENTATION',
         schoolId: user.schoolId,
+        assignedDate: new Date().toISOString().split('T')[0],
       };
-      const updated = await teacherService.updateAssignment(editingAssignment.id, payload);
-      if (attachmentFile && (editingAssignment?.id || updated?.id)) {
-        const id = editingAssignment?.id || updated?.id;
-        await teacherService.uploadAssignmentAttachment(id, attachmentFile);
+      const updated = await teacherService.updateAssignment(editingMaterial.id, payload);
+      if (attachmentFile && (editingMaterial?.id || updated?.id)) {
+        const id = editingMaterial?.id || updated?.id;
+        try {
+          await teacherService.uploadAssignmentAttachment(id, attachmentFile);
+        } catch (e: any) {
+          const status = e?.response?.status;
+          const msg = e?.response?.data?.message || e?.message || '';
+          setSuccess('Study material updated (attachment upload failed).');
+          setError(status === 413 ? 'Attachment too large. Maximum allowed size is 10MB.' : (msg || 'Attachment upload failed'));
+        }
+      } else {
+        setSuccess('Study material updated successfully!');
       }
-      setSuccess('Assignment updated successfully!');
       setShowModal(false);
-      setEditingAssignment(null);
+      setEditingMaterial(null);
       resetForm();
-      await loadClassesAndAssignments();
+      await loadData();
       setTimeout(() => setSuccess(''), 3000);
     } catch (e: any) {
-      setError(e?.response?.data?.message || 'Failed to update assignment');
+      setError(e?.response?.data?.message || 'Failed to update study material');
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this assignment?')) return;
+    if (!window.confirm('Are you sure you want to delete this study material?')) return;
     try {
       setLoading(true); setError('');
       await teacherService.deleteAssignment(id);
-      setSuccess('Assignment deleted successfully!');
-      await loadClassesAndAssignments();
+      setSuccess('Study material deleted successfully!');
+      await loadData();
       setTimeout(() => setSuccess(''), 3000);
     } catch (e: any) {
-      setError(e?.response?.data?.message || 'Failed to delete assignment');
+      setError(e?.response?.data?.message || 'Failed to delete study material');
     } finally {
       setLoading(false);
     }
@@ -221,11 +232,26 @@ export const TeacherAssignments: React.FC = () => {
       description: '',
       classId: '',
       subject: '',
-      dueDate: '',
-      totalMarks: 100,
-      type: 'HOMEWORK'
+      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     });
     setAttachmentFile(null);
+    setEditAttachments([]);
+  };
+
+  const downloadAttachment = async (assignmentId: string, filename: string) => {
+    try {
+      const blob = await teacherService.getAssignmentAttachmentBlob(assignmentId, filename);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error('Failed to download attachment', e);
+    }
   };
 
   return (
@@ -238,15 +264,15 @@ export const TeacherAssignments: React.FC = () => {
           <div className="mb-4">
             <div className="d-flex justify-content-between align-items-center">
               <div>
-                <h2>Assignments</h2>
-                <p className="text-muted">Create and manage homework and projects</p>
+                <h2>Study Materials</h2>
+                <p className="text-muted">Share notes, reference materials, and resources with your students</p>
               </div>
               <Button 
                 variant="primary" 
-                onClick={() => { setEditingAssignment(null); resetForm(); setShowModal(true); }}
+                onClick={() => { setEditingMaterial(null); resetForm(); setShowModal(true); }}
               >
                 <i className="bi bi-plus-lg me-2"></i>
-                Create Assignment
+                Share Material
               </Button>
             </div>
           </div>
@@ -262,28 +288,24 @@ export const TeacherAssignments: React.FC = () => {
                     <th>Title</th>
                     <th>Class</th>
                     <th>Subject</th>
-                    <th>Due Date</th>
-                    <th>Submissions</th>
+                    <th>Shared On</th>
                     <th>Status</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {assignments.map((assignment) => (
-                    <tr key={assignment.id}>
-                      <td><strong>{assignment.title}</strong></td>
-                      <td>{assignment.class}</td>
-                      <td><Badge bg="secondary">{assignment.subject}</Badge></td>
-                      <td>{new Date(assignment.dueDate).toLocaleDateString()}</td>
+                  {materials.map((material) => (
+                    <tr key={material.id}>
+                      <td><strong>{material.title}</strong></td>
+                      <td>{material.class}</td>
+                      <td><Badge bg="secondary">{material.subject}</Badge></td>
+                      <td>{new Date(material.dueDate).toLocaleDateString()}</td>
+                      <td><Badge bg="success">{material.status}</Badge></td>
                       <td>
-                        <span className="text-success">{assignment.submissions}</span> / {assignment.totalStudents}
-                      </td>
-                      <td><Badge bg="success">{assignment.status}</Badge></td>
-                      <td>
-                        <Button variant="outline-primary" size="sm" className="me-2" onClick={() => handleEdit(assignment)}>
+                        <Button variant="outline-primary" size="sm" className="me-2" onClick={() => handleEdit(material)}>
                           <i className="bi bi-pencil"></i>
                         </Button>
-                        <Button variant="outline-danger" size="sm" onClick={() => handleDelete(assignment.id)}>
+                        <Button variant="outline-danger" size="sm" onClick={() => handleDelete(material.id)}>
                           <i className="bi bi-trash"></i>
                         </Button>
                       </td>
@@ -296,7 +318,7 @@ export const TeacherAssignments: React.FC = () => {
 
           <Modal show={showModal} onHide={() => setShowModal(false)} size="lg">
             <Modal.Header closeButton>
-              <Modal.Title>{editingAssignment ? 'Edit' : 'Create'} Assignment</Modal.Title>
+              <Modal.Title>{editingMaterial ? 'Edit' : 'Share'} Study Material</Modal.Title>
             </Modal.Header>
             <Modal.Body>
               <Form>
@@ -306,6 +328,7 @@ export const TeacherAssignments: React.FC = () => {
                     type="text"
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    placeholder="e.g., Chapter 5 Notes, Reference Material"
                   />
                 </Form.Group>
 
@@ -316,6 +339,7 @@ export const TeacherAssignments: React.FC = () => {
                     rows={3}
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="Brief description of the material"
                   />
                 </Form.Group>
 
@@ -360,63 +384,41 @@ export const TeacherAssignments: React.FC = () => {
                   </Col>
                 </Row>
 
-                <Row>
-                  <Col md={6}>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Due Date *</Form.Label>
-                      <Form.Control
-                        type="date"
-                        value={formData.dueDate}
-                        onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={6}>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Total Marks *</Form.Label>
-                      <Form.Control
-                        type="number"
-                        value={formData.totalMarks}
-                        onChange={(e) => setFormData({ ...formData, totalMarks: Number(e.target.value) })}
-                      />
-                    </Form.Group>
-                  </Col>
-                </Row>
-
-                <Row>
-                  <Col md={6}>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Type *</Form.Label>
-                      <Form.Select
-                        value={formData.type}
-                        onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                      >
-                        <option value="HOMEWORK">Homework / Assignment</option>
-                        <option value="PROJECT">Project</option>
-                        <option value="PRACTICAL">Practical</option>
-                        <option value="RESEARCH">Research</option>
-                      </Form.Select>
-                      <Form.Text className="text-muted">For quizzes/tests, use Quiz & Tests page. For study materials, use Study Materials page.</Form.Text>
-                    </Form.Group>
-                  </Col>
-                </Row>
+                <Form.Group className="mb-3">
+                  <Form.Label>Available Until</Form.Label>
+                  <Form.Control
+                    type="date"
+                    value={formData.dueDate}
+                    onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+                  />
+                  <Form.Text className="text-muted">Optional: Set when this material expires</Form.Text>
+                </Form.Group>
 
                 <Form.Group className="mb-3">
-                  <Form.Label>Attachment (optional)</Form.Label>
+                  <Form.Label>Upload File *</Form.Label>
                   <Form.Control
                     type="file"
-                    accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.txt"
+                    accept=".pdf,.doc,.docx,.ppt,.pptx,.png,.jpg,.jpeg,.txt,.zip"
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                       const file = e.target.files && e.target.files[0];
+                      if (file) {
+                        const max = 10 * 1024 * 1024; // 10MB
+                        if (file.size > max) {
+                          setError('File is too large. Maximum allowed size is 10MB.');
+                          e.currentTarget.value = '';
+                          setAttachmentFile(null);
+                          return;
+                        }
+                      }
                       setAttachmentFile(file || null);
                     }}
                   />
-                  <Form.Text className="text-muted">Upload question sheet or related material. Max 5-10MB recommended.</Form.Text>
+                  <Form.Text className="text-muted">Upload study material (PDF, DOC, PPT, images, etc.). Max 10MB.</Form.Text>
                 </Form.Group>
 
                 <Alert variant="info">
                   <i className="bi bi-info-circle me-2"></i>
-                  All students in the selected class will receive a notification about this assignment.
+                  Study materials are view-only for students. They cannot submit anything.
                 </Alert>
               </Form>
             </Modal.Body>
@@ -424,10 +426,10 @@ export const TeacherAssignments: React.FC = () => {
               <Button variant="secondary" onClick={() => setShowModal(false)}>Cancel</Button>
                 <Button 
                   variant="primary" 
-                  onClick={editingAssignment ? handleUpdate : handleCreate}
-                  disabled={!formData.title || !formData.classId || !formData.subject || !formData.dueDate}
+                  onClick={editingMaterial ? handleUpdate : handleCreate}
+                  disabled={!formData.title || !formData.classId || !formData.subject}
                 >
-                  {editingAssignment ? 'Update' : 'Create'} Assignment
+                  {editingMaterial ? 'Update' : 'Share'} Material
                 </Button>
             </Modal.Footer>
           </Modal>

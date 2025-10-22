@@ -1,5 +1,5 @@
 import apiService from './api';
-import { SchoolClass } from '../types';
+import { SchoolClass, Student } from '../types';
 
 // Normalize backend payloads that may return `active` instead of `isActive`
 const normalizeClass = (c: any): SchoolClass => ({
@@ -65,5 +65,13 @@ export const classService = {
 
   async getClassStats(id: string): Promise<any> {
     return apiService.get<any>(`/classes/${id}/stats`);
+  },
+  async getClassStudents(classId: string): Promise<Student[]> {
+    const data = await apiService.get<any[]>(`/classes/${classId}/students`);
+    // Backend returns Student entities; normalize like studentService does (lightly)
+    return (data || []).map((s: any) => ({
+      ...s,
+      isActive: s?.isActive ?? s?.active ?? false,
+    })) as Student[];
   },
 };

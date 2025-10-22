@@ -1,12 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Layout } from '../components/Layout';
-import { Container, Row, Col, Card, Table, Button, Badge, Alert, Spinner, Form } from 'react-bootstrap';
+import { Container, Row, Col, Card, Table, Button, Badge, Alert, Spinner, Form, Modal } from 'react-bootstrap';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { timetableService } from '../services/timetableService';
 import { classService } from '../services/classService';
-import { SchoolClass, Timetable } from '../types';
+import { SchoolClass, Timetable, School } from '../types';
 import { studentService } from '../services/studentService';
+import { schoolService } from '../services/schoolService';
 
 export const TimetableList: React.FC = () => {
   const { user } = useAuth();
@@ -19,6 +20,9 @@ export const TimetableList: React.FC = () => {
   const [classId, setClassId] = useState<string>('');
   const [year, setYear] = useState<string>('');
   const [q, setQ] = useState('');
+  const [school, setSchool] = useState<School | null>(null);
+  const [showWeekendModal, setShowWeekendModal] = useState(false);
+  const [weekendSelection, setWeekendSelection] = useState<string[]>([]);
 
   const isAdmin = useMemo(() => (user?.roles || []).some(r => r === 'ADMIN' || r === 'ROLE_ADMIN'), [user?.roles]);
   const isStudent = useMemo(() => (user?.roles || []).some(r => r === 'STUDENT' || r === 'ROLE_STUDENT'), [user?.roles]);
@@ -72,6 +76,19 @@ export const TimetableList: React.FC = () => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.schoolId, year, isStudent, user?.email]);
+
+  useEffect(() => {
+    const loadSchool = async () => {
+      if (!isAdmin || !user?.schoolId) return;
+      try {
+        const s = await schoolService.getById(user.schoolId);
+        setSchool(s);
+        setWeekendSelection((s?.configuration?.weekendDays || []).map((d: any) => String(d).toUpperCase()));
+      } catch {}
+    };
+    loadSchool();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin, user?.schoolId]);
 
   const handleDelete = async (id: string) => {
     if (!window.confirm('Delete this timetable?')) return;
@@ -142,6 +159,12 @@ export const TimetableList: React.FC = () => {
                   <Button variant="primary" onClick={() => navigate('/timetable/new')}>
                     <i className="bi bi-plus-lg me-2"></i>
                     New Timetable
+                  </Button>
+                )}
+                {isAdmin && (
+                  <Button variant="outline-secondary" onClick={() => setShowWeekendModal(true)}>
+                    <i className="bi bi-calendar-x me-2"></i>
+                    Weekend Days
                   </Button>
                 )}
               </div>
@@ -240,6 +263,51 @@ export const TimetableList: React.FC = () => {
           </Card.Body>
         </Card>
       </Container>
+      {isAdmin && (
+        <Modal show={showWeekendModal} onHide={() => setShowWeekendModal(false)}>
+          <Modal.Header closeButton>
+            <Modal.Title>Configure Weekend Days</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <div className="d-flex flex-column gap-2">
+              {['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY','SUNDAY'].map(d => (
+                <Form.Check
+                  key={d}
+                  type="checkbox"
+                  id={`wk-${d}`}
+                  label={d.charAt(0) + d.slice(1).toLowerCase()}
+                  checked={weekendSelection.includes(d)}
+                  onChange={(e) => {
+                    setWeekendSelection(prev => {
+                      const set = new Set(prev);
+                      if (e.target.checked) set.add(d); else set.delete(d);
+                      return Array.from(set);
+                    });
+                  }}
+                />
+              ))}
+            </div>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => setShowWeekendModal(false)}>Cancel</Button>
+            <Button variant="primary" onClick={async () => {
+              if (!user?.schoolId) return;
+              try {
+                const updated = await schoolService.update(user.schoolId, {
+                  ...school,
+                  configuration: { ...(school?.configuration || {}), weekendDays: weekendSelection }
+                } as any);
+                setSchool(updated);
+                setShowWeekendModal(false);
+                setSuccess('Weekend days updated');
+                setTimeout(() => setSuccess(''), 2000);
+              } catch (e: any) {
+                setError(e?.response?.data?.message || 'Failed to update weekend days');
+              }
+            }}>Save</Button>
+          </Modal.Footer>
+        </Modal>
+      )}
     </Layout>
   );
 };

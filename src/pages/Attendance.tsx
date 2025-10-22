@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Container, Row, Col, Card, Form, Button, Table, Spinner, Alert, Badge, InputGroup } from 'react-bootstrap';
+import { Container, Row, Col, Card, Form, Button, Table, Spinner, Alert, Badge, InputGroup, Nav, Modal } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
 import { attendanceService } from '../services/attendanceService';
+import { Attendance, Student, SchoolClass } from '../types';
+import { classService } from '../services/classService';
 import { studentService } from '../services/studentService';
-import { Attendance, Student } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 
 function getMonthRangeISO(d = new Date()) {
   const start = new Date(d.getFullYear(), d.getMonth(), 1);
@@ -13,6 +15,10 @@ function getMonthRangeISO(d = new Date()) {
 }
 
 export const AttendancePage: React.FC = () => {
+  const { user } = useAuth();
+  const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+  const schoolId = user?.schoolId || userInfo.schoolId || '';
+
   const [studentQuery, setStudentQuery] = useState('');
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
@@ -30,13 +36,29 @@ export const AttendancePage: React.FC = () => {
     attendancePercentage: number;
   } | null>(null);
 
+  // Admin: class view
+  const [viewMode, setViewMode] = useState<'student' | 'class'>('student');
+  const [classes, setClasses] = useState<SchoolClass[]>([]);
+  const [selectedClassId, setSelectedClassId] = useState('');
+  const [classRecords, setClassRecords] = useState<Attendance[]>([]);
+  const [studentNameMap, setStudentNameMap] = useState<Record<string, string>>({});
+  const [editing, setEditing] = useState<{ id: string; status: Attendance['status'] | ''; remarks: string } | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+
   useEffect(() => {
     // if a student is selected, load attendance for range
-    if (selectedStudent) {
+    if (viewMode === 'student' && selectedStudent) {
       loadAttendance(selectedStudent.id, start, end);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedStudent, start, end]);
+  }, [selectedStudent, start, end, viewMode]);
+
+  useEffect(() => {
+    if (viewMode === 'class') {
+      loadClasses();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewMode]);
 
   const searchStudents = async () => {
     setError('');
@@ -49,6 +71,38 @@ export const AttendancePage: React.FC = () => {
       setStudents(list);
     } catch (e: any) {
       setError(e.response?.data?.message || 'Failed to search students');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadClasses = async () => {
+    try {
+      const cls = await classService.getAllClasses({ schoolId });
+      setClasses(cls);
+      if (!selectedClassId && cls.length > 0) setSelectedClassId(cls[0].id);
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  const loadClassAttendance = async (classId: string, s?: string, e?: string) => {
+    setError('');
+    try {
+      setLoading(true);
+      const [recs, studs] = await Promise.all([
+        attendanceService.getByClassAdmin(classId, { startDate: s, endDate: e }),
+        studentService.getStudentsByClass(classId).catch(() => []),
+      ]);
+      const map: Record<string, string> = {};
+      (studs || []).forEach((st: any) => {
+        if (st?.id) map[st.id] = `${st.firstName || ''} ${st.lastName || ''}`.trim() || st.admissionNumber || st.id;
+      });
+      setStudentNameMap(map);
+      setClassRecords(recs as any);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to load class attendance');
+      setClassRecords([]);
     } finally {
       setLoading(false);
     }
@@ -87,7 +141,7 @@ export const AttendancePage: React.FC = () => {
             <div className="d-flex justify-content-between align-items-center">
               <div>
                 <h2 className="mb-1">Attendance</h2>
-                <p className="text-muted mb-0">View attendance by student and date range</p>
+                <p className="text-muted mb-0">View attendance by student or by class and date range</p>
               </div>
             </div>
           </Col>
@@ -99,6 +153,16 @@ export const AttendancePage: React.FC = () => {
           </Alert>
         )}
 
+        <Nav variant="tabs" activeKey={viewMode} onSelect={(k) => setViewMode((k as any) || 'student')} className="mb-3">
+          <Nav.Item>
+            <Nav.Link eventKey="student">By Student</Nav.Link>
+          </Nav.Item>
+          <Nav.Item>
+            <Nav.Link eventKey="class">By Class</Nav.Link>
+          </Nav.Item>
+        </Nav>
+
+        {viewMode === 'student' && (
         <Row className="mb-3">
           <Col md={6} className="mb-3">
             <Card className="border-0 shadow-sm h-100">
@@ -230,26 +294,67 @@ export const AttendancePage: React.FC = () => {
             </Card>
           </Col>
         </Row>
+        )}
+
+        {viewMode === 'class' && (
+        <Row className="mb-3">
+          <Col md={6} className="mb-3">
+            <Card className="border-0 shadow-sm h-100">
+              <Card.Header className="bg-white">
+                <strong>Select Class & Range</strong>
+              </Card.Header>
+              <Card.Body>
+                <Row className="g-3 align-items-end">
+                  <Col md={12}>
+                    <Form.Group>
+                      <Form.Label>Class</Form.Label>
+                      <Form.Select value={selectedClassId} onChange={(e) => setSelectedClassId(e.target.value)}>
+                        {classes.map((c) => (
+                          <option key={c.id} value={c.id}>{(c.className || c.name)} - {c.section}</option>
+                        ))}
+                      </Form.Select>
+                    </Form.Group>
+                  </Col>
+                  <Col md={5}>
+                    <Form.Group>
+                      <Form.Label>Start Date</Form.Label>
+                      <Form.Control type="date" value={start} onChange={(e) => setRange((r) => ({ ...r, start: e.target.value }))} />
+                    </Form.Group>
+                  </Col>
+                  <Col md={5}>
+                    <Form.Group>
+                      <Form.Label>End Date</Form.Label>
+                      <Form.Control type="date" value={end} onChange={(e) => setRange((r) => ({ ...r, end: e.target.value }))} />
+                    </Form.Group>
+                  </Col>
+                  <Col md={2} className="d-grid">
+                    <Button variant="primary" onClick={() => selectedClassId && loadClassAttendance(selectedClassId, start, end)} disabled={!selectedClassId || loading}>Load</Button>
+                  </Col>
+                </Row>
+              </Card.Body>
+            </Card>
+          </Col>
+        </Row>
+        )}
 
         <Card className="border-0 shadow-sm">
           <Card.Header className="bg-white d-flex justify-content-between align-items-center">
-            <h5 className="mb-0">Records</h5>
+            <h5 className="mb-0">Records {viewMode === 'class' && selectedClassId ? `for Class` : ''}</h5>
             {loading && <Spinner size="sm" animation="border" />}
           </Card.Header>
           <Card.Body className="p-0">
-            {records.length === 0 ? (
+            {viewMode === 'student' ? (
+              records.length === 0 ? (
               <div className="text-center py-5">
                 <i className="bi bi-hourglass display-5 text-primary"></i>
                 <p className="mt-2 text-muted">{selectedStudent ? 'No attendance records in this range' : 'Select a student to view attendance'}</p>
               </div>
-            ) : (
+              ) : (
               <Table responsive hover className="mb-0">
                 <thead className="table-light">
                   <tr>
                     <th>Date</th>
                     <th>Status</th>
-                    <th>Subject</th>
-                    <th>Period</th>
                     <th>Remarks</th>
                   </tr>
                 </thead>
@@ -264,16 +369,106 @@ export const AttendancePage: React.FC = () => {
                         {r.status === 'EXCUSED' && <Badge bg="info">Excused</Badge>}
                         {r.status === 'HALF_DAY' && <Badge bg="secondary">Half Day</Badge>}
                       </td>
-                      <td>{r.subject || '-'}</td>
-                      <td>{r.period || '-'}</td>
                       <td>{r.remarks || '-'}</td>
                     </tr>
                   ))}
                 </tbody>
               </Table>
+              )
+            ) : (
+              classRecords.length === 0 ? (
+                <div className="text-center py-5">
+                  <i className="bi bi-hourglass display-5 text-primary"></i>
+                  <p className="mt-2 text-muted">Select a class and load to view attendance</p>
+                </div>
+              ) : (
+                <Table responsive hover className="mb-0">
+                  <thead className="table-light">
+                    <tr>
+                      <th>Date</th>
+                      <th>Student</th>
+                      <th>Status</th>
+                      <th>Remarks</th>
+                      <th className="text-end">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {classRecords.map((r, idx) => (
+                      <tr key={r.id || idx}>
+                        <td>{new Date(r.date).toLocaleDateString('en-IN')}</td>
+                        <td>{studentNameMap[r.studentId] || <code>{r.studentId}</code>}</td>
+                        <td>
+                          {r.status === 'PRESENT' && <Badge bg="success">Present</Badge>}
+                          {r.status === 'ABSENT' && <Badge bg="danger">Absent</Badge>}
+                          {r.status === 'LATE' && <Badge bg="warning" text="dark">Late</Badge>}
+                          {r.status === 'EXCUSED' && <Badge bg="info">Excused</Badge>}
+                          {r.status === 'HALF_DAY' && <Badge bg="secondary">Half Day</Badge>}
+                        </td>
+                        <td>{r.remarks || '-'}</td>
+                        <td className="text-end">
+                          <Button size="sm" variant="outline-primary" onClick={() => setEditing({ id: r.id as string, status: r.status, remarks: r.remarks || '' })}>
+                            Edit
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              )
             )}
           </Card.Body>
         </Card>
+
+        {/* Edit Modal */}
+        <Modal show={!!editing} onHide={() => setEditing(null)} centered>
+          <Modal.Header closeButton>
+            <Modal.Title>Edit Attendance</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <Form>
+              <Form.Group className="mb-3">
+                <Form.Label>Status</Form.Label>
+                <Form.Select
+                  value={editing?.status || ''}
+                  onChange={(e) => setEditing((prev) => prev ? { ...prev, status: e.target.value as any } : prev)}
+                >
+                  <option value="PRESENT">Present</option>
+                  <option value="ABSENT">Absent</option>
+                  <option value="LATE">Late</option>
+                  <option value="EXCUSED">Excused</option>
+                  <option value="HALF_DAY">Half Day</option>
+                </Form.Select>
+              </Form.Group>
+              <Form.Group>
+                <Form.Label>Remarks</Form.Label>
+                <Form.Control
+                  as="textarea"
+                  rows={3}
+                  value={editing?.remarks || ''}
+                  onChange={(e) => setEditing((prev) => prev ? { ...prev, remarks: e.target.value } : prev)}
+                />
+              </Form.Group>
+            </Form>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="outline-secondary" onClick={() => setEditing(null)} disabled={savingEdit}>Cancel</Button>
+            <Button variant="primary" disabled={savingEdit || !editing} onClick={async () => {
+              if (!editing) return;
+              try {
+                setSavingEdit(true);
+                const updated = await attendanceService.updateByAdmin(editing.id, { status: editing.status as any, remarks: editing.remarks });
+                setClassRecords((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+                setEditing(null);
+              } catch (e: any) {
+                setError(e?.response?.data?.message || 'Failed to update attendance');
+              } finally {
+                setSavingEdit(false);
+              }
+            }}>
+              Save Changes
+            </Button>
+          </Modal.Footer>
+        </Modal>
       </Container>
     </Layout>
   );

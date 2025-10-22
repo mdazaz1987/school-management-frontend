@@ -26,16 +26,35 @@ export interface ChildDetail {
   fees: any[];
 }
 
+export interface AttendanceRecord {
+  id?: string;
+  date: string;
+  status: 'PRESENT' | 'ABSENT' | 'LATE' | string;
+}
+
+export interface AttendanceSummary {
+  totalDays: number;
+  presentDays: number;
+  absentDays: number;
+  lateDays: number;
+  attendancePercentage: number;
+  records: AttendanceRecord[];
+}
+
 export const parentService = {
   async getDashboard(): Promise<ParentDashboardResponse> {
     return apiService.get('/parent/dashboard');
+  },
+
+  async getChildDetails(childId: string): Promise<any> {
+    return apiService.get(`/parent/children/${childId}`);
   },
 
   async getMyChildren(): Promise<ChildDetail[]> {
     return apiService.get('/parent/children');
   },
 
-  async getChildAttendance(childId: string, startDate?: string, endDate?: string): Promise<any[]> {
+  async getChildAttendance(childId: string, startDate?: string, endDate?: string): Promise<AttendanceSummary> {
     const params = new URLSearchParams();
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
@@ -43,15 +62,30 @@ export const parentService = {
   },
 
   async getChildPerformance(childId: string): Promise<any> {
-    return apiService.get(`/parent/children/${childId}/performance`);
+    // Backend exposes /parent/children/{id}/grades for performance summary
+    return apiService.get(`/parent/children/${childId}/grades`);
   },
 
   async getChildFees(childId: string): Promise<any[]> {
     return apiService.get(`/parent/children/${childId}/fees`);
   },
 
+  async getChildFeeSummary(childId: string): Promise<{
+    studentId: string;
+    totalDue: number;
+    totalPaid: number;
+    pendingCount: number;
+    totalFees: number;
+  }> {
+    return apiService.get(`/fees/student/${childId}/summary`);
+  },
+
   async getChildNotifications(childId: string): Promise<any[]> {
     return apiService.get(`/parent/children/${childId}/notifications`);
+  },
+
+  async getChildAssignments(childId: string): Promise<any[]> {
+    return apiService.get(`/parent/children/${childId}/assignments`);
   },
 
   // ===== LEAVE APPLICATION APPROVAL =====

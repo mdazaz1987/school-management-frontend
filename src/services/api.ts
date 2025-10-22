@@ -1,6 +1,53 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api';
+// Infer API base URL at runtime. This prevents accidental localhost calls in production.
+function inferApiBaseUrl(): string {
+  // 1) Respect explicit env if provided at build time
+  if (process.env.REACT_APP_API_URL && process.env.REACT_APP_API_URL.trim() !== '') {
+    return process.env.REACT_APP_API_URL;
+  }
+
+  // 2) If running in browser, infer from current hostname
+  if (typeof window !== 'undefined' && window.location) {
+    const { protocol, hostname } = window.location;
+    // Common setup: frontend served on :4001, backend on :9090
+    // Fallback to same host with backend port 9090
+    return `${protocol}//${hostname}:9090/api`;
+  }
+
+  // 3) Dev fallback
+  return 'http://localhost:8080/api';
+}
+
+const API_BASE_URL = inferApiBaseUrl();
+// Try to derive the API origin (scheme+host+port) from API_BASE_URL
+const API_ORIGIN = (() => {
+  try {
+    const u = new URL(API_BASE_URL);
+    return u.origin;
+  } catch {
+    try { return window.location.origin; } catch { return ''; }
+  }
+})();
+
+// Resolve a URL or API path (like "/api/..." or "//host/..." or absolute) to an absolute URL
+export function resolveUrl(pathOrUrl: string): string {
+  try {
+    if (!pathOrUrl) return '';
+    // Already absolute (http/https)
+    if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl;
+    // API path -> resolve against API origin so it hits backend server, not frontend origin
+    if (pathOrUrl.startsWith('/api/')) return `${API_ORIGIN}${pathOrUrl}`;
+    // Protocol-relative
+    if (/^\/\//.test(pathOrUrl)) return `${window.location.protocol}${pathOrUrl}`;
+    // Starts with / -> relative to current origin
+    if (pathOrUrl.startsWith('/')) return `${window.location.origin}${pathOrUrl}`;
+    // Otherwise return as-is
+    return pathOrUrl;
+  } catch {
+    return pathOrUrl;
+  }
+}
 
 class ApiService {
   private api: AxiosInstance;
@@ -12,6 +59,12 @@ class ApiService {
         'Content-Type': 'application/json',
       },
     });
+
+    // Log the resolved API base URL once
+    try {
+      // eslint-disable-next-line no-console
+      console.log('[API] Using base URL:', API_BASE_URL);
+    } catch {}
 
     // Request interceptor to add auth token
     this.api.interceptors.request.use(

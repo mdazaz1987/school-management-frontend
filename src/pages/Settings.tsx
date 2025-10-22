@@ -6,16 +6,18 @@ import { useAuth } from '../contexts/AuthContext';
 import { School } from '../types';
 import { schoolService } from '../services/schoolService';
 import { useTheme } from '../contexts/ThemeContext';
-import { apiService } from '../services/api';
+import apiService, { resolveUrl } from '../services/api';
 import { useNavigate } from 'react-router-dom';
+import { useLang } from '../contexts/LangContext';
 
 export const Settings: React.FC = () => {
   const { user } = useAuth();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
+  const { t } = useLang();
   const isAdmin = useMemo(() => (user?.roles || []).some(r => r === 'ADMIN' || r === 'ROLE_ADMIN'), [user?.roles]);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
-  const [activeTab, setActiveTab] = useState<'password' | 'notifications' | 'preferences' | 'school'>('password');
+  const [activeTab, setActiveTab] = useState<'password' | 'notifications' | 'preferences' | 'school' | 'email'>('password');
   const [saveMessage, setSaveMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -57,6 +59,23 @@ export const Settings: React.FC = () => {
     branding: { primaryColor: '#0d6efd', secondaryColor: '#6c757d', theme: 'light' },
   });
 
+  // Email configuration (admin-only)
+  const [emailConfig, setEmailConfig] = useState<{
+    smtpHost?: string;
+    smtpPort?: number;
+    smtpUsername?: string;
+    smtpPassword?: string;
+    fromEmail?: string;
+    fromName?: string;
+    enableSSL?: boolean;
+    enableTLS?: boolean;
+  }>({});
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [emailSaving, setEmailSaving] = useState(false);
+  const [testEmail, setTestEmail] = useState('');
+
+  const [newHolidayDate, setNewHolidayDate] = useState('');
+
   useEffect(() => {
     // keep Settings theme in sync with global ThemeContext
     setPreferences((prev) => ({ ...prev, theme }));
@@ -90,9 +109,22 @@ export const Settings: React.FC = () => {
         setSchoolLoading(false);
       }
     };
+    const maybeLoadEmail = async () => {
+      if (!isAdmin || !user?.schoolId) return;
+      try {
+        setEmailLoading(true);
+        const cfg = await apiService.get(`/admin/schools/${user.schoolId}/email-config`);
+        setEmailConfig(cfg || {});
+      } catch (e) {
+        // ignore if not configured yet
+      } finally {
+        setEmailLoading(false);
+      }
+    };
     
     loadNotificationPreferences();
     maybeLoadSchool();
+    maybeLoadEmail();
   }, [isAdmin, user?.schoolId, theme]);
 
   const handlePasswordChange = async (e: React.FormEvent) => {
@@ -219,6 +251,17 @@ export const Settings: React.FC = () => {
                     School
                   </ListGroup.Item>
                 )}
+                {isAdmin && (
+                  <ListGroup.Item
+                    action
+                    active={activeTab === 'email'}
+                    onClick={() => setActiveTab('email')}
+                    className="d-flex align-items-center"
+                  >
+                    <i className="bi bi-envelope-paper me-2"></i>
+                    Email
+                  </ListGroup.Item>
+                )}
               </ListGroup>
             </Card>
 
@@ -301,6 +344,159 @@ export const Settings: React.FC = () => {
                         </>
                       )}
                     </Button>
+                  </Form>
+                </Card.Body>
+              </Card>
+            )}
+
+            {/* Email Config Tab (Admin only) */}
+            {activeTab === 'email' && isAdmin && (
+              <Card className="border-0 shadow-sm">
+                <Card.Header className="bg-white d-flex justify-content-between align-items-center">
+                  <h5 className="mb-0">
+                    <i className="bi bi-envelope-paper me-2"></i>
+                    {t('settings.email.title')}
+                  </h5>
+                  {emailLoading && <Spinner animation="border" size="sm" />}
+                </Card.Header>
+                <Card.Body className="p-4">
+                  <Form
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      if (!user?.schoolId) return;
+                      setErrorMessage('');
+                      setSaveMessage('');
+                      setEmailSaving(true);
+                      try {
+                        const payload = { ...emailConfig };
+                        const saved = await apiService.put(`/admin/schools/${user.schoolId}/email-config`, payload);
+                        setEmailConfig(saved as any);
+                        setSaveMessage(t('settings.email.save_success'));
+                        setTimeout(() => setSaveMessage(''), 3000);
+                      } catch (err: any) {
+                        setErrorMessage(err.response?.data?.message || t('settings.email.save_failed'));
+                      } finally {
+                        setEmailSaving(false);
+                      }
+                    }}
+                  >
+                    <Row>
+                      <Col md={6} className="mb-3">
+                        <Form.Group>
+                          <Form.Label>{t('settings.email.smtp_host')}</Form.Label>
+                          <Form.Control
+                            type="text"
+                            value={emailConfig.smtpHost || ''}
+                            onChange={(e) => setEmailConfig({ ...emailConfig, smtpHost: e.target.value })}
+                          />
+                        </Form.Group>
+                      </Col>
+                      <Col md={3} className="mb-3">
+                        <Form.Group>
+                          <Form.Label>{t('settings.email.smtp_port')}</Form.Label>
+                          <Form.Control
+                            type="number"
+                            value={emailConfig.smtpPort || 0}
+                            onChange={(e) => setEmailConfig({ ...emailConfig, smtpPort: parseInt(e.target.value || '0', 10) })}
+                          />
+                        </Form.Group>
+                      </Col>
+                      <Col md={3} className="mb-3">
+                        <Form.Group>
+                          <Form.Label>{t('settings.email.from_name')}</Form.Label>
+                          <Form.Control
+                            type="text"
+                            value={emailConfig.fromName || ''}
+                            onChange={(e) => setEmailConfig({ ...emailConfig, fromName: e.target.value })}
+                          />
+                        </Form.Group>
+                      </Col>
+                    </Row>
+                    <Row>
+                      <Col md={6} className="mb-3">
+                        <Form.Group>
+                          <Form.Label>{t('settings.email.smtp_username')}</Form.Label>
+                          <Form.Control
+                            type="text"
+                            value={emailConfig.smtpUsername || ''}
+                            onChange={(e) => setEmailConfig({ ...emailConfig, smtpUsername: e.target.value })}
+                          />
+                        </Form.Group>
+                      </Col>
+                      <Col md={6} className="mb-3">
+                        <Form.Group>
+                          <Form.Label>{t('settings.email.smtp_password')}</Form.Label>
+                          <Form.Control
+                            type="password"
+                            value={emailConfig.smtpPassword || ''}
+                            onChange={(e) => setEmailConfig({ ...emailConfig, smtpPassword: e.target.value })}
+                          />
+                        </Form.Group>
+                      </Col>
+                    </Row>
+                    <Row>
+                      <Col md={6} className="mb-3">
+                        <Form.Group>
+                          <Form.Label>{t('settings.email.from_email_label')}</Form.Label>
+                          <Form.Control
+                            type="email"
+                            value={emailConfig.fromEmail || ''}
+                            onChange={(e) => setEmailConfig({ ...emailConfig, fromEmail: e.target.value })}
+                          />
+                        </Form.Group>
+                      </Col>
+                      <Col md={6} className="mb-3 d-flex align-items-center gap-3">
+                        <Form.Check
+                          type="switch"
+                          id="enable-ssl"
+                          label={t('settings.email.enable_ssl')}
+                          checked={!!emailConfig.enableSSL}
+                          onChange={(e) => setEmailConfig({ ...emailConfig, enableSSL: e.target.checked })}
+                        />
+                        <Form.Check
+                          type="switch"
+                          id="enable-tls"
+                          label={t('settings.email.enable_tls')}
+                          checked={!!emailConfig.enableTLS}
+                          onChange={(e) => setEmailConfig({ ...emailConfig, enableTLS: e.target.checked })}
+                        />
+                      </Col>
+                    </Row>
+
+                    <div className="d-flex gap-2">
+                      <Button type="submit" variant="primary" disabled={emailSaving}>
+                        {emailSaving ? (
+                          <>
+                            <Spinner size="sm" animation="border" className="me-2" />
+                            {t('common.saving')}
+                          </>
+                        ) : (
+                          <>
+                            <i className="bi bi-check-lg me-2"></i>
+                            {t('common.save')}
+                          </>
+                        )}
+                      </Button>
+                      <Form.Control
+                        type="email"
+                        placeholder={t('settings.email.test_email_placeholder')}
+                        value={testEmail}
+                        onChange={(e) => setTestEmail(e.target.value)}
+                        style={{ maxWidth: 280 }}
+                      />
+                      <Button variant="outline-secondary" onClick={async () => {
+                        if (!user?.schoolId || !testEmail) return;
+                        try {
+                          await apiService.post(`/admin/schools/${user.schoolId}/test-email`, { ...emailConfig, testEmail });
+                          setSaveMessage(`${t('settings.email.test_email_sent_to')} ${testEmail}`);
+                          setTimeout(() => setSaveMessage(''), 3000);
+                        } catch (err: any) {
+                          setErrorMessage(err.response?.data?.message || t('settings.email.test_email_failed'));
+                        }
+                      }}>
+                        {t('settings.email.send_test_email')}
+                      </Button>
+                    </div>
                   </Form>
                 </Card.Body>
               </Card>
@@ -508,12 +704,16 @@ export const Settings: React.FC = () => {
                   <Form
                     onSubmit={async (e) => {
                       e.preventDefault();
-                      if (!user?.schoolId) return;
+                      const schoolId = school.id || user?.schoolId;
+                      if (!schoolId) {
+                        setErrorMessage('School ID is required');
+                        return;
+                      }
                       setErrorMessage('');
                       setSaveMessage('');
                       setSchoolSaving(true);
                       try {
-                        const updated = await schoolService.update(user.schoolId, school);
+                        const updated = await schoolService.update(schoolId, school);
                         setSchool(updated);
                         setSaveMessage('School settings saved');
                         setTimeout(() => setSaveMessage(''), 3000);
@@ -522,7 +722,7 @@ export const Settings: React.FC = () => {
                         if (err?.response?.status === 404) {
                           try {
                             const created = await schoolService.create({
-                              id: user.schoolId,
+                              id: schoolId,
                               ...school,
                             });
                             setSchool(created);
@@ -542,13 +742,22 @@ export const Settings: React.FC = () => {
                     <Row>
                       <Col md={6} className="mb-3">
                         <Form.Group>
-                          <Form.Label>School ID</Form.Label>
-                          <Form.Control type="text" value={user?.schoolId || ''} disabled readOnly />
+                          <Form.Label>{t('settings.school.school_id_label')}</Form.Label>
+                          <Form.Control
+                            type="text"
+                            value={school.id || user?.schoolId || ''}
+                            onChange={(e) => setSchool((prev) => ({ ...prev, id: e.target.value }))}
+                            disabled={!!school.id || !!user?.schoolId}
+                            placeholder={t('settings.school.school_id_placeholder')}
+                          />
+                          <Form.Text className="text-muted">
+                            {t('settings.school.school_id_help')}
+                          </Form.Text>
                         </Form.Group>
                       </Col>
                       <Col md={6} className="mb-3">
                         <Form.Group>
-                          <Form.Label>School Name</Form.Label>
+                          <Form.Label>{t('settings.school.school_name_label')}</Form.Label>
                           <Form.Control
                             type="text"
                             value={school.name || ''}
@@ -559,7 +768,7 @@ export const Settings: React.FC = () => {
                       </Col>
                       <Col md={6} className="mb-3">
                         <Form.Group>
-                          <Form.Label>Logo URL</Form.Label>
+                          <Form.Label>{t('settings.school.logo_url_label')}</Form.Label>
                           <Form.Control
                             type="text"
                             value={school.logo || ''}
@@ -569,10 +778,79 @@ export const Settings: React.FC = () => {
                       </Col>
                     </Row>
 
+                    {/* Principal details for receipts */}
                     <Row>
                       <Col md={6} className="mb-3">
                         <Form.Group>
-                          <Form.Label>Phone</Form.Label>
+                          <Form.Label>{t('settings.school.principal_name_label')}</Form.Label>
+                          <Form.Control
+                            type="text"
+                            value={school.configuration?.principalName || ''}
+                            onChange={(e) => setSchool(prev => ({
+                              ...prev,
+                              configuration: { ...(prev.configuration || {}), principalName: e.target.value },
+                            }))}
+                            placeholder={t('settings.school.example.principal_name')}
+                          />
+                        </Form.Group>
+                      </Col>
+                      <Col md={6} className="mb-3">
+                        <Form.Group>
+                          <Form.Label>{t('settings.school.principal_signature_label')}</Form.Label>
+                          <div className="d-flex align-items-center gap-2">
+                            <Form.Control
+                              type="text"
+                              placeholder={t('settings.school.principal_signature_placeholder')}
+                              value={school.configuration?.principalSignatureUrl || ''}
+                              onChange={(e) => setSchool(prev => ({
+                                ...prev,
+                                configuration: { ...(prev.configuration || {}), principalSignatureUrl: e.target.value },
+                              }))}
+                            />
+                            <Form.Control
+                              type="file"
+                              accept="image/*"
+                              onChange={async (e) => {
+                                const input = e.target as HTMLInputElement;
+                                const file = input.files?.[0];
+                                if (!file || !user?.schoolId) return;
+                                try {
+                                  const resp: any = await schoolService.uploadPrincipalSignature(user.schoolId, file);
+                                  const url = resp?.url || resp;
+                                  setSchool(prev => ({
+                                    ...prev,
+                                    configuration: { ...(prev.configuration || {}), principalSignatureUrl: url },
+                                  }));
+                                  setSaveMessage(t('settings.school.signature_uploaded'));
+                                  setTimeout(() => setSaveMessage(''), 2000);
+                                } catch (err: any) {
+                                  setErrorMessage(err.response?.data?.message || t('error.upload_failed'));
+                                  setTimeout(() => setErrorMessage(''), 3000);
+                                }
+                              }}
+                            />
+                          </div>
+                          {school.configuration?.principalSignatureUrl && (
+                            <div className="mt-2">
+                              <small className="text-muted d-block mb-1">{t('settings.school.preview')}</small>
+                              {/* preview image */}
+                              <img
+                                src={resolveUrl(String(school.configuration?.principalSignatureUrl || ''))}
+                                alt="Principal Signature"
+                                style={{ maxHeight: 60 }}
+                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                              />
+                            </div>
+                          )}
+                        </Form.Group>
+                      </Col>
+                    </Row>
+                    {/* Working hours and weekend configuration removed per requirement */}
+
+                    <Row>
+                      <Col md={6} className="mb-3">
+                        <Form.Group>
+                          <Form.Label>{t('settings.school.contact.phone_label')}</Form.Label>
                           <Form.Control
                             type="text"
                             value={school.contactInfo?.phone || ''}
@@ -585,7 +863,7 @@ export const Settings: React.FC = () => {
                       </Col>
                       <Col md={6} className="mb-3">
                         <Form.Group>
-                          <Form.Label>Email</Form.Label>
+                          <Form.Label>{t('settings.school.contact.email_label')}</Form.Label>
                           <Form.Control
                             type="email"
                             value={school.contactInfo?.email || ''}
@@ -601,7 +879,7 @@ export const Settings: React.FC = () => {
                     <Row>
                       <Col md={6} className="mb-3">
                         <Form.Group>
-                          <Form.Label>Website</Form.Label>
+                          <Form.Label>{t('settings.school.contact.website_label')}</Form.Label>
                           <Form.Control
                             type="text"
                             value={school.contactInfo?.website || ''}
@@ -614,7 +892,7 @@ export const Settings: React.FC = () => {
                       </Col>
                       <Col md={6} className="mb-3">
                         <Form.Group>
-                          <Form.Label>Address (Street)</Form.Label>
+                          <Form.Label>{t('settings.school.address.street_label')}</Form.Label>
                           <Form.Control
                             type="text"
                             value={school.address?.street || ''}
@@ -630,7 +908,7 @@ export const Settings: React.FC = () => {
                     <Row>
                       <Col md={4} className="mb-3">
                         <Form.Group>
-                          <Form.Label>City</Form.Label>
+                          <Form.Label>{t('settings.school.address.city_label')}</Form.Label>
                           <Form.Control
                             type="text"
                             value={school.address?.city || ''}
@@ -643,7 +921,7 @@ export const Settings: React.FC = () => {
                       </Col>
                       <Col md={4} className="mb-3">
                         <Form.Group>
-                          <Form.Label>State</Form.Label>
+                          <Form.Label>{t('settings.school.address.state_label')}</Form.Label>
                           <Form.Control
                             type="text"
                             value={school.address?.state || ''}
@@ -656,7 +934,7 @@ export const Settings: React.FC = () => {
                       </Col>
                       <Col md={4} className="mb-3">
                         <Form.Group>
-                          <Form.Label>Zip Code</Form.Label>
+                          <Form.Label>{t('settings.school.address.zip_label')}</Form.Label>
                           <Form.Control
                             type="text"
                             value={school.address?.zipCode || ''}
@@ -672,7 +950,7 @@ export const Settings: React.FC = () => {
                     <Row>
                       <Col md={3} className="mb-3">
                         <Form.Group>
-                          <Form.Label>Academic Year</Form.Label>
+                          <Form.Label>{t('settings.school.config.academic_year_label')}</Form.Label>
                           <Form.Control
                             type="text"
                             value={school.configuration?.academicYear || ''}
@@ -680,13 +958,13 @@ export const Settings: React.FC = () => {
                               ...prev,
                               configuration: { ...(prev.configuration || {}), academicYear: e.target.value },
                             }))}
-                            placeholder="e.g., 2025-2026"
+                            placeholder={t('settings.school.example.academic_year')}
                           />
                         </Form.Group>
                       </Col>
                       <Col md={3} className="mb-3">
                         <Form.Group>
-                          <Form.Label>Grade System</Form.Label>
+                          <Form.Label>{t('settings.school.config.grade_system_label')}</Form.Label>
                           <Form.Control
                             type="text"
                             value={school.configuration?.gradeSystem || ''}
@@ -694,13 +972,13 @@ export const Settings: React.FC = () => {
                               ...prev,
                               configuration: { ...(prev.configuration || {}), gradeSystem: e.target.value },
                             }))}
-                            placeholder="e.g., Percentage"
+                            placeholder={t('settings.school.example.grade_system')}
                           />
                         </Form.Group>
                       </Col>
                       <Col md={3} className="mb-3">
                         <Form.Group>
-                          <Form.Label>Currency</Form.Label>
+                          <Form.Label>{t('settings.school.config.currency_label')}</Form.Label>
                           <Form.Control
                             type="text"
                             value={school.configuration?.currency || ''}
@@ -708,13 +986,13 @@ export const Settings: React.FC = () => {
                               ...prev,
                               configuration: { ...(prev.configuration || {}), currency: e.target.value },
                             }))}
-                            placeholder="e.g., INR"
+                            placeholder={t('settings.school.example.currency')}
                           />
                         </Form.Group>
                       </Col>
                       <Col md={3} className="mb-3">
                         <Form.Group>
-                          <Form.Label>Timezone</Form.Label>
+                          <Form.Label>{t('settings.school.config.timezone_label')}</Form.Label>
                           <Form.Control
                             type="text"
                             value={school.configuration?.timezone || ''}
@@ -722,7 +1000,171 @@ export const Settings: React.FC = () => {
                               ...prev,
                               configuration: { ...(prev.configuration || {}), timezone: e.target.value },
                             }))}
-                            placeholder="e.g., Asia/Kolkata"
+                            placeholder={t('settings.school.example.timezone')}
+                          />
+                        </Form.Group>
+                      </Col>
+                    </Row>
+
+                    <Row>
+                      <Col md={6} className="mb-3">
+                        <Form.Group>
+                          <Form.Label>{t('settings.school.config.student_id_format_label')}</Form.Label>
+                          <Form.Control
+                            type="text"
+                            value={(school.configuration as any)?.studentIdFormat || ''}
+                            onChange={(e) => setSchool((prev) => ({
+                              ...prev,
+                              configuration: { ...(prev.configuration || {}), studentIdFormat: e.target.value },
+                            }))}
+                            placeholder={t('settings.school.example.student_id_format')}
+                          />
+                        </Form.Group>
+                      </Col>
+                      <Col md={6} className="mb-3">
+                        <Form.Group>
+                          <Form.Label>{t('settings.school.config.employee_id_format_label')}</Form.Label>
+                          <Form.Control
+                            type="text"
+                            value={(school.configuration as any)?.employeeIdFormat || ''}
+                            onChange={(e) => setSchool((prev) => ({
+                              ...prev,
+                              configuration: { ...(prev.configuration || {}), employeeIdFormat: e.target.value },
+                            }))}
+                            placeholder={t('settings.school.example.employee_id_format')}
+                          />
+                        </Form.Group>
+                      </Col>
+                    </Row>
+
+                    <Row>
+                      <Col md={12}>
+                        <h5 className="mt-3">{t('settings.school.holidays.title')}</h5>
+                      </Col>
+                    </Row>
+                    <Row className="align-items-end">
+                      <Col md={4} className="mb-3">
+                        <Form.Group>
+                          <Form.Label>{t('settings.school.holidays.title')}</Form.Label>
+                          <Form.Control
+                            type="date"
+                            value={newHolidayDate}
+                            onChange={(e) => setNewHolidayDate(e.target.value)}
+                          />
+                        </Form.Group>
+                      </Col>
+                      <Col md={8} className="mb-3 d-flex gap-2">
+                        <Button
+                          variant="outline-primary"
+                          onClick={() => {
+                            if (!newHolidayDate) return;
+                            setSchool(prev => ({
+                              ...prev,
+                              configuration: {
+                                ...(prev.configuration || {}),
+                                holidays: Array.from(new Set([...(prev.configuration?.holidays || []), newHolidayDate])).sort(),
+                              },
+                            }));
+                            setNewHolidayDate('');
+                          }}
+                        >
+                          {t('common.add')}
+                        </Button>
+                        <Button
+                          variant="outline-secondary"
+                          onClick={() => {
+                            const y = new Date().getFullYear();
+                            const defaults = [
+                              `${y}-01-26`,
+                              `${y}-05-01`,
+                              `${y}-08-15`,
+                              `${y}-10-02`,
+                              `${y}-12-25`,
+                            ];
+                            setSchool(prev => ({
+                              ...prev,
+                              configuration: {
+                                ...(prev.configuration || {}),
+                                holidays: Array.from(new Set([...(prev.configuration?.holidays || []), ...defaults])).sort(),
+                              },
+                            }));
+                          }}
+                        >
+                          {t('settings.school.holidays.populate_defaults')}
+                        </Button>
+                      </Col>
+                    </Row>
+                    <Row>
+                      <Col md={12} className="mb-3">
+                        <div className="d-flex flex-wrap gap-2">
+                          {(school.configuration?.holidays || []).map((d) => (
+                            <div key={d} className="d-flex align-items-center border rounded px-2 py-1">
+                              <span className="me-2">{d}</span>
+                              <Button
+                                size="sm"
+                                variant="outline-danger"
+                                onClick={() => setSchool(prev => ({
+                                  ...prev,
+                                  configuration: {
+                                    ...(prev.configuration || {}),
+                                    holidays: (prev.configuration?.holidays || []).filter(x => x !== d),
+                                  },
+                                }))}
+                              >
+                                {t('common.remove')}
+                              </Button>
+                            </div>
+                          ))}
+                          {!(school.configuration?.holidays || []).length && (
+                            <div className="text-muted">—</div>
+                          )}
+                        </div>
+                      </Col>
+                    </Row>
+
+                    <Row>
+                      <Col md={12}>
+                        <h5 className="mt-3">{t('settings.school.leave_policy.title')}</h5>
+                      </Col>
+                    </Row>
+                    <Row>
+                      <Col md={6} className="mb-3">
+                        <Form.Group>
+                          <Form.Label>{t('settings.school.leave_policy.privilege_per_year')}</Form.Label>
+                          <Form.Control
+                            type="number"
+                            min={0}
+                            value={school.configuration?.teacherLeavePolicy?.privilegePerYear ?? ''}
+                            onChange={(e) => setSchool(prev => ({
+                              ...prev,
+                              configuration: {
+                                ...(prev.configuration || {}),
+                                teacherLeavePolicy: {
+                                  ...(prev.configuration?.teacherLeavePolicy || {}),
+                                  privilegePerYear: Math.max(0, parseInt(e.target.value || '0', 10)),
+                                },
+                              },
+                            }))}
+                          />
+                        </Form.Group>
+                      </Col>
+                      <Col md={6} className="mb-3">
+                        <Form.Group>
+                          <Form.Label>{t('settings.school.leave_policy.sick_per_year')}</Form.Label>
+                          <Form.Control
+                            type="number"
+                            min={0}
+                            value={school.configuration?.teacherLeavePolicy?.sickPerYear ?? ''}
+                            onChange={(e) => setSchool(prev => ({
+                              ...prev,
+                              configuration: {
+                                ...(prev.configuration || {}),
+                                teacherLeavePolicy: {
+                                  ...(prev.configuration?.teacherLeavePolicy || {}),
+                                  sickPerYear: Math.max(0, parseInt(e.target.value || '0', 10)),
+                                },
+                              },
+                            }))}
                           />
                         </Form.Group>
                       </Col>
@@ -733,12 +1175,12 @@ export const Settings: React.FC = () => {
                         {schoolSaving ? (
                           <>
                             <Spinner size="sm" animation="border" className="me-2" />
-                            Saving...
+                            {t('common.saving')}
                           </>
                         ) : (
                           <>
                             <i className="bi bi-check-lg me-2"></i>
-                            Save
+                            {t('common.save')}
                           </>
                         )}
                       </Button>

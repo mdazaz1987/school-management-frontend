@@ -3,6 +3,10 @@ import { Row, Col, Card, Table, Form, Badge, ProgressBar, Alert, Spinner } from 
 import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
+import { parentService, AttendanceSummary } from '../services/parentService';
+import { studentService } from '../services/studentService';
+import { timetableService } from '../services/timetableService';
+import { useSearchParams } from 'react-router-dom';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -15,59 +19,89 @@ const sidebarItems = [
 
 export const ParentAttendance: React.FC = () => {
   const { user } = useAuth();
-  const [selectedChild, setSelectedChild] = useState('1');
+  const [searchParams] = useSearchParams();
+  const [children, setChildren] = useState<Array<{ id: string; name: string; className?: string }>>([]);
+  const [selectedChild, setSelectedChild] = useState<string>('');
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [attendanceRecords, setAttendanceRecords] = useState<any[]>([]);
+  const [attendanceRecords, setAttendanceRecords] = useState<{ date: string; status: string }[]>([]);
+  const [timeSlotsByDay, setTimeSlotsByDay] = useState<Record<string, Record<string, { start: string; end: string }>>>({});
   const [stats, setStats] = useState({ total: 0, present: 0, absent: 0, late: 0, percentage: 0 });
   const [loading, setLoading] = useState(false);
-
-  const children = [
-    { id: '1', name: 'John Doe', class: 'Class 10 - A' },
-    { id: '2', name: 'Jane Doe', class: 'Class 8 - B' }
-  ];
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    loadAttendance();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedChild, selectedMonth, selectedYear]);
-
-  const loadAttendance = () => {
-    setLoading(true);
-    // Mock data
-    const mockRecords = generateMockAttendance(selectedMonth, selectedYear);
-    const present = mockRecords.filter(r => r.status === 'PRESENT').length;
-    const absent = mockRecords.filter(r => r.status === 'ABSENT').length;
-    const late = mockRecords.filter(r => r.status === 'LATE').length;
-    const total = mockRecords.length;
-    
-    setAttendanceRecords(mockRecords);
-    setStats({
-      total,
-      present,
-      absent,
-      late,
-      percentage: total > 0 ? Math.round(((present + late) / total) * 100) : 0
-    });
-    setLoading(false);
-  };
-
-  const generateMockAttendance = (month: number, year: number) => {
-    const records = [];
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const statuses = ['PRESENT', 'PRESENT', 'PRESENT', 'PRESENT', 'LATE', 'ABSENT'];
-    
-    for (let day = 1; day <= daysInMonth; day++) {
-      const date = new Date(year, month, day);
-      if (date.getDay() !== 0 && date.getDay() !== 6 && date <= new Date()) {
-        records.push({
-          date: date.toISOString(),
-          status: statuses[Math.floor(Math.random() * statuses.length)]
-        });
+    const loadChildren = async () => {
+      try {
+        setLoading(true); setError('');
+        const list = await parentService.getMyChildren();
+        const items = (list || []).map((c: any) => ({ id: c.id, name: `${c.firstName || ''} ${c.lastName || ''}`.trim(), className: c.className }));
+        setChildren(items);
+        if (!selectedChild && items.length) {
+          const qChild = searchParams.get('child');
+          setSelectedChild(qChild && items.some(i => i.id === qChild) ? qChild : items[0].id);
+        }
+      } catch (e: any) {
+        setError(e?.response?.data?.message || 'Failed to load children');
+      } finally {
+        setLoading(false);
       }
-    }
-    return records;
-  };
+    };
+    loadChildren();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  useEffect(() => {
+    const loadAttendance = async () => {
+      if (!selectedChild) return;
+      try {
+        setLoading(true); setError('');
+        // Build timetable slot map for child's class for time lookup per period
+        try {
+          const stud = await studentService.getStudentById(selectedChild);
+          const classId = (stud as any).classId;
+          const section = (stud as any).section;
+          const tt = await timetableService.getByClass(classId, section);
+          const map: Record<string, Record<string, { start: string; end: string }>> = {};
+          (tt.entries || []).forEach((e: any) => {
+            const day = String(e.day || '').toUpperCase();
+            if (!map[day]) map[day] = {};
+            map[day][e.period] = { start: String(e.startTime||'').slice(0,5), end: String(e.endTime||'').slice(0,5) };
+          });
+          setTimeSlotsByDay(map);
+        } catch {}
+        const start = new Date(selectedYear, selectedMonth, 1);
+        const end = new Date(selectedYear, selectedMonth + 1, 0);
+        const toISO = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        const summary: AttendanceSummary = await parentService.getChildAttendance(selectedChild, toISO(start), toISO(end));
+        const recs = (summary.records || []).map((r: any) => ({ date: r.date, status: r.status, subject: r.subject, period: r.period }))
+          .filter((r) => {
+            const dt = new Date(r.date);
+            return dt.getMonth() === selectedMonth && dt.getFullYear() === selectedYear;
+          })
+          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+        const present = recs.filter(r => r.status === 'PRESENT').length;
+        const absent = recs.filter(r => r.status === 'ABSENT').length;
+        const late = recs.filter(r => r.status === 'LATE').length;
+        const total = recs.length;
+
+        setAttendanceRecords(recs);
+        setStats({
+          total,
+          present,
+          absent,
+          late,
+          percentage: total > 0 ? Math.round(((present + late) / total) * 100) : 0
+        });
+      } catch (e: any) {
+        setError(e?.response?.data?.message || 'Failed to load attendance');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadAttendance();
+  }, [selectedChild, selectedMonth, selectedYear]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -101,7 +135,7 @@ export const ParentAttendance: React.FC = () => {
                     <Form.Label>Select Child</Form.Label>
                     <Form.Select value={selectedChild} onChange={(e) => setSelectedChild(e.target.value)}>
                       {children.map(child => (
-                        <option key={child.id} value={child.id}>{child.name} - {child.class}</option>
+                        <option key={child.id} value={child.id}>{child.name}{child.className ? ` - ${child.className}` : ''}</option>
                       ))}
                     </Form.Select>
                   </Form.Group>
@@ -136,6 +170,7 @@ export const ParentAttendance: React.FC = () => {
             </div>
           ) : (
             <>
+              {error && <Alert variant="danger">{error}</Alert>}
               <Row className="mb-4">
                 <Col md={3}>
                   <Card className="border-0 shadow-sm text-center">
@@ -192,6 +227,7 @@ export const ParentAttendance: React.FC = () => {
                       {attendanceRecords.map((record, index) => {
                         const date = new Date(record.date);
                         const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                        const dayKey = dayNames[date.getDay()].toUpperCase();
                         return (
                           <tr key={index}>
                             <td>{date.toLocaleDateString()}</td>

@@ -4,6 +4,8 @@ import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { parentService } from '../services/parentService';
+import { feeService } from '../services/feeService';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -26,40 +28,47 @@ export const ParentChildren: React.FC = () => {
   }, []);
 
   const loadChildren = async () => {
-    setLoading(true);
+    setLoading(true); setError('');
     try {
-      // Mock data - replace with actual API call
-      const mockChildren = [
-        {
-          id: '1',
-          firstName: 'John',
-          lastName: 'Doe',
-          className: 'Class 10 - Section A',
-          rollNumber: '101',
-          email: 'john.doe@student.com',
-          phone: '9876543210',
-          attendance: 92,
-          averageGrade: 85,
-          pendingFees: 5000,
-          profilePicture: null
-        },
-        {
-          id: '2',
-          firstName: 'Jane',
-          lastName: 'Doe',
-          className: 'Class 8 - Section B',
-          rollNumber: '205',
-          email: 'jane.doe@student.com',
-          phone: '9876543211',
-          attendance: 95,
-          averageGrade: 90,
-          pendingFees: 0,
-          profilePicture: null
+      const data = await parentService.getMyChildren();
+
+      const base = (data || []).map((child: any) => ({
+        id: child.id,
+        firstName: child.firstName || '',
+        lastName: child.lastName || '',
+        className: child.className || 'Not assigned',
+        rollNumber: child.rollNumber || 'N/A',
+        email: child.email || '',
+        phone: child.phone || '',
+        attendance: 0,
+        averageGrade: 0,
+        pendingFees: 0,
+        profilePicture: child.profilePicture
+      }));
+
+      // Enrich each child with attendance %, average grade, and fee due (best-effort)
+      const enriched = await Promise.all(base.map(async (c) => {
+        try {
+          const [attendance, grades, feeSummary] = await Promise.all([
+            parentService.getChildAttendance(c.id).catch(() => null),
+            parentService.getChildPerformance(c.id).catch(() => null),
+            feeService.studentSummary(c.id).catch(() => null),
+          ]);
+
+          return {
+            ...c,
+            attendance: Math.round(attendance?.attendancePercentage || 0),
+            averageGrade: Math.round(grades?.averageMarks || 0),
+            pendingFees: Math.round(feeSummary?.totalDue || 0),
+          };
+        } catch {
+          return c;
         }
-      ];
-      setChildren(mockChildren);
+      }));
+
+      setChildren(enriched);
     } catch (e: any) {
-      setError('Failed to load children');
+      setError('Failed to load children: ' + (e?.response?.data?.message || e?.message || 'Unknown error'));
     } finally {
       setLoading(false);
     }
@@ -144,7 +153,12 @@ export const ParentChildren: React.FC = () => {
 
                       <Row>
                         <Col xs={6}>
-                          <Button variant="outline-primary" size="sm" className="w-100">
+                          <Button
+                            variant="outline-primary"
+                            size="sm"
+                            className="w-100"
+                            onClick={() => navigate(`/parent/attendance?child=${child.id}`)}
+                          >
                             <i className="bi bi-eye me-1"></i>
                             View Details
                           </Button>

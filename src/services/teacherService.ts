@@ -7,52 +7,20 @@ const normalizeTeacher = (t: any): Teacher => ({
   isActive: t?.isActive ?? t?.active ?? false,
 });
 
-// Helper to build address
-const buildAddress = (d: Partial<TeacherCreateRequest>) => {
-  const has = d.addressLine1 || d.addressLine2 || d.city || d.state || d.zipCode;
-  if (!has) return undefined;
-  return {
-    street: [d.addressLine1, d.addressLine2].filter(Boolean).join(', '),
-    city: d.city || '',
-    state: d.state || '',
-    zipCode: d.zipCode || '',
-  };
-};
-
-// Helper to build qualification info
-const buildQualificationInfo = (d: Partial<TeacherCreateRequest>) => {
-  const has = d.highestDegree || d.university || d.yearOfPassing || d.certifications || d.specializations || d.percentage;
-  if (!has) return undefined;
-  return {
-    highestDegree: d.highestDegree || '',
-    university: d.university || '',
-    yearOfPassing: d.yearOfPassing,
-    certifications: d.certifications || [],
-    specializations: d.specializations || [],
-    percentage: d.percentage,
-  };
-};
-
-// Helper to build employment info
-const buildEmploymentInfo = (d: Partial<TeacherCreateRequest>) => {
-  const has = d.designation || d.department || d.salary || d.employmentType || d.totalExperience;
-  if (!has) return undefined;
-  return {
-    designation: d.designation || '',
-    department: d.department || '',
-    salary: d.salary,
-    employmentType: d.employmentType || '',
-    totalExperience: d.totalExperience,
-    previousSchool: d.previousSchoolEmployment || '',
-    achievements: d.achievements || [],
-    bankAccountNumber: d.bankAccountNumber || '',
-    bankName: d.bankName || '',
-    ifscCode: d.ifscCode || '',
-    panNumber: d.panNumber || '',
-  };
-};
 
 export const teacherService = {
+  // Session-scoped teacher profile
+  async getMyProfile(): Promise<any> {
+    return apiService.get(`/teacher/profile`);
+  },
+
+  async getSubmissionAttachmentBlob(assignmentId: string, submissionId: string, filename: string): Promise<Blob> {
+    const axios = apiService.getAxiosInstance();
+    const resp = await axios.get(`/assignments/${assignmentId}/submissions/${submissionId}/attachments/${encodeURIComponent(filename)}` as any, {
+      responseType: 'blob',
+    });
+    return resp.data as Blob;
+  },
   // Admin CRUD operations
   async getAllTeachers(params?: PageRequest): Promise<PageResponse<Teacher>> {
     const queryParams = new URLSearchParams();
@@ -99,56 +67,105 @@ export const teacherService = {
 
   async createTeacher(data: TeacherCreateRequest): Promise<any> {
     const payload = {
-      teacher: {
-        employeeId: data.employeeId,
+      user: {
         firstName: data.firstName,
         lastName: data.lastName,
         email: data.email,
+        schoolId: data.schoolId,
+        password: data.teacherPassword,
+      },
+      teacher: {
+        employeeId: data.employeeId,
         phone: data.phone,
         dateOfBirth: data.dateOfBirth,
         gender: data.gender,
-        bloodGroup: data.bloodGroup,
-        nationality: data.nationality,
-        maritalStatus: data.maritalStatus,
-        schoolId: data.schoolId,
-        address: buildAddress(data),
-        qualificationInfo: buildQualificationInfo(data),
-        employmentInfo: buildEmploymentInfo(data),
-        subjectIds: data.subjectIds || [],
-        classIds: data.classIds || [],
-        joiningDate: data.joiningDate,
-        customFields: data.customFields || {},
+        bloodGroup: (data as any).bloodGroup,
+        nationality: (data as any).nationality,
+        maritalStatus: (data as any).maritalStatus,
+        address: {
+          street: [data.addressLine1, data.addressLine2].filter(Boolean).join(' ').trim() || undefined,
+          city: data.city || undefined,
+          state: data.state || undefined,
+          zipCode: data.zipCode || undefined,
+        },
+        qualificationInfo: {
+          highestDegree: (data as any).highestDegree,
+          university: (data as any).university,
+          yearOfPassing: (data as any).yearOfPassing,
+          certifications: (data as any).certifications,
+          specializations: (data as any).specializations,
+          percentage: (data as any).percentage,
+        },
+        employmentInfo: {
+          designation: (data as any).designation,
+          department: (data as any).department,
+          salary: (data as any).salary,
+          employmentType: (data as any).employmentType,
+          totalExperience: (data as any).totalExperience,
+          previousSchool: (data as any).previousSchoolEmployment,
+          achievements: (data as any).achievements,
+          bankAccountNumber: (data as any).bankAccountNumber,
+          bankName: (data as any).bankName,
+          ifscCode: (data as any).ifscCode,
+          panNumber: (data as any).panNumber,
+        },
+        subjectIds: (data as any).subjectIds,
+        classIds: (data as any).classIds,
+        joiningDate: (data as any).joiningDate,
+        customFields: (data as any).customFields,
       },
-      passwordMode: data.passwordMode || 'GENERATE',
-      teacherPassword: data.teacherPassword,
-      sendEmailToTeacher: data.sendEmailToTeacher !== false,
     };
     
     return apiService.post('/teachers', payload);
   },
 
   async updateTeacher(id: string, data: any): Promise<Teacher> {
-    // Build nested structure like createTeacher does
-    const payload: any = {
-      employeeId: data.employeeId,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      email: data.email,
-      phone: data.phone,
-      dateOfBirth: data.dateOfBirth,
-      gender: data.gender,
-      bloodGroup: data.bloodGroup,
-      nationality: data.nationality,
-      maritalStatus: data.maritalStatus,
-      schoolId: data.schoolId,
-      address: buildAddress(data),
-      qualificationInfo: buildQualificationInfo(data),
-      employmentInfo: buildEmploymentInfo(data),
-      subjectIds: data.subjectIds || [],
-      classIds: data.classIds || [],
-      joiningDate: data.joiningDate,
-      profilePicture: data.profilePicture,
-      customFields: data.customFields || {},
+    const payload = {
+      user: {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+      },
+      teacher: {
+        employeeId: data.employeeId,
+        phone: data.phone,
+        dateOfBirth: data.dateOfBirth,
+        gender: data.gender,
+        bloodGroup: data.bloodGroup,
+        nationality: data.nationality,
+        maritalStatus: data.maritalStatus,
+        address: {
+          street: [data.addressLine1, data.addressLine2].filter(Boolean).join(' ').trim() || undefined,
+          city: data.city || undefined,
+          state: data.state || undefined,
+          zipCode: data.zipCode || undefined,
+        },
+        qualificationInfo: {
+          highestDegree: data.highestDegree,
+          university: data.university,
+          yearOfPassing: data.yearOfPassing,
+          certifications: data.certifications,
+          specializations: data.specializations,
+          percentage: data.percentage,
+        },
+        employmentInfo: {
+          designation: data.designation,
+          department: data.department,
+          salary: data.salary,
+          employmentType: data.employmentType,
+          totalExperience: data.totalExperience,
+          previousSchool: data.previousSchoolEmployment,
+          achievements: data.achievements,
+          bankAccountNumber: data.bankAccountNumber,
+          bankName: data.bankName,
+          ifscCode: data.ifscCode,
+          panNumber: data.panNumber,
+        },
+        subjectIds: data.subjectIds,
+        classIds: data.classIds,
+        joiningDate: data.joiningDate,
+        customFields: data.customFields,
+      },
     };
     const resp = await apiService.put<any>(`/teachers/${id}`, payload);
     return normalizeTeacher(resp);
@@ -178,9 +195,50 @@ export const teacherService = {
     return apiService.get('/teacher/dashboard/stats');
   },
 
+  async getRecentSubmissions(limit = 5): Promise<Array<{
+    submissionId: string;
+    assignmentId: string;
+    assignmentTitle: string;
+    studentId: string;
+    studentName: string;
+    classId: string;
+    className: string;
+    section: string;
+    submittedAt: string;
+    status: string;
+  }>> {
+    return apiService.get(`/teacher/recent-submissions`, { limit });
+  },
+
   // Teacher Portal - Classes
   async getMyClasses(): Promise<any[]> {
-    return apiService.get('/teacher/classes');
+    // Session-based endpoint; no admin calls
+    try {
+      return await apiService.get(`/teacher/classes`);
+    } catch (error) {
+      console.error('Error fetching teacher classes:', error);
+      return [];
+    }
+  },
+
+  // Get teacher's assigned subjects
+  async getMySubjects(): Promise<any[]> {
+    try {
+      return await apiService.get(`/teacher/my-subjects`);
+    } catch (error) {
+      console.error('Error fetching teacher subjects:', error);
+      return [];
+    }
+  },
+
+  // Get teacher's assigned students
+  async getMyStudents(): Promise<any[]> {
+    try {
+      return await apiService.get(`/teacher/my-students`);
+    } catch (error) {
+      console.error('Error fetching teacher students:', error);
+      return [];
+    }
   },
 
   async getClassDetails(classId: string): Promise<any> {
@@ -191,8 +249,48 @@ export const teacherService = {
     return apiService.get(`/teacher/classes/${classId}/students`);
   },
 
+  // Prefer this for detailed student info (rollNumber, section, etc.)
+  async getClassStudentsV2(classId: string): Promise<any[]> {
+    // Session-based teacher endpoint returns proper User info for names
+    return apiService.get(`/teacher/classes/${classId}/students`);
+  },
+
+  // Enriched students with attendance% and average grade%
+  async getEnrichedClassStudents(classId: string): Promise<Array<{
+    id: string;
+    name: string;
+    rollNo: string;
+    studentClass: string;
+    section: string;
+    email: string;
+    attendance: number;
+    avgGrade: number;
+  }>> {
+    const enriched = await apiService.get<any[]>(`/teacher/classes/${classId}/students/enriched`).catch(() => [] as any[]);
+    if (Array.isArray(enriched) && enriched.length > 0) return enriched;
+    // Fallback: plain students and map minimal fields
+    const plain = await apiService.get<any[]>(`/teacher/classes/${classId}/students`).catch(() => [] as any[]);
+    return (plain || []).map((u: any) => ({
+      id: u.id,
+      name: `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email || 'Student',
+      rollNo: u.rollNumber || u.rollNo || '-',
+      studentClass: '',
+      section: '',
+      email: u.email,
+      attendance: 0,
+      avgGrade: 0,
+    }));
+  },
+
   // Teacher Portal - Assignments
   async getMyAssignments(): Promise<any[]> {
+    // Legacy (if exists)
+    return apiService.get('/teacher/assignments');
+  },
+
+  // New backend-compatible teacher endpoints
+  async listTeacherAssignments(_teacherId?: string): Promise<any[]> {
+    // Session-based list; do not hit admin-only endpoints
     return apiService.get('/teacher/assignments');
   },
 
@@ -208,16 +306,71 @@ export const teacherService = {
     return apiService.put(`/teacher/assignments/${assignmentId}`, assignment);
   },
 
+  async getAssignmentDetail(assignmentId: string): Promise<any> {
+    return apiService.get(`/teacher/assignments/${assignmentId}`);
+  },
+
+  // V2 assignment endpoints (teacher-scoped)
+  async createAssignmentV2(teacherId: string, assignment: any): Promise<any> {
+    return apiService.post(`/teachers/${teacherId}/assignments`, assignment);
+  },
+
+  async updateAssignmentV2(teacherId: string, assignmentId: string, assignment: any): Promise<any> {
+    return apiService.put(`/teachers/${teacherId}/assignments/${assignmentId}`, assignment);
+  },
+
   async deleteAssignment(assignmentId: string): Promise<void> {
     return apiService.delete(`/teacher/assignments/${assignmentId}`);
   },
 
+  async uploadAssignmentAttachment(assignmentId: string, file: File): Promise<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiService.post(`/teacher/assignments/${assignmentId}/attachments`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+
+  // List teacher-provided attachments for an assignment
+  async listAssignmentAttachments(assignmentId: string): Promise<string[]> {
+    return apiService.get(`/assignments/${assignmentId}/attachments`);
+  },
+
+  // Download an attachment as Blob
+  async getAssignmentAttachmentBlob(assignmentId: string, filename: string): Promise<Blob> {
+    const axios = apiService.getAxiosInstance();
+    const resp = await axios.get(`/assignments/${assignmentId}/attachments/${encodeURIComponent(filename)}` as any, {
+      responseType: 'blob',
+    });
+    return resp.data as Blob;
+  },
+
   async getAssignmentSubmissions(assignmentId: string): Promise<any[]> {
+    // Legacy endpoint if exists
     return apiService.get(`/teacher/assignments/${assignmentId}/submissions`);
+  },
+
+  async listSubmissions(_teacherId: string, assignmentId: string): Promise<any[]> {
+    // Prefer session-based endpoint first to avoid 403
+    try {
+      return await apiService.get(`/teacher/assignments/${assignmentId}/submissions`);
+    } catch (e) {
+      // Fallback to teacher-scoped path if available (may require ADMIN)
+      return apiService.get(`/teachers/${_teacherId}/assignments/${assignmentId}/submissions`);
+    }
   },
 
   async gradeSubmission(submissionId: string, marks: number, feedback: string): Promise<any> {
     return apiService.put(`/teacher/submissions/${submissionId}/grade`, { marks, feedback });
+  },
+
+  async gradeSubmissionV2(teacherId: string, assignmentId: string, submissionId: string, marks: number, feedback: string): Promise<any> {
+    // Prefer session-based grading endpoint
+    try {
+      return await apiService.put(`/teacher/submissions/${submissionId}/grade`, { marks, feedback });
+    } catch (e) {
+      return apiService.put(`/teachers/${teacherId}/assignments/${assignmentId}/submissions/${submissionId}/grade`, { marks, feedback });
+    }
   },
 
   // Teacher Portal - Attendance
@@ -236,6 +389,11 @@ export const teacherService = {
     return apiService.put(`/teacher/attendance/${attendanceId}`, attendance);
   },
 
+  async checkAttendanceAuthorization(classId: string, date: string): Promise<{ allowed: boolean; firstPeriod?: any }> {
+    const params = new URLSearchParams({ date });
+    return apiService.get(`/teacher/classes/${classId}/attendance/authorization?${params.toString()}`);
+  },
+
   // Teacher Portal - Leave Approval
   async getPendingLeaveApplications(): Promise<any[]> {
     return apiService.get('/teacher/leave/pending');
@@ -247,5 +405,40 @@ export const teacherService = {
 
   async rejectLeaveApplication(leaveId: string, reason: string): Promise<any> {
     return apiService.put(`/teacher/leave/${leaveId}/reject`, { reason });
+  },
+
+  // Teacher Leave (new)
+  async applyLeave(data: { startDate: string; endDate: string; reason: string; leaveType: 'PRIVILEGE' | 'SICK' | 'OTHER' }): Promise<any> {
+    return apiService.post('/teacher/leave/apply', data);
+  },
+
+  async myLeaveApplications(): Promise<any[]> {
+    return apiService.get('/teacher/leave/my-applications');
+  },
+
+  async getLeaveBalances(): Promise<{ allowedPrivilege: number; allowedSick: number; usedPrivilege: number; usedSick: number }> {
+    return apiService.get('/teacher/leave/balances');
+  },
+
+  // Principal endpoints (current teacher must be principal)
+  async principalPending(): Promise<any[]> {
+    return apiService.get('/principal/teacher/leave/pending');
+  },
+  async principalApprove(leaveId: string, comments?: string): Promise<any> {
+    return apiService.put(`/principal/teacher/leave/${leaveId}/approve`, { comments });
+  },
+  async principalReject(leaveId: string, reason: string): Promise<any> {
+    return apiService.put(`/principal/teacher/leave/${leaveId}/reject`, { reason });
+  },
+
+  // Admin endpoints
+  async adminPending(schoolId: string): Promise<any[]> {
+    return apiService.get(`/admin/teacher/leave/pending`, { schoolId });
+  },
+  async adminApprove(leaveId: string, comments?: string): Promise<any> {
+    return apiService.put(`/admin/teacher/leave/${leaveId}/approve`, { comments });
+  },
+  async adminReject(leaveId: string, reason: string): Promise<any> {
+    return apiService.put(`/admin/teacher/leave/${leaveId}/reject`, { reason });
   },
 };

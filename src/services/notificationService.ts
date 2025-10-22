@@ -11,15 +11,24 @@ export const notificationService = {
     return apiService.get(`/notifications?${queryParams.toString()}`);
   },
 
-  // Get notifications for current user
+  // Get notifications for current user (resolved from Auth/localStorage)
   async getMyNotifications(): Promise<Notification[]> {
-    return apiService.get('/notifications/my-notifications');
+    const stored = localStorage.getItem('user');
+    const parsed = stored ? JSON.parse(stored) : {};
+    const userId = parsed?.id;
+    if (!userId) throw new Error('Missing user id');
+    return this.getByUser(userId);
   },
 
-  // Get unread count
+  // New: get notifications by userId (backend implementation)
+  async getByUser(userId: string): Promise<Notification[]> {
+    return apiService.get(`/notifications`, { userId });
+  },
+
+  // Get unread count (client-side)
   async getUnreadCount(): Promise<number> {
-    const response: { count: number } = await apiService.get('/notifications/unread-count');
-    return response.count;
+    const list = await this.getMyNotifications();
+    return (list || []).filter((n: any) => !!n && (n as any).read === false).length;
   },
 
   // Get notification by ID
@@ -32,6 +41,11 @@ export const notificationService = {
     return apiService.post('/notifications', data);
   },
 
+  // Alias for create
+  async create(data: any): Promise<Notification> {
+    return apiService.post('/notifications', data);
+  },
+
   // Update notification (Admin/Teacher)
   async updateNotification(id: string, data: Partial<Notification>): Promise<Notification> {
     return apiService.put(`/notifications/${id}`, data);
@@ -39,12 +53,22 @@ export const notificationService = {
 
   // Mark notification as read
   async markAsRead(id: string): Promise<void> {
-    return apiService.put(`/notifications/${id}/mark-read`, {});
+    // Legacy endpoint (may not exist). Use backend-compatible endpoint
+    try {
+      await apiService.put(`/notifications/${id}/mark-read`, {});
+    } catch {
+      await apiService.put(`/notifications/${id}/read`, {});
+    }
   },
 
   // Mark all notifications as read
   async markAllAsRead(): Promise<void> {
-    return apiService.put('/notifications/mark-all-read', {});
+    const list = await this.getMyNotifications();
+    await Promise.all(
+      (list || [])
+        .filter((n: any) => n && (n as any).isRead === false || (n as any).read === false)
+        .map((n: any) => this.markAsRead((n as any).id))
+    );
   },
 
   // Delete notification (Admin/Teacher)
@@ -85,6 +109,11 @@ export const notificationService = {
     link?: string;
   }): Promise<Notification> {
     return apiService.post('/notifications/send-to-role', data);
+  },
+
+  // Admin: seed notifications for a user/role
+  async seed(data: { userId?: string; schoolId: string; role?: string; count?: number }): Promise<{ success: boolean; created: number }> {
+    return apiService.post('/notifications/seed', data);
   },
 
   // Get scheduled notifications

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Row, Col, Card, Table, Form, Badge, ProgressBar, Alert, Spinner, Tabs, Tab } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
+import { parentService } from '../services/parentService';
+import { useLang } from '../contexts/LangContext';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -13,59 +15,73 @@ const sidebarItems = [
 ];
 
 export const ParentPerformance: React.FC = () => {
-  const [selectedChild, setSelectedChild] = useState('1');
+  const { t } = useLang();
+  const [children, setChildren] = useState<Array<{ id: string; name: string; className?: string }>>([]);
+  const [selectedChild, setSelectedChild] = useState<string>('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const children = [
-    { id: '1', name: 'John Doe', class: 'Class 10 - A' },
-    { id: '2', name: 'Jane Doe', class: 'Class 8 - B' }
-  ];
+  const [subjectPerformance, setSubjectPerformance] = useState<Array<{ subject: string; percentage: number; obtained: number; totalMarks: number }>>([]);
+  const [overallAverage, setOverallAverage] = useState<number>(0);
+  const [assignments, setAssignments] = useState<Array<{ title: string; subject: string; status: string; marks?: string; type?: string; percentage?: number; passed?: boolean }>>([]);
 
-  const subjectPerformance = [
-    { subject: 'Mathematics', grade: 'A', percentage: 92, totalMarks: 100, obtained: 92, color: 'success' },
-    { subject: 'Physics', grade: 'A', percentage: 88, totalMarks: 100, obtained: 88, color: 'success' },
-    { subject: 'Chemistry', grade: 'B+', percentage: 78, totalMarks: 100, obtained: 78, color: 'primary' },
-    { subject: 'English', grade: 'A', percentage: 85, totalMarks: 100, obtained: 85, color: 'success' },
-    { subject: 'Computer Science', grade: 'A+', percentage: 95, totalMarks: 100, obtained: 95, color: 'success' },
-  ];
+  useEffect(() => {
+    const loadChildren = async () => {
+      try {
+        setLoading(true); setError('');
+        const list = await parentService.getMyChildren();
+        const items = (list || []).map((c: any) => ({ id: c.id, name: `${c.firstName || ''} ${c.lastName || ''}`.trim(), className: c.className }));
+        setChildren(items);
+        if (!selectedChild && items.length) setSelectedChild(items[0].id);
+      } catch (e: any) {
+        setError(e?.response?.data?.message || t('error.failed_to_load_children'));
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadChildren();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const examResults = [
-    {
-      exam: 'First Term Exam',
-      subject: 'Mathematics',
-      date: '2025-01-15',
-      totalMarks: 100,
-      obtained: 92,
-      grade: 'A',
-      rank: 3
-    },
-    {
-      exam: 'First Term Exam',
-      subject: 'Physics',
-      date: '2025-01-17',
-      totalMarks: 100,
-      obtained: 88,
-      grade: 'A',
-      rank: 5
-    },
-    {
-      exam: 'Unit Test',
-      subject: 'Chemistry',
-      date: '2025-02-10',
-      totalMarks: 50,
-      obtained: 39,
-      grade: 'B+',
-      rank: 8
-    }
-  ];
+  useEffect(() => {
+    const loadPerformance = async () => {
+      if (!selectedChild) return;
+      try {
+        setLoading(true); setError('');
+        const summary = await parentService.getChildPerformance(selectedChild);
+        const subj = (summary.subjectGrades || []).map((sg: any) => ({
+          subject: sg.subject,
+          percentage: Math.round(sg.percentage || 0),
+          obtained: sg.totalMarks,
+          totalMarks: sg.maxMarks,
+        }));
+        setSubjectPerformance(subj);
+        setOverallAverage(Math.round(summary.averageMarks || 0));
 
-  const assignments = [
-    { title: 'Math Assignment 1', subject: 'Mathematics', status: 'Submitted', grade: 'A', marks: '48/50' },
-    { title: 'Physics Lab Report', subject: 'Physics', status: 'Graded', grade: 'A', marks: '45/50' },
-    { title: 'English Essay', subject: 'English', status: 'Pending', grade: '-', marks: '-' },
-  ];
+        const list = await parentService.getChildAssignments(selectedChild).catch(() => []);
+        const mapped = (list || []).map((it: any) => {
+          const a = it.assignment || it;
+          const s = it.submission;
+          const totalPoints = (a?.questions || []).reduce((acc: number, q: any) => acc + (q?.points ?? 1), 0);
+          const max = (a?.type === 'QUIZ' || a?.type === 'EXAM') ? (totalPoints || a?.maxMarks || 0) : (a?.maxMarks || 0);
+          const rawMarks = s?.marksObtained ?? s?.score;
+          const marks = rawMarks != null && max > 0 ? `${rawMarks}/${max}` : undefined;
+          const percentage = rawMarks != null && max > 0 ? Math.round((rawMarks * 10000) / max) / 100 : undefined;
+          const status = s ? s.status : 'PENDING';
+          const passed = s?.passed ?? (a?.quizConfig?.passingMarks != null && rawMarks != null ? rawMarks >= a.quizConfig.passingMarks : undefined);
+          return { title: a?.title || 'Assignment', subject: a?.subject || '-', status, marks, type: a?.type, percentage, passed };
+        });
+        setAssignments(mapped);
+      } catch (e: any) {
+        setError(e?.response?.data?.message || t('error.failed_to_load_performance'));
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadPerformance();
+  }, [selectedChild]);
 
-  const overallPercentage = Math.round(subjectPerformance.reduce((sum, s) => sum + s.percentage, 0) / subjectPerformance.length);
+  const overallPercentage = overallAverage;
 
   return (
     <Layout>
@@ -75,17 +91,17 @@ export const ParentPerformance: React.FC = () => {
         </Col>
         <Col md={10}>
           <div className="mb-4">
-            <h2>Academic Performance</h2>
-            <p className="text-muted">Track your children's academic progress</p>
+            <h2>{t('parent.performance.title')}</h2>
+            <p className="text-muted">{t('parent.performance.subtitle')}</p>
           </div>
 
           <Card className="border-0 shadow-sm mb-4">
             <Card.Body>
               <Form.Group>
-                <Form.Label>Select Child</Form.Label>
+                <Form.Label>{t('parent.performance.select_child')}</Form.Label>
                 <Form.Select value={selectedChild} onChange={(e) => setSelectedChild(e.target.value)}>
                   {children.map(child => (
-                    <option key={child.id} value={child.id}>{child.name} - {child.class}</option>
+                    <option key={child.id} value={child.id}>{child.name}{child.className ? ` - ${child.className}` : ''}</option>
                   ))}
                 </Form.Select>
               </Form.Group>
@@ -98,7 +114,7 @@ export const ParentPerformance: React.FC = () => {
                 <Card.Body>
                   <i className="bi bi-star-fill fs-1 text-warning mb-2"></i>
                   <h3>{overallPercentage}%</h3>
-                  <p className="text-muted mb-0">Overall Average</p>
+                  <p className="text-muted mb-0">{t('parent.performance.overall_average')}</p>
                 </Card.Body>
               </Card>
             </Col>
@@ -106,8 +122,8 @@ export const ParentPerformance: React.FC = () => {
               <Card className="border-0 shadow-sm text-center">
                 <Card.Body>
                   <i className="bi bi-trophy-fill fs-1 text-success mb-2"></i>
-                  <h3>3</h3>
-                  <p className="text-muted mb-0">Class Rank</p>
+                  <h3>—</h3>
+                  <p className="text-muted mb-0">{t('parent.performance.class_rank')}</p>
                 </Card.Body>
               </Card>
             </Col>
@@ -115,8 +131,8 @@ export const ParentPerformance: React.FC = () => {
               <Card className="border-0 shadow-sm text-center">
                 <Card.Body>
                   <i className="bi bi-graph-up fs-1 text-primary mb-2"></i>
-                  <h3>Excellent</h3>
-                  <p className="text-muted mb-0">Progress</p>
+                  <h3>{overallPercentage >= 85 ? t('parent.performance.rating.excellent') : overallPercentage >= 70 ? t('parent.performance.rating.good') : t('parent.performance.rating.needs_attention')}</h3>
+                  <p className="text-muted mb-0">{t('parent.performance.progress')}</p>
                 </Card.Body>
               </Card>
             </Col>
@@ -125,82 +141,109 @@ export const ParentPerformance: React.FC = () => {
           <Card className="border-0 shadow-sm">
             <Card.Body>
               <Tabs defaultActiveKey="subjects" className="mb-3">
-                <Tab eventKey="subjects" title="Subject-wise Performance">
-                  <Row>
-                    {subjectPerformance.map((subject, index) => (
-                      <Col md={6} key={index} className="mb-3">
-                        <Card className="border">
-                          <Card.Body>
-                            <div className="d-flex justify-content-between align-items-center mb-2">
-                              <h6 className="mb-0">{subject.subject}</h6>
-                              <Badge bg={subject.color}>{subject.grade}</Badge>
-                            </div>
-                            <div className="d-flex justify-content-between mb-2">
-                              <span className="text-muted">Marks: {subject.obtained}/{subject.totalMarks}</span>
-                              <span className="fw-bold">{subject.percentage}%</span>
-                            </div>
-                            <ProgressBar now={subject.percentage} variant={subject.color} />
-                          </Card.Body>
-                        </Card>
-                      </Col>
-                    ))}
-                  </Row>
+                <Tab eventKey="subjects" title={t('parent.performance.subject_wise')}>
+                  {subjectPerformance.length === 0 ? (
+                    <div className="text-center text-muted py-4">{t('parent.performance.no_data')}</div>
+                  ) : (
+                    <Row>
+                      {subjectPerformance.map((subject, index) => (
+                        <Col md={6} key={index} className="mb-3">
+                          <Card className="border">
+                            <Card.Body>
+                              <div className="d-flex justify-content-between align-items-center mb-2">
+                                <h6 className="mb-0">{subject.subject}</h6>
+                                <Badge bg={subject.percentage >= 85 ? 'success' : subject.percentage >= 70 ? 'primary' : 'warning'}>
+                                  {subject.percentage}%
+                                </Badge>
+                              </div>
+                              <div className="d-flex justify-content-between mb-2">
+                                <span className="text-muted">{t('table.marks')}: {subject.obtained}/{subject.totalMarks}</span>
+                              </div>
+                              <ProgressBar now={subject.percentage} variant={subject.percentage >= 85 ? 'success' : subject.percentage >= 70 ? 'primary' : 'warning'} />
+                            </Card.Body>
+                          </Card>
+                        </Col>
+                      ))}
+                    </Row>
+                  )}
                 </Tab>
                 
-                <Tab eventKey="exams" title="Exam Results">
-                  <Table responsive hover>
-                    <thead>
-                      <tr>
-                        <th>Exam</th>
-                        <th>Subject</th>
-                        <th>Date</th>
-                        <th>Marks</th>
-                        <th>Grade</th>
-                        <th>Rank</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {examResults.map((exam, index) => (
-                        <tr key={index}>
-                          <td>{exam.exam}</td>
-                          <td>{exam.subject}</td>
-                          <td>{new Date(exam.date).toLocaleDateString()}</td>
-                          <td><strong>{exam.obtained}</strong>/{exam.totalMarks}</td>
-                          <td><Badge bg="success">{exam.grade}</Badge></td>
-                          <td>#{exam.rank}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </Table>
+                <Tab eventKey="exams" title={t('parent.performance.exams')}>
+                  <div className="text-center text-muted py-4">{t('parent.performance.no_data')}</div>
                 </Tab>
 
-                <Tab eventKey="assignments" title="Assignments">
-                  <Table responsive hover>
-                    <thead>
-                      <tr>
-                        <th>Title</th>
-                        <th>Subject</th>
-                        <th>Status</th>
-                        <th>Grade</th>
-                        <th>Marks</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {assignments.map((assignment, index) => (
-                        <tr key={index}>
-                          <td>{assignment.title}</td>
-                          <td><Badge bg="secondary">{assignment.subject}</Badge></td>
-                          <td>
-                            <Badge bg={assignment.status === 'Graded' ? 'success' : assignment.status === 'Submitted' ? 'info' : 'warning'}>
-                              {assignment.status}
-                            </Badge>
-                          </td>
-                          <td>{assignment.grade !== '-' ? <Badge bg="success">{assignment.grade}</Badge> : '-'}</td>
-                          <td>{assignment.marks}</td>
+                <Tab eventKey="assignments" title={t('parent.performance.assignments')}>
+                  {assignments.length === 0 ? (
+                    <div className="text-center text-muted py-4">{t('parent.performance.no_assignments')}</div>
+                  ) : (
+                    <Table responsive hover>
+                      <thead>
+                        <tr>
+                          <th>{t('table.title')}</th>
+                          <th>{t('table.subject')}</th>
+                          <th>{t('table.status')}</th>
+                          <th>{t('table.marks')}</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </Table>
+                      </thead>
+                      <tbody>
+                        {assignments.map((assignment, index) => (
+                          <tr key={index}>
+                            <td>{assignment.title}</td>
+                            <td><Badge bg="secondary">{assignment.subject}</Badge></td>
+                            <td>
+                              <Badge bg={assignment.status === 'GRADED' ? 'success' : assignment.status === 'SUBMITTED' ? 'info' : 'warning'}>
+                                {assignment.status === 'GRADED' ? t('status.graded') : assignment.status === 'SUBMITTED' ? t('status.submitted') : t('status.pending')}
+                              </Badge>
+                            </td>
+                            <td>{assignment.marks || '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </Table>
+                  )}
+                </Tab>
+
+                <Tab eventKey="quizzes" title={t('parent.performance.quizzes')}>
+                  {assignments.filter(a => a.type === 'QUIZ' || a.type === 'EXAM').length === 0 ? (
+                    <div className="text-center text-muted py-4">{t('parent.performance.no_quizzes')}</div>
+                  ) : (
+                    <Table responsive hover>
+                      <thead>
+                        <tr>
+                          <th>{t('table.title')}</th>
+                          <th>{t('table.subject')}</th>
+                          <th>{t('table.type')}</th>
+                          <th>{t('table.status')}</th>
+                          <th>{t('table.marks')}</th>
+                          <th>{t('table.percent')}</th>
+                          <th>{t('table.result')}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {assignments.filter(a => a.type === 'QUIZ' || a.type === 'EXAM').map((q, idx) => (
+                          <tr key={idx}>
+                            <td>{q.title}</td>
+                            <td><Badge bg="secondary">{q.subject}</Badge></td>
+                            <td><Badge bg={q.type === 'EXAM' ? 'warning' : 'info'}>{q.type === 'EXAM' ? t('table.exam') : t('table.quiz')}</Badge></td>
+                            <td>
+                              <Badge bg={q.status === 'GRADED' ? 'success' : q.status === 'SUBMITTED' ? 'info' : 'warning'}>
+                                {q.status === 'GRADED' ? t('status.graded') : q.status === 'SUBMITTED' ? t('status.submitted') : t('status.pending')}
+                              </Badge>
+                            </td>
+                            <td>{q.marks || '-'}</td>
+                            <td>{q.percentage != null ? `${q.percentage}%` : '-'}</td>
+                            <td>
+                              {q.passed === undefined ? '-' : q.passed ? (
+                                <Badge bg="success"><i className="bi bi-trophy-fill me-1"></i>{t('result.passed')}</Badge>
+                              ) : (
+                                <Badge bg="danger">{t('result.failed')}</Badge>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </Table>
+                  )}
                 </Tab>
               </Tabs>
             </Card.Body>

@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
-import { Row, Col, Card, ListGroup, Badge, Button, Form } from 'react-bootstrap';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Row, Col, Card, ListGroup, Badge, Button, Form, Spinner, Alert } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
+import { parentService } from '../services/parentService';
+import { notificationService } from '../services/notificationService';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -13,74 +15,41 @@ const sidebarItems = [
 ];
 
 export const ParentNotifications: React.FC = () => {
-  const [filter, setFilter] = useState('all');
-  const [notifications, setNotifications] = useState([
-    {
-      id: '1',
-      child: 'John Doe',
-      type: 'attendance',
-      title: 'Attendance Alert',
-      message: 'John Doe was absent today (Feb 5, 2025)',
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-      read: false,
-      priority: 'high'
-    },
-    {
-      id: '2',
-      child: 'Jane Doe',
-      type: 'grade',
-      title: 'New Grade Posted',
-      message: 'Jane Doe received grade A in Mathematics Mid-Term Exam',
-      timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-      read: false,
-      priority: 'medium'
-    },
-    {
-      id: '3',
-      child: 'John Doe',
-      type: 'fee',
-      title: 'Fee Payment Reminder',
-      message: 'Tuition fee payment of ₹50,000 is due on March 31, 2025',
-      timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-      read: true,
-      priority: 'high'
-    },
-    {
-      id: '4',
-      child: 'Jane Doe',
-      type: 'assignment',
-      title: 'Assignment Submitted',
-      message: 'Jane Doe submitted English Essay assignment',
-      timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-      read: true,
-      priority: 'low'
-    },
-    {
-      id: '5',
-      child: 'All',
-      type: 'announcement',
-      title: 'Parent-Teacher Meeting',
-      message: 'Parent-Teacher meeting scheduled for March 15, 2025 at 10:00 AM',
-      timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-      read: true,
-      priority: 'medium'
-    },
-    {
-      id: '6',
-      child: 'John Doe',
-      type: 'exam',
-      title: 'Upcoming Exam',
-      message: 'Mid-term exam for Physics on March 10, 2025',
-      timestamp: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-      read: true,
-      priority: 'high'
-    }
-  ]);
+  const [filter, setFilter] = useState<'all' | string>('all');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [children, setChildren] = useState<Array<{ id: string; name: string }>>([]);
+  const [notifications, setNotifications] = useState<any[]>([]);
 
-  const markAsRead = (id: string) => {
-    setNotifications(notifications.map(n => 
-      n.id === id ? { ...n, read: true } : n
-    ));
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setLoading(true); setError('');
+        const kids = await parentService.getMyChildren();
+        const mappedKids = (kids || []).map((c: any) => ({ id: c.id, name: `${c.firstName || ''} ${c.lastName || ''}`.trim() }));
+        setChildren(mappedKids);
+
+        // Merge notifications across children
+        const lists = await Promise.all(mappedKids.map(async (k) => {
+          const list = await parentService.getChildNotifications(k.id).catch(() => []);
+          return (list || []).map((n: any) => ({ ...n, childName: k.name }));
+        }));
+        const flat = lists.flat().sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setNotifications(flat);
+      } catch (e: any) {
+        setError(e?.response?.data?.message || 'Failed to load notifications');
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
+
+  const markAsRead = async (id: string) => {
+    try {
+      await notificationService.markAsRead(id);
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true, isRead: true } : n));
+    } catch {}
   };
 
   const markAllAsRead = () => {
@@ -89,12 +58,12 @@ export const ParentNotifications: React.FC = () => {
 
   const getIcon = (type: string) => {
     switch (type) {
-      case 'attendance': return 'bi-calendar-check text-warning';
-      case 'grade': return 'bi-star text-success';
-      case 'fee': return 'bi-cash-coin text-danger';
-      case 'assignment': return 'bi-file-text text-primary';
-      case 'announcement': return 'bi-megaphone text-info';
-      case 'exam': return 'bi-clipboard-check text-danger';
+      case 'ATTENDANCE': return 'bi-calendar-check text-warning';
+      case 'RESULT': return 'bi-star text-success';
+      case 'FEE': return 'bi-cash-coin text-danger';
+      case 'ASSIGNMENT': return 'bi-file-text text-primary';
+      case 'ANNOUNCEMENT': return 'bi-megaphone text-info';
+      case 'EXAM': return 'bi-clipboard-check text-danger';
       default: return 'bi-bell text-secondary';
     }
   };
@@ -110,11 +79,12 @@ export const ParentNotifications: React.FC = () => {
     return `${days} days ago`;
   };
 
-  const filteredNotifications = filter === 'all' 
-    ? notifications 
-    : notifications.filter(n => n.child === filter || n.child === 'All');
+  const filteredNotifications = useMemo(() => {
+    if (filter === 'all') return notifications;
+    return notifications.filter(n => n.childName === filter);
+  }, [notifications, filter]);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = notifications.filter(n => !(n.read || n.isRead)).length;
 
   return (
     <Layout>
@@ -143,8 +113,9 @@ export const ParentNotifications: React.FC = () => {
                 <Form.Label>Filter by Child</Form.Label>
                 <Form.Select value={filter} onChange={(e) => setFilter(e.target.value)}>
                   <option value="all">All Children</option>
-                  <option value="John Doe">John Doe</option>
-                  <option value="Jane Doe">Jane Doe</option>
+                  {children.map((c) => (
+                    <option key={c.id} value={c.name}>{c.name}</option>
+                  ))}
                 </Form.Select>
               </Form.Group>
             </Card.Body>
@@ -157,14 +128,17 @@ export const ParentNotifications: React.FC = () => {
             </div>
           )}
 
+          {error && <Alert variant="danger">{error}</Alert>}
+          {loading && <div className="text-center py-2"><Spinner animation="border" /></div>}
+
           <Card className="border-0 shadow-sm">
             <ListGroup variant="flush">
               {filteredNotifications.map((notification) => (
                 <ListGroup.Item
                   key={notification.id}
-                  className={`${!notification.read ? 'bg-light' : ''} border-start border-3 ${
-                    notification.priority === 'high' ? 'border-danger' : 
-                    notification.priority === 'medium' ? 'border-warning' : 'border-secondary'
+                  className={`${!(notification.read || notification.isRead) ? 'bg-light' : ''} border-start border-3 ${
+                    notification.priority === 'URGENT' ? 'border-danger' : 
+                    notification.priority === 'HIGH' ? 'border-warning' : 'border-secondary'
                   }`}
                   action
                   onClick={() => markAsRead(notification.id)}
@@ -180,18 +154,18 @@ export const ParentNotifications: React.FC = () => {
                         <div className="flex-grow-1">
                           <div className="d-flex align-items-center mb-1">
                             <h6 className="mb-0 me-2">{notification.title}</h6>
-                            {!notification.read && <Badge bg="primary">New</Badge>}
+                            {!(notification.read || notification.isRead) && <Badge bg="primary">New</Badge>}
                           </div>
                           <p className="mb-1 text-muted">{notification.message}</p>
                           <div className="d-flex align-items-center">
-                            <Badge bg="secondary" className="me-2">{notification.child}</Badge>
+                            <Badge bg="secondary" className="me-2">{notification.childName || 'All'}</Badge>
                             <small className="text-muted">
                               <i className="bi bi-clock me-1"></i>
-                              {getTimeDiff(notification.timestamp)}
+                              {getTimeDiff(notification.createdAt || notification.timestamp)}
                             </small>
                           </div>
                         </div>
-                        {!notification.read && (
+                        {!(notification.read || notification.isRead) && (
                           <Button
                             variant="link"
                             size="sm"

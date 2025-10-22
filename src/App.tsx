@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Container, Spinner } from 'react-bootstrap';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Login } from './pages/Login';
+import { ForgotPassword } from './pages/ForgotPassword';
+import { ResetPassword } from './pages/ResetPassword';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { TeacherDashboard } from './pages/TeacherDashboard';
 import { StudentDashboard } from './pages/StudentDashboard';
@@ -19,6 +21,7 @@ import { StudentDetail } from './pages/StudentDetail';
 import { DebugAuth } from './pages/DebugAuth';
 import './App.css';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { LangProvider } from './contexts/LangContext';
 import { SubjectList } from './pages/SubjectList';
 import { SubjectForm } from './pages/SubjectForm';
 import { ExamList } from './pages/ExamList';
@@ -26,14 +29,17 @@ import { ExamForm } from './pages/ExamForm';
 import { FeeList } from './pages/FeeList';
 import { FeeForm } from './pages/FeeForm';
 import { TimetableList } from './pages/TimetableList';
-import { TimetableForm } from './pages/TimetableForm';
+import { TimetableFormImproved as TimetableForm } from './pages/TimetableFormImproved';
 import { TeacherList } from './pages/TeacherList';
 import { TeacherForm } from './pages/TeacherForm';
 import { TeacherDetail } from './pages/TeacherDetail';
 import { Notifications } from './pages/Notifications';
+import { CreateNotification } from './pages/CreateNotification';
 import { AttendancePage } from './pages/Attendance';
 import { StudentAssignments } from './pages/StudentAssignments';
 import { StudentExams } from './pages/StudentExams';
+import { StudentQuizzes } from './pages/StudentQuizzes';
+import { StudentStudyMaterials } from './pages/StudentStudyMaterials';
 import { StudentAttendance } from './pages/StudentAttendance';
 import { StudentTimetable } from './pages/StudentTimetable';
 import { StudentFeePayment } from './pages/StudentFeePayment';
@@ -45,11 +51,16 @@ import { ParentFees } from './pages/ParentFees';
 import { ParentNotifications } from './pages/ParentNotifications';
 import { TeacherMyClasses } from './pages/TeacherMyClasses';
 import { TeacherAssignments } from './pages/TeacherAssignments';
+import { TeacherStudyMaterials } from './pages/TeacherStudyMaterials';
+import { TeacherQuizTest } from './pages/TeacherQuizTest';
 import { TeacherAttendance } from './pages/TeacherAttendance';
 import { TeacherGrading } from './pages/TeacherGrading';
 import { TeacherTimetable } from './pages/TeacherTimetable';
 import { ContactSupport } from './pages/ContactSupport';
 import { TeacherStudents } from './pages/TeacherStudents';
+import { AdminFinanceTools } from './pages/AdminFinanceTools';
+import { AdminNotificationTools } from './pages/AdminNotificationTools';
+import { AdminReports } from './pages/AdminReports';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactElement }> = ({ children }) => {
@@ -100,11 +111,14 @@ const DashboardRouter: React.FC = () => {
 
 function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <Router>
+    <LangProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           
           {/* Dashboard routes */}
           <Route
@@ -146,6 +160,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Notifications />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/notifications/create"
+            element={
+              <ProtectedRoute>
+                <CreateNotification />
               </ProtectedRoute>
             }
           />
@@ -330,6 +352,32 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          {/* Admin Tools */}
+          <Route
+            path="/admin/tools/finance"
+            element={
+              <ProtectedRoute>
+                <AdminFinanceTools />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/tools/notifications"
+            element={
+              <ProtectedRoute>
+                <AdminNotificationTools />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/reports"
+            element={
+              <ProtectedRoute>
+                <AdminReports />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/timetable"
             element={
@@ -425,6 +473,22 @@ function App() {
             element={
               <ProtectedRoute>
                 <StudentAssignments />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student/study-materials"
+            element={
+              <ProtectedRoute>
+                <StudentStudyMaterials />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student/quizzes"
+            element={
+              <ProtectedRoute>
+                <StudentQuizzes />
               </ProtectedRoute>
             }
           />
@@ -529,6 +593,22 @@ function App() {
             }
           />
           <Route
+            path="/teacher/study-materials"
+            element={
+              <ProtectedRoute>
+                <TeacherStudyMaterials />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/teacher/quiz-test"
+            element={
+              <ProtectedRoute>
+                <TeacherQuizTest />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/teacher/attendance"
             element={
               <ProtectedRoute>
@@ -584,9 +664,10 @@ function App() {
             }
           />
         </Routes>
-        </Router>
-      </AuthProvider>
-    </ThemeProvider>
+          </Router>
+        </AuthProvider>
+      </ThemeProvider>
+    </LangProvider>
   );
 }
 

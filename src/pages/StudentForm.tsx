@@ -5,8 +5,10 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, useParams } from 'react-router-dom';
 import { studentService } from '../services/studentService';
 import { classService } from '../services/classService';
+import { feeService } from '../services/feeService';
 import { StudentCreateRequest, StudentUpdateRequest, SchoolClass } from '../types';
 import { CredentialsModal } from '../components/CredentialsModal';
+import { adminService } from '../services/adminService';
 
 export const StudentForm: React.FC = () => {
   const { user } = useAuth();
@@ -18,6 +20,7 @@ export const StudentForm: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [info, setInfo] = useState('');
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [loadingClasses, setLoadingClasses] = useState(false);
   
@@ -31,10 +34,55 @@ export const StudentForm: React.FC = () => {
   const [sendEmailToParents, setSendEmailToParents] = useState(true);
   const [showCredentialsModal, setShowCredentialsModal] = useState(false);
   const [createdCredentials, setCreatedCredentials] = useState<any[]>([]);
+  // Document uploads
+  const [aadhaarFile, setAadhaarFile] = useState<File | null>(null);
+  const [apaarFile, setApaarFile] = useState<File | null>(null);
+  const [birthCertFile, setBirthCertFile] = useState<File | null>(null);
+  const [studentPhotoFile, setStudentPhotoFile] = useState<File | null>(null);
+  
+  const uploadSelectedDocuments = async (sid: string) => {
+    const uploads: Promise<any>[] = [];
+    if (aadhaarFile) uploads.push(studentService.uploadGovtIdDocument(sid, 'aadhaar', aadhaarFile));
+    if (apaarFile) uploads.push(studentService.uploadGovtIdDocument(sid, 'apaar', apaarFile));
+    if (birthCertFile) uploads.push(studentService.uploadGovtIdDocument(sid, 'birth-certificate', birthCertFile));
+    if (uploads.length > 0) {
+      try { await Promise.all(uploads); } catch (err) { console.error('Document upload failed', err); }
+    }
+    if (studentPhotoFile) {
+      try { await studentService.uploadStudentPhoto(sid, studentPhotoFile); } catch (err) { console.error('Photo upload failed', err); }
+    }
+  };
+
+  // Detect existing parent email and inform linkage
+  const checkExistingParent = async (email?: string, relationLabel?: string) => {
+    try {
+      const e = (email || '').trim();
+      if (!e) return;
+      const user = await adminService.getUserByEmail(e);
+      if (user && user.id) {
+        setInfo(`${relationLabel || 'Parent'} account already exists. The system will link to the existing user and use their credentials.`);
+      }
+    } catch {
+      // ignore
+    }
+  };
   
   // Parent account creation options
   const [createParentAccount, setCreateParentAccount] = useState(true);
   const [parentAccountType, setParentAccountType] = useState<'father' | 'mother' | 'guardian'>('father');
+  
+  // Fee creation options
+  const [createAdmissionFee, setCreateAdmissionFee] = useState(false);
+  const [admissionAmount, setAdmissionAmount] = useState('2000');
+  const [registrationAmount, setRegistrationAmount] = useState('500');
+  const [idCardAmount, setIdCardAmount] = useState('100');
+  const [feeDiscount, setFeeDiscount] = useState('0');
+  const [applySiblingDiscount, setApplySiblingDiscount] = useState(false);
+  const [feeDueDate, setFeeDueDate] = useState(() => {
+    const date = new Date();
+    date.setDate(date.getDate() + 7);
+    return date.toISOString().split('T')[0];
+  });
 
   // Form data
   const [formData, setFormData] = useState<StudentCreateRequest>({
@@ -80,6 +128,8 @@ export const StudentForm: React.FC = () => {
     isActive: true,
     aadhaarNumber: '',
     apaarId: '',
+    birthCertificateNumber: '',
+    customFields: {},
   });
 
   const loadClasses = useCallback(async () => {
@@ -100,6 +150,35 @@ export const StudentForm: React.FC = () => {
       loadStudent(id);
     }
   }, [id, isEditMode, loadClasses]);
+
+  // Auto-fill student section from selected class
+  useEffect(() => {
+    if (!formData.classId) return;
+    const cls = classes.find(c => c.id === formData.classId);
+    if (cls && cls.section && formData.section !== cls.section) {
+      setFormData(prev => ({ ...prev, section: cls.section }));
+    }
+    // Prefill roll number preview for new admission using class configuration
+    if (!isEditMode && cls) {
+      const next = (cls as any).nextRollNumber as number | undefined;
+      const width = (cls as any).rollNumberWidth as number | undefined;
+      const prefix = (cls as any).rollNumberPrefix as string | undefined;
+      if (next && !formData.rollNumber) {
+        const numberPart = width && width > 0 ? String(next).padStart(width, '0') : String(next);
+        const rn = `${prefix || ''}${numberPart}`;
+        setFormData(prev => ({ ...prev, rollNumber: rn }));
+      }
+    }
+  }, [formData.classId, classes]);
+
+  // Auto-calc sibling discount
+  useEffect(() => {
+    if (applySiblingDiscount) {
+      const adm = parseFloat(admissionAmount || '0');
+      const tenPct = Math.round(adm * 0.10);
+      setFeeDiscount(String(tenPct));
+    }
+  }, [applySiblingDiscount, admissionAmount]);
 
   const loadStudent = async (studentId: string) => {
     try {
@@ -149,6 +228,8 @@ export const StudentForm: React.FC = () => {
         isActive: student.isActive,
         aadhaarNumber: student.aadhaarNumber || '',
         apaarId: student.apaarId || '',
+        birthCertificateNumber: student.birthCertificateNumber || '',
+        customFields: (student as any).customFields || {},
       });
     } catch (err: any) {
       console.error('Error loading student:', err);
@@ -179,6 +260,7 @@ export const StudentForm: React.FC = () => {
     e.preventDefault();
     setError('');
     setSuccess('');
+    setInfo('');
 
     // Validate passwords if in CUSTOM mode
     if (!isEditMode && passwordMode === 'CUSTOM') {
@@ -196,6 +278,15 @@ export const StudentForm: React.FC = () => {
       }
     }
 
+    // Aadhaar is mandatory for new admissions and must be 12 digits
+    if (!isEditMode) {
+      const aadhaar = (formData.aadhaarNumber || '').trim();
+      if (!/^\d{12}$/.test(aadhaar)) {
+        setError('Aadhaar number is required and must be 12 digits');
+        return;
+      }
+    }
+
     setSaving(true);
 
     try {
@@ -207,6 +298,8 @@ export const StudentForm: React.FC = () => {
         if (typeof formData.isActive === 'boolean') {
           await studentService.updateStatus(id, !!formData.isActive);
         }
+        // Upload any newly selected documents
+        await uploadSelectedDocuments(id);
         setSuccess('Student updated successfully!');
         
         setTimeout(() => {
@@ -239,6 +332,34 @@ export const StudentForm: React.FC = () => {
         });
 
         setSuccess('Student created successfully!');
+
+        // Upload any selected documents for the newly created student
+        if (response?.student?.id) {
+          await uploadSelectedDocuments(response.student.id);
+          
+          // Create admission fee if requested
+          if (createAdmissionFee) {
+            try {
+              await feeService.createAdmissionFee({
+                studentId: response.student.id,
+                schoolId: user?.schoolId || formData.schoolId,
+                classId: formData.classId,
+                academicYear: formData.academicYear || `${new Date().getFullYear()}-${new Date().getFullYear() + 1}`,
+                term: 'Admission',
+                feeItems: [
+                  { itemName: 'Admission Fee', itemAmount: parseFloat(admissionAmount) || 0 },
+                  { itemName: 'Registration Fee', itemAmount: parseFloat(registrationAmount) || 0 },
+                  { itemName: 'ID Card', itemAmount: parseFloat(idCardAmount) || 0 }
+                ].filter(item => item.itemAmount > 0),
+                discount: parseFloat(feeDiscount) || 0,
+                dueDate: feeDueDate
+              });
+            } catch (feeErr: any) {
+              console.error('Failed to create admission fee:', feeErr);
+              // Don't fail the whole operation if fee creation fails
+            }
+          }
+        }
 
         // Show credentials modal if there are credentials to display
         if (response.credentialsCreated && response.credentialsCreated.length > 0) {
@@ -313,6 +434,13 @@ export const StudentForm: React.FC = () => {
           </Alert>
         )}
 
+        {info && (
+          <Alert variant="info" dismissible onClose={() => setInfo('')}>
+            <i className="bi bi-info-circle me-2"></i>
+            {info}
+          </Alert>
+        )}
+
         {/* Form */}
         <Form onSubmit={handleSubmit}>
           <Tabs defaultActiveKey="basic" className="mb-4">
@@ -323,15 +451,19 @@ export const StudentForm: React.FC = () => {
                   <Row>
                     <Col md={6}>
                       <Form.Group className="mb-3">
-                        <Form.Label>Admission Number <span className="text-danger">*</span></Form.Label>
+                        <Form.Label>Admission Number</Form.Label>
                         <Form.Control
                           type="text"
                           name="admissionNumber"
                           value={formData.admissionNumber}
                           onChange={handleChange}
-                          required
                           disabled={isEditMode}
                         />
+                        {!isEditMode && (
+                          <Form.Text className="text-muted">
+                            Leave blank to auto-generate an Admission ID
+                          </Form.Text>
+                        )}
                       </Form.Group>
                     </Col>
                     <Col md={6}>
@@ -463,6 +595,20 @@ export const StudentForm: React.FC = () => {
                   <Row>
                     <Col md={6}>
                       <Form.Group className="mb-3">
+                        <Form.Label>Student Photograph</Form.Label>
+                        <Form.Control
+                          type="file"
+                          accept="image/*"
+                          onChange={(e: any) => setStudentPhotoFile(e.target.files?.[0] || null)}
+                        />
+                        <Form.Text className="text-muted">Upload passport-size photo (JPG/PNG, max 5MB).</Form.Text>
+                      </Form.Group>
+                    </Col>
+                  </Row>
+
+                  <Row>
+                    <Col md={6}>
+                      <Form.Group className="mb-3">
                         <Form.Label>Religion</Form.Label>
                         <Form.Control
                           type="text"
@@ -537,8 +683,11 @@ export const StudentForm: React.FC = () => {
                           name="section"
                           value={formData.section}
                           onChange={handleChange}
-                          placeholder="e.g., A"
+                          disabled
+                          readOnly
+                          placeholder="Auto-filled from selected Class"
                         />
+                        <Form.Text className="text-muted">Section is derived from the selected Class.</Form.Text>
                       </Form.Group>
                     </Col>
                     <Col md={4}>
@@ -554,46 +703,7 @@ export const StudentForm: React.FC = () => {
                     </Col>
                   </Row>
                   
-                  <hr className="my-4" />
-                  <h6 className="mb-3">Government IDs</h6>
-
-                  <Row>
-                    <Col md={6}>
-                      <Form.Group className="mb-3">
-                        <Form.Label>Aadhaar Number</Form.Label>
-                        <Form.Control
-                          type="text"
-                          name="aadhaarNumber"
-                          value={formData.aadhaarNumber}
-                          onChange={handleChange}
-                          placeholder="12 digit Aadhaar number"
-                          maxLength={12}
-                          pattern="\d{12}"
-                        />
-                        <Form.Text className="text-muted">
-                          Enter 12 digit Aadhaar number (stored securely)
-                        </Form.Text>
-                      </Form.Group>
-                    </Col>
-                    <Col md={6}>
-                      <Form.Group className="mb-3">
-                        <Form.Label>APAAR ID</Form.Label>
-                        <Form.Control
-                          type="text"
-                          name="apaarId"
-                          value={formData.apaarId}
-                          onChange={handleChange}
-                          placeholder="12 character APAAR ID"
-                          maxLength={12}
-                          pattern="[A-Z0-9]{12}"
-                          style={{ textTransform: 'uppercase' }}
-                        />
-                        <Form.Text className="text-muted">
-                          12 alphanumeric characters (Automated Permanent Academic Account Registry)
-                        </Form.Text>
-                      </Form.Group>
-                    </Col>
-                  </Row>
+                  {/* Government IDs moved to dedicated tab to avoid duplication */}
                 </Card.Body>
               </Card>
             </Tab>
@@ -710,12 +820,29 @@ export const StudentForm: React.FC = () => {
                   <Row>
                     <Col md={6}>
                       <Form.Group className="mb-3">
+                        <Form.Label>Father's Aadhaar (optional)</Form.Label>
+                        <Form.Control
+                          type="text"
+                          value={(formData.customFields as any)?.fatherAadhaar || ''}
+                          onChange={(e) => setFormData(prev => ({ ...prev, customFields: { ...(prev.customFields || {}), fatherAadhaar: e.target.value } }))}
+                          placeholder="12 digit Aadhaar"
+                          maxLength={12}
+                        />
+                        <Form.Text className="text-muted">Enter 12 digits without spaces.</Form.Text>
+                      </Form.Group>
+                    </Col>
+                  </Row>
+
+                  <Row>
+                    <Col md={6}>
+                      <Form.Group className="mb-3">
                         <Form.Label>Father's Email</Form.Label>
                         <Form.Control
                           type="email"
                           name="fatherEmail"
                           value={formData.fatherEmail}
                           onChange={handleChange}
+                          onBlur={(e) => checkExistingParent(e.currentTarget.value, 'Father')}
                         />
                       </Form.Group>
                     </Col>
@@ -762,12 +889,29 @@ export const StudentForm: React.FC = () => {
                   <Row>
                     <Col md={6}>
                       <Form.Group className="mb-3">
+                        <Form.Label>Mother's Aadhaar (optional)</Form.Label>
+                        <Form.Control
+                          type="text"
+                          value={(formData.customFields as any)?.motherAadhaar || ''}
+                          onChange={(e) => setFormData(prev => ({ ...prev, customFields: { ...(prev.customFields || {}), motherAadhaar: e.target.value } }))}
+                          placeholder="12 digit Aadhaar"
+                          maxLength={12}
+                        />
+                        <Form.Text className="text-muted">Enter 12 digits without spaces.</Form.Text>
+                      </Form.Group>
+                    </Col>
+                  </Row>
+
+                  <Row>
+                    <Col md={6}>
+                      <Form.Group className="mb-3">
                         <Form.Label>Mother's Email</Form.Label>
                         <Form.Control
                           type="email"
                           name="motherEmail"
                           value={formData.motherEmail}
                           onChange={handleChange}
+                          onBlur={(e) => checkExistingParent(e.currentTarget.value, 'Mother')}
                         />
                       </Form.Group>
                     </Col>
@@ -820,6 +964,7 @@ export const StudentForm: React.FC = () => {
                           name="guardianEmail"
                           value={formData.guardianEmail}
                           onChange={handleChange}
+                          onBlur={(e) => checkExistingParent(e.currentTarget.value, 'Guardian')}
                         />
                       </Form.Group>
                     </Col>
@@ -983,6 +1128,251 @@ export const StudentForm: React.FC = () => {
                 </Card.Body>
               </Card>
             </Tab>
+
+            {/* Government IDs Tab */}
+            <Tab eventKey="govtIds" title="Government IDs">
+              <Card className="border-0 shadow-sm mb-4">
+                <Card.Body>
+                  <Alert variant="info" className="mb-4">
+                    <i className="bi bi-shield-check me-2"></i>
+                    <strong>Important:</strong> Government ID information is confidential and stored securely.
+                    Aadhaar numbers are masked and not displayed publicly.
+                  </Alert>
+
+                  <Row>
+                    <Col md={6}>
+                      <Form.Group className="mb-3">
+                        <Form.Label>Aadhaar Number <span className="text-danger">*</span></Form.Label>
+                        <Form.Control
+                          type="text"
+                          name="aadhaarNumber"
+                          value={formData.aadhaarNumber}
+                          onChange={handleChange}
+                          placeholder="12-digit Aadhaar number"
+                          maxLength={12}
+                          pattern="\d{12}"
+                          required={!isEditMode}
+                        />
+                        <Form.Text className="text-muted">
+                          Enter 12-digit Aadhaar number (will be stored securely and masked)
+                        </Form.Text>
+                      </Form.Group>
+                    </Col>
+                    <Col md={6}>
+                      <Form.Group className="mb-3">
+                        <Form.Label>Birth Certificate Number</Form.Label>
+                        <Form.Control
+                          type="text"
+                          name="birthCertificateNumber"
+                          value={formData.birthCertificateNumber}
+                          onChange={handleChange}
+                          placeholder="Birth certificate number"
+                        />
+                        <Form.Text className="text-muted">
+                          Official birth certificate registration number
+                        </Form.Text>
+                      </Form.Group>
+                    </Col>
+                  </Row>
+
+                  <Row>
+                    <Col md={6}>
+                      <Form.Group className="mb-3">
+                        <Form.Label>APAAR ID</Form.Label>
+                        <Form.Control
+                          type="text"
+                          name="apaarId"
+                          value={formData.apaarId}
+                          onChange={handleChange}
+                          placeholder="12-character APAAR ID"
+                          maxLength={12}
+                        />
+                        <Form.Text className="text-muted">
+                          Automated Permanent Academic Account Registry ID (if available)
+                        </Form.Text>
+                      </Form.Group>
+                    </Col>
+                  </Row>
+
+                  <hr className="my-4" />
+                  <h6 className="mb-3">Document Uploads</h6>
+                  <Alert variant="secondary" className="mb-3">
+                    <i className="bi bi-paperclip me-2"></i>
+                    Upload scanned copies of government-issued ID documents for verification
+                  </Alert>
+
+                  <Row>
+                    <Col md={4}>
+                      <Form.Group className="mb-3">
+                        <Form.Label>Aadhaar Document</Form.Label>
+                        <Form.Control
+                          type="file"
+                          accept="image/*,.pdf"
+                          onChange={(e: any) => setAadhaarFile(e.target.files?.[0] || null)}
+                        />
+                        <Form.Text className="text-muted">Image or PDF</Form.Text>
+                      </Form.Group>
+                    </Col>
+                    <Col md={4}>
+                      <Form.Group className="mb-3">
+                        <Form.Label>Birth Certificate</Form.Label>
+                        <Form.Control
+                          type="file"
+                          accept="image/*,.pdf"
+                          onChange={(e: any) => setBirthCertFile(e.target.files?.[0] || null)}
+                        />
+                        <Form.Text className="text-muted">Image or PDF</Form.Text>
+                      </Form.Group>
+                    </Col>
+                    <Col md={4}>
+                      <Form.Group className="mb-3">
+                        <Form.Label>APAAR Document</Form.Label>
+                        <Form.Control
+                          type="file"
+                          accept="image/*,.pdf"
+                          onChange={(e: any) => setApaarFile(e.target.files?.[0] || null)}
+                        />
+                        <Form.Text className="text-muted">Image or PDF</Form.Text>
+                      </Form.Group>
+                    </Col>
+                  </Row>
+                </Card.Body>
+              </Card>
+            </Tab>
+
+            {/* Fee Details Tab - Only for new students */}
+            {!isEditMode && (
+              <Tab eventKey="fees" title="Fee Details (Optional)">
+                <Card className="border-0 shadow-sm mb-4">
+                  <Card.Body>
+                    <Alert variant="info" className="mb-4">
+                      <i className="bi bi-cash-coin me-2"></i>
+                      <strong>Optional:</strong> Create admission fee during student enrollment.
+                      You can also create fees later from the Fees management page.
+                    </Alert>
+
+                    <Form.Group className="mb-4">
+                      <Form.Check
+                        type="checkbox"
+                        id="create-admission-fee"
+                        label="Create Admission Fee for this student"
+                        checked={createAdmissionFee}
+                        onChange={(e) => setCreateAdmissionFee(e.target.checked)}
+                      />
+                      <Form.Text className="text-muted d-block ms-4">
+                        This will automatically create a fee record with admission-related charges
+                      </Form.Text>
+                    </Form.Group>
+
+                    {createAdmissionFee && (
+                      <>
+                        <hr className="my-4" />
+                        <h6 className="mb-3">Fee Components</h6>
+                        <Row>
+                          <Col md={4}>
+                            <Form.Group className="mb-3">
+                              <Form.Label>Admission Fee (₹)</Form.Label>
+                              <Form.Control
+                                type="number"
+                                value={admissionAmount}
+                                onChange={(e) => setAdmissionAmount(e.target.value)}
+                                placeholder="2000"
+                                min="0"
+                                step="100"
+                              />
+                            </Form.Group>
+                          </Col>
+                          <Col md={4}>
+                            <Form.Group className="mb-3">
+                              <Form.Label>Registration Fee (₹)</Form.Label>
+                              <Form.Control
+                                type="number"
+                                value={registrationAmount}
+                                onChange={(e) => setRegistrationAmount(e.target.value)}
+                                placeholder="500"
+                                min="0"
+                                step="50"
+                              />
+                            </Form.Group>
+                          </Col>
+                          <Col md={4}>
+                            <Form.Group className="mb-3">
+                              <Form.Label>ID Card Fee (₹)</Form.Label>
+                              <Form.Control
+                                type="number"
+                                value={idCardAmount}
+                                onChange={(e) => setIdCardAmount(e.target.value)}
+                                placeholder="100"
+                                min="0"
+                                step="10"
+                              />
+                            </Form.Group>
+                          </Col>
+                        </Row>
+
+                        <Row>
+                          <Col md={12}>
+                            <Form.Group className="mb-3">
+                              <Form.Check
+                                type="checkbox"
+                                id="apply-sibling-discount"
+                                label="Apply Sibling Discount (10% of Admission Fee)"
+                                checked={applySiblingDiscount}
+                                onChange={(e) => setApplySiblingDiscount(e.target.checked)}
+                              />
+                              <Form.Text className="text-muted ms-4 d-block">
+                                When enabled, the Discount field will auto-fill to 10% of Admission Fee.
+                              </Form.Text>
+                            </Form.Group>
+                          </Col>
+                        </Row>
+
+                        <Row>
+                          <Col md={6}>
+                            <Form.Group className="mb-3">
+                              <Form.Label>Discount (₹)</Form.Label>
+                              <Form.Control
+                                type="number"
+                                value={feeDiscount}
+                                onChange={(e) => setFeeDiscount(e.target.value)}
+                                placeholder="0"
+                                min="0"
+                                step="50"
+                              />
+                              <Form.Text className="text-muted">
+                                Optional discount amount to apply
+                              </Form.Text>
+                            </Form.Group>
+                          </Col>
+                          <Col md={6}>
+                            <Form.Group className="mb-3">
+                              <Form.Label>Due Date</Form.Label>
+                              <Form.Control
+                                type="date"
+                                value={feeDueDate}
+                                onChange={(e) => setFeeDueDate(e.target.value)}
+                                min={new Date().toISOString().split('T')[0]}
+                              />
+                              <Form.Text className="text-muted">
+                                Payment deadline for this fee
+                              </Form.Text>
+                            </Form.Group>
+                          </Col>
+                        </Row>
+
+                        <Alert variant="secondary" className="mt-3">
+                          <strong>Total Amount:</strong> ₹
+                          {(parseFloat(admissionAmount || '0') + 
+                            parseFloat(registrationAmount || '0') + 
+                            parseFloat(idCardAmount || '0') - 
+                            parseFloat(feeDiscount || '0')).toLocaleString()}
+                        </Alert>
+                      </>
+                    )}
+                  </Card.Body>
+                </Card>
+              </Tab>
+            )}
 
             {/* User Account Creation Tab - Only for new students */}
             {!isEditMode && (

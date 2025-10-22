@@ -1,9 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { useAuth } from '../contexts/AuthContext';
 import { Subject } from '../types';
+import { teacherService } from '../services/teacherService';
+import { classService } from '../services/classService';
 import { subjectService } from '../services/subjectService';
 
 export const SubjectForm: React.FC = () => {
@@ -26,7 +28,13 @@ export const SubjectForm: React.FC = () => {
     credits: 0,
     totalHours: 0,
     isActive: true,
+    teacherIds: [],
   });
+
+  const [teachers, setTeachers] = useState<any[]>([]);
+  const [classes, setClasses] = useState<any[]>([]);
+  const classSelectRef = useRef<HTMLSelectElement>(null);
+  const teacherSelectRef = useRef<HTMLSelectElement>(null);
 
   const isEdit = Boolean(id);
 
@@ -49,6 +57,28 @@ export const SubjectForm: React.FC = () => {
     load();
   }, [id]);
 
+  useEffect(() => {
+    const loadTeachers = async () => {
+      if (!user?.schoolId) return;
+      try {
+        const list = await teacherService.getTeachersBySchool(user.schoolId);
+        setTeachers(list || []);
+      } catch {}
+    };
+    loadTeachers();
+  }, [user?.schoolId]);
+
+  useEffect(() => {
+    const loadClasses = async () => {
+      if (!user?.schoolId) return;
+      try {
+        const list = await classService.getAllClasses({ schoolId: user.schoolId });
+        setClasses(list || []);
+      } catch {}
+    };
+    loadClasses();
+  }, [user?.schoolId]);
+
   const handleChange = (key: keyof Subject, value: any) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
@@ -59,6 +89,13 @@ export const SubjectForm: React.FC = () => {
     setSuccess('');
     setSaving(true);
     try {
+      // Read current selections directly from DOM to avoid relying on blur ordering
+      const selectedClassIds = classSelectRef.current
+        ? Array.from(classSelectRef.current.selectedOptions).map(o => o.value)
+        : ((form as any).classIds as any) || [];
+      const selectedTeacherIds = teacherSelectRef.current
+        ? Array.from(teacherSelectRef.current.selectedOptions).map(o => o.value)
+        : (form.teacherIds as any) || [];
       const payload: Partial<Subject> = {
         name: form.name?.trim() || '',
         code: form.code?.trim() || '',
@@ -69,6 +106,8 @@ export const SubjectForm: React.FC = () => {
         credits: form.credits ?? 0,
         totalHours: form.totalHours ?? undefined,
         isActive: form.isActive ?? true,
+        teacherIds: selectedTeacherIds || [],
+        classIds: selectedClassIds || [],
       };
       if (isEdit && id) {
         await subjectService.update(id, payload);
@@ -234,6 +273,51 @@ export const SubjectForm: React.FC = () => {
                         value={form.description || ''}
                         onChange={(e) => handleChange('description', e.target.value)}
                       />
+                    </Form.Group>
+                  </Col>
+                </Row>
+
+                <Row>
+                  <Col md={12} className="mb-3">
+                    <Form.Group>
+                      <Form.Label>Assign to Classes</Form.Label>
+                      <Form.Select
+                        multiple
+                        value={((form as any).classIds as any) || []}
+                        onChange={(e) => {
+                          const options = Array.from(e.target.selectedOptions).map(o => o.value);
+                          setForm(prev => ({ ...prev, classIds: options as any } as any));
+                        }}
+                        ref={classSelectRef}
+                      >
+                        {classes.map((c: any) => (
+                          <option key={c.id} value={c.id}>
+                            {(c.name || c.className || 'Class') + (c.section ? ` - ${c.section}` : '')}
+                          </option>
+                        ))}
+                      </Form.Select>
+                      <Form.Text className="text-muted">Hold Ctrl/Cmd to select multiple classes</Form.Text>
+                    </Form.Group>
+                  </Col>
+                  <Col md={12} className="mb-3">
+                    <Form.Group>
+                      <Form.Label>Assign Teachers</Form.Label>
+                      <Form.Select
+                        multiple
+                        value={(form.teacherIds as any) || []}
+                        onChange={(e) => {
+                          const options = Array.from(e.target.selectedOptions).map(o => o.value);
+                          handleChange('teacherIds' as any, options);
+                        }}
+                        ref={teacherSelectRef}
+                      >
+                        {teachers.map((t: any) => (
+                          <option key={t.id} value={t.id}>
+                            {t.firstName} {t.lastName} ({t.employeeId})
+                          </option>
+                        ))}
+                      </Form.Select>
+                      <Form.Text className="text-muted">Hold Ctrl/Cmd to select multiple teachers</Form.Text>
                     </Form.Group>
                   </Col>
                 </Row>

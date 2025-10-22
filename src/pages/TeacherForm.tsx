@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner, Nav, Tab } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
+import { CredentialsModal } from '../components/CredentialsModal';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { teacherService } from '../services/teacherService';
@@ -19,6 +20,10 @@ export const TeacherForm: React.FC = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [activeTab, setActiveTab] = useState('personal');
+
+  // Credentials modal state
+  const [showCredentialsModal, setShowCredentialsModal] = useState(false);
+  const [createdCredentials, setCreatedCredentials] = useState<any[]>([]);
 
   // Prefer schoolId from auth context, fallback to localStorage if needed
   const { user } = useAuth();
@@ -92,18 +97,20 @@ export const TeacherForm: React.FC = () => {
       // If edit mode, load teacher data
       if (id) {
         const teacher = await teacherService.getTeacherById(id);
+        console.log('Loaded teacher data:', teacher); // Debug log
+        
         setFormData({
-          employeeId: teacher.employeeId,
-          firstName: teacher.firstName,
-          lastName: teacher.lastName,
-          email: teacher.email,
+          employeeId: teacher.employeeId || '',
+          firstName: teacher.firstName || '',
+          lastName: teacher.lastName || '',
+          email: teacher.email || '',
           phone: teacher.phone || '',
           dateOfBirth: teacher.dateOfBirth || '',
           gender: teacher.gender || 'MALE',
           bloodGroup: teacher.bloodGroup || '',
           nationality: teacher.nationality || 'Indian',
           maritalStatus: teacher.maritalStatus || 'Single',
-          schoolId: teacher.schoolId,
+          schoolId: teacher.schoolId || schoolId,
           addressLine1: (teacher.address as any)?.addressLine1 || (teacher.address as any)?.street || '',
           addressLine2: (teacher.address as any)?.addressLine2 || '',
           city: teacher.address?.city || '',
@@ -128,10 +135,11 @@ export const TeacherForm: React.FC = () => {
           panNumber: teacher.employmentInfo?.panNumber || '',
           subjectIds: teacher.subjectIds || [],
           classIds: teacher.classIds || [],
-          joiningDate: teacher.joiningDate || '',
+          joiningDate: teacher.joiningDate || new Date().toISOString().split('T')[0],
+          isPrincipal: teacher.isPrincipal || false,
           passwordMode: 'NONE',
           sendEmailToTeacher: false,
-        });
+        } as any);
       }
     } catch (err: any) {
       console.error('Error loading data:', err);
@@ -168,11 +176,6 @@ export const TeacherForm: React.FC = () => {
     e.preventDefault();
     
     // Validation
-    if (!formData.employeeId.trim()) {
-      setError('Employee ID is required');
-      setActiveTab('personal');
-      return;
-    }
     if (!formData.firstName.trim() || !formData.lastName.trim()) {
       setError('First name and last name are required');
       setActiveTab('personal');
@@ -198,19 +201,22 @@ export const TeacherForm: React.FC = () => {
         const response = await teacherService.createTeacher({ ...formData, schoolId: formData.schoolId || schoolId });
         setSuccess('Teacher created successfully!');
         
-        // Show credentials if generated
+        // Show credentials in modal if generated
         if (response.credentialsCreated && response.credentialsCreated.length > 0) {
-          const cred = response.credentialsCreated[0];
-          if (cred.password) {
-            alert(`Teacher login credentials:\nEmail: ${cred.email}\nPassword: ${cred.password}\n\nPlease save these credentials.`);
+          const credsWithPw = response.credentialsCreated.filter((c: any) => c.password);
+          if (credsWithPw.length > 0) {
+            setCreatedCredentials(response.credentialsCreated);
+            setShowCredentialsModal(true);
           }
         }
       }
       
-      // Navigate back to list after a short delay
-      setTimeout(() => {
-        navigate('/teachers');
-      }, 1500);
+      // Navigate back to list after a short delay if modal not shown
+      if (!showCredentialsModal) {
+        setTimeout(() => {
+          navigate('/teachers');
+        }, 1500);
+      }
     } catch (err: any) {
       console.error('Error saving teacher:', err);
       setError(err.response?.data?.message || 'Failed to save teacher');
@@ -291,15 +297,17 @@ export const TeacherForm: React.FC = () => {
                     <Row>
                       <Col md={6}>
                         <Form.Group className="mb-3">
-                          <Form.Label>Employee ID <span className="text-danger">*</span></Form.Label>
+                          <Form.Label>Employee ID <small className="text-muted">(leave blank to auto-generate)</small></Form.Label>
                           <Form.Control
                             type="text"
                             name="employeeId"
                             value={formData.employeeId}
                             onChange={handleChange}
-                            required
                             disabled={isEditMode}
                           />
+                          {!isEditMode && (
+                            <Form.Text className="text-muted">If left empty, an ID like EMP-2025-0001 will be generated.</Form.Text>
+                          )}
                         </Form.Group>
                       </Col>
                       <Col md={6}>
@@ -604,6 +612,23 @@ export const TeacherForm: React.FC = () => {
                     </Row>
 
                     <Row>
+                      <Col md={12}>
+                        <Form.Group className="mb-3">
+                          <Form.Check
+                            type="checkbox"
+                            name="isPrincipal"
+                            label="Principal (Has elevated permissions for leave approvals and administrative tasks)"
+                            checked={(formData as any).isPrincipal || false}
+                            onChange={(e) => setFormData({ ...formData, isPrincipal: e.target.checked } as any)}
+                          />
+                          <Form.Text className="text-muted">
+                            Only one teacher should be designated as Principal
+                          </Form.Text>
+                        </Form.Group>
+                      </Col>
+                    </Row>
+
+                    <Row>
                       <Col md={4}>
                         <Form.Group className="mb-3">
                           <Form.Label>Total Experience (Years)</Form.Label>
@@ -840,6 +865,16 @@ export const TeacherForm: React.FC = () => {
             </Card>
           </Tab.Container>
         </Form>
+
+        {/* Credentials Modal */}
+        <CredentialsModal
+          show={showCredentialsModal}
+          onHide={() => {
+            setShowCredentialsModal(false);
+            navigate('/teachers');
+          }}
+          credentials={createdCredentials}
+        />
       </Container>
     </Layout>
   );

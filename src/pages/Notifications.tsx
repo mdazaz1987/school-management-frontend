@@ -3,9 +3,13 @@ import { Container, Row, Col, Card, ListGroup, Badge, Button, Spinner, Alert, Fo
 import { Layout } from '../components/Layout';
 import { notificationService } from '../services/notificationService';
 import { Notification } from '../types';
-import { FaBell, FaCheck, FaExclamationCircle, FaInfoCircle, FaFilter } from 'react-icons/fa';
+import { FaBell, FaCheck, FaExclamationCircle, FaInfoCircle, FaFilter, FaPlus } from 'react-icons/fa';
+import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 export const Notifications: React.FC = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [filteredNotifications, setFilteredNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -127,12 +131,20 @@ export const Notifications: React.FC = () => {
                   {unreadCount > 0 ? `${unreadCount} unread notification${unreadCount !== 1 ? 's' : ''}` : 'All caught up!'}
                 </p>
               </div>
-              {unreadCount > 0 && (
-                <Button variant="outline-primary" onClick={handleMarkAllAsRead}>
-                  <FaCheck className="me-2" />
-                  Mark All as Read
-                </Button>
-              )}
+              <div className="d-flex gap-2">
+                {(user?.roles?.includes('ADMIN') || user?.roles?.includes('TEACHER')) && (
+                  <Button variant="primary" onClick={() => navigate('/notifications/create')}>
+                    <FaPlus className="me-2" />
+                    Create Notification
+                  </Button>
+                )}
+                {unreadCount > 0 && (
+                  <Button variant="outline-primary" onClick={handleMarkAllAsRead}>
+                    <FaCheck className="me-2" />
+                    Mark All as Read
+                  </Button>
+                )}
+              </div>
             </div>
           </Col>
         </Row>

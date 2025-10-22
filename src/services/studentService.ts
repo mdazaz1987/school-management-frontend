@@ -104,6 +104,18 @@ export const studentService = {
   },
 
   /**
+   * Get masked Aadhaar value for a student (admin returns full via different endpoint; this always returns masked or null)
+   */
+  async getMaskedAadhaar(id: string): Promise<string | null> {
+    try {
+      const data = await apiService.get<{ maskedAadhaar: string | null }>(`/students/${id}/aadhaar/masked`);
+      return (data as any)?.maskedAadhaar ?? null;
+    } catch {
+      return null;
+    }
+  },
+
+  /**
    * Get student by admission number
    */
   async getStudentByAdmissionNumber(admissionNumber: string): Promise<Student> {
@@ -156,6 +168,7 @@ export const studentService = {
       admissionDate: data.admissionDate,
       aadhaarNumber: data.aadhaarNumber,
       apaarId: data.apaarId,
+      birthCertificateNumber: (data as any).birthCertificateNumber,
     };
     
     // Wrap in new API format
@@ -191,12 +204,9 @@ export const studentService = {
       name: string;
     }>;
   }> {
-    // Transform flat form into nested backend model
+    // Split data into student and user objects as per new backend model
     const studentPayload: any = {
       admissionNumber: options.student.admissionNumber,
-      firstName: options.student.firstName,
-      lastName: options.student.lastName,
-      email: options.student.email,
       phone: options.student.phone,
       dateOfBirth: options.student.dateOfBirth,
       gender: options.student.gender,
@@ -212,21 +222,28 @@ export const studentService = {
       parentInfo: buildParentInfo(options.student),
       academicInfo: buildAcademicInfo(options.student),
       isActive: options.student.isActive !== undefined ? options.student.isActive : true,
-      active: options.student.isActive !== undefined ? options.student.isActive : true,
       admissionDate: options.student.admissionDate,
       aadhaarNumber: options.student.aadhaarNumber,
       apaarId: options.student.apaarId,
+      birthCertificateNumber: (options.student as any).birthCertificateNumber,
+      customFields: (options.student as any).customFields || undefined,
+    };
+
+    const userPayload: any = {
+      firstName: options.student.firstName,
+      lastName: options.student.lastName,
+      email: options.student.email,
+      schoolId: options.student.schoolId,
+      password: options.studentPassword,
     };
 
     const payload = {
       student: studentPayload,
-      passwordMode: options.passwordMode,
-      studentPassword: options.studentPassword,
-      parentPassword: options.parentPassword,
-      sendEmailToStudent: options.sendEmailToStudent,
-      sendEmailToParents: options.sendEmailToParents,
+      user: userPayload,
       createParentAccount: options.createParentAccount ?? false,
-      parentAccountType: options.parentAccountType || 'father'
+      parentAccountType: options.parentAccountType || 'father',
+      parentPassword: options.parentPassword,
+      sendEmailToParent: options.sendEmailToParents ?? false,
     };
 
     const resp = await apiService.post<any>('/students', payload);
@@ -271,6 +288,8 @@ export const studentService = {
       profilePicture: data.profilePicture,
       aadhaarNumber: data.aadhaarNumber,
       apaarId: data.apaarId,
+      birthCertificateNumber: (data as any).birthCertificateNumber,
+      customFields: (data as any).customFields,
     };
     const resp = await apiService.patch<Student>(`/students/${id}`, payload);
     return normalizeStudent(resp as any);
@@ -292,8 +311,15 @@ export const studentService = {
   },
 
   async updateStatus(id: string, isActive: boolean): Promise<Student> {
-    const resp = await apiService.put<Student>(`/students/${id}/status`, { isActive, active: isActive });
-    return normalizeStudent(resp as any);
+    if (isActive) {
+      const resp = await apiService.put<Student>(`/students/${id}/activate`, {});
+      return normalizeStudent(resp as any);
+    } else {
+      await apiService.delete<void>(`/students/${id}`);
+      // After deactivation, backend returns no content; construct minimal updated state
+      const refreshed = await this.getStudentById(id).catch(() => ({ id, isActive: false } as any));
+      return normalizeStudent({ ...refreshed, isActive: false } as any);
+    }
   },
 
   /**
@@ -330,6 +356,15 @@ export const studentService = {
    */
   async getPerformanceRecords(id: string): Promise<any[]> {
     return apiService.get<any[]>(`/students/${id}/performance`);
+  },
+
+  /**
+   * Get upcoming exams for a student (within next `days` days; default backend is 30 days)
+   */
+  async getUpcomingExams(id: string, days: number = 30, fromDate?: string): Promise<any[]> {
+    const params: any = { days };
+    if (fromDate) params.fromDate = fromDate;
+    return apiService.get<any[]>(`/students/${id}/exams/upcoming`, params);
   },
 
   /**
@@ -381,6 +416,24 @@ export const studentService = {
    */
   async getMyAssignments(): Promise<any[]> {
     return apiService.get('/student/assignments');
+  },
+
+  /**
+   * List attachments provided by teacher for an assignment
+   */
+  async listAssignmentAttachments(assignmentId: string): Promise<string[]> {
+    return apiService.get(`/assignments/${assignmentId}/attachments`);
+  },
+
+  /**
+   * Download a teacher-provided attachment as Blob
+   */
+  async getAssignmentAttachmentBlob(assignmentId: string, filename: string): Promise<Blob> {
+    const axios = apiService.getAxiosInstance();
+    const resp = await axios.get(`/assignments/${assignmentId}/attachments/${encodeURIComponent(filename)}` as any, {
+      responseType: 'blob',
+    });
+    return resp.data as Blob;
   },
 
   /**
@@ -451,5 +504,41 @@ export const studentService = {
    */
   async markNotificationAsRead(notificationId: string): Promise<void> {
     return apiService.put(`/student/notifications/${notificationId}/read`, {});
+  },
+
+  /**
+   * Upload an attachment for a government ID for a student
+   * type: 'aadhaar' | 'apaar' | 'birth-certificate'
+   */
+  async uploadGovtIdDocument(studentId: string, type: 'aadhaar' | 'apaar' | 'birth-certificate', file: File): Promise<{
+    success: boolean;
+    message: string;
+    fileId?: string;
+    url?: string;
+  }> {
+    const form = new FormData();
+    form.append('file', file);
+    // use raw axios instance for multipart
+    const axios = apiService.getAxiosInstance();
+    const response = await axios.post(`/students/${studentId}/documents/${type}` as any, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
+  /** Upload a student's profile photograph (admin/teacher) */
+  async uploadStudentPhoto(studentId: string, file: File): Promise<{
+    success: boolean;
+    message: string;
+    fileId?: string;
+    url?: string;
+  }> {
+    const form = new FormData();
+    form.append('file', file);
+    const axios = apiService.getAxiosInstance();
+    const response = await axios.post(`/students/${studentId}/photo` as any, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
   },
 };

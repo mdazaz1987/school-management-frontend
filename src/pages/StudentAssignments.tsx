@@ -3,11 +3,14 @@ import { Row, Col, Card, Table, Badge, Button, Modal, Form, Alert, Spinner, Tabs
 import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
+import apiService from '../services/api';
 import { studentService } from '../services/studentService';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
   { path: '/student/assignments', label: 'Assignments', icon: 'bi-file-text' },
+  { path: '/student/study-materials', label: 'Study Materials', icon: 'bi-book' },
+  { path: '/student/quizzes', label: 'Quizzes & Tests', icon: 'bi-clipboard-check' },
   { path: '/student/exams', label: 'Exams & Results', icon: 'bi-clipboard-check' },
   { path: '/student/attendance', label: 'My Attendance', icon: 'bi-calendar-check' },
   { path: '/student/timetable', label: 'Timetable', icon: 'bi-calendar3' },
@@ -23,8 +26,10 @@ export const StudentAssignments: React.FC = () => {
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
   const [submissionText, setSubmissionText] = useState('');
-  const [, setSubmissionFile] = useState<File | null>(null);
+  const [submissionFile, setSubmissionFile] = useState<File | null>(null);
   const [activeTab, setActiveTab] = useState('pending');
+  const [attachments, setAttachments] = useState<string[]>([]);
+  const [viewOnly, setViewOnly] = useState(false);
 
   useEffect(() => {
     loadAssignments();
@@ -36,65 +41,49 @@ export const StudentAssignments: React.FC = () => {
     setLoading(true);
     setError('');
     try {
-      // Fetch student data for future enhancements
-      // const student = await studentService.getStudentByEmail(user.email);
-      // const dashboard = await studentService.getStudentDashboard(student.id);
-      
-      // Mock assignments data (replace with actual API call)
-      const mockAssignments = [
-        {
-          id: '1',
-          title: 'Mathematics - Chapter 5 Exercise',
-          subject: 'Mathematics',
-          description: 'Complete all problems from Chapter 5',
-          dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
-          assignedDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-          totalMarks: 100,
-          status: 'pending',
-          attachments: []
-        },
-        {
-          id: '2',
-          title: 'Physics - Lab Report',
-          subject: 'Physics',
-          description: 'Submit lab report for the recent experiment',
-          dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
-          assignedDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-          totalMarks: 50,
-          status: 'pending',
-          attachments: []
-        },
-        {
-          id: '3',
-          title: 'English - Essay Writing',
-          subject: 'English',
-          description: 'Write an essay on "My Future Goals"',
-          dueDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-          assignedDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-          totalMarks: 50,
-          status: 'submitted',
-          submittedDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-          grade: 'A',
-          marksObtained: 45,
-          feedback: 'Excellent work! Well structured essay.'
-        },
-        {
-          id: '4',
-          title: 'Chemistry - Periodic Table Quiz',
-          subject: 'Chemistry',
-          description: 'Online quiz on periodic table elements',
-          dueDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-          assignedDate: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(),
-          totalMarks: 25,
-          status: 'graded',
-          submittedDate: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(),
-          grade: 'B+',
-          marksObtained: 21,
-          feedback: 'Good attempt. Review noble gases.'
+      // Resolve student by email to get studentId/class/section
+      const student = await studentService.getStudentByEmail(user.email);
+      const studentId = (student as any).id;
+      const classId = (student as any).classId;
+      const section = (student as any).section;
+
+      // Fetch assignments and submissions
+      const [assignmentsData, submissionsData] = await Promise.all([
+        apiService.get<any[]>(`/students/${studentId}/assignments`, { classId, section }),
+        apiService.get<any[]>(`/students/${studentId}/assignments/submissions`),
+      ]);
+
+      // Index submissions by assignmentId
+      const subMap: Record<string, any> = {};
+      (submissionsData || []).forEach((s: any) => {
+        subMap[s.assignmentId] = s;
+      });
+
+      const normalized = (assignmentsData || []).map((a: any) => {
+        const sub = subMap[a.id];
+        let status = 'pending';
+        if (sub) {
+          if (sub.status === 'GRADED') status = 'graded';
+          else status = 'submitted';
         }
-      ];
-      
-      setAssignments(mockAssignments);
+        return {
+          id: a.id,
+          title: a.title,
+          subject: a.subjectName || a.subject || 'Subject',
+          description: a.description,
+          dueDate: a.dueDate,
+          assignedDate: a.assignedDate,
+          totalMarks: a.maxMarks || a.totalMarks,
+          submittedDate: sub?.submittedAt,
+          grade: sub?.grade,
+          marksObtained: sub?.marksObtained,
+          feedback: sub?.feedback,
+          status, // include computed status so tabs filter works
+          type: a.type || 'HOMEWORK',
+        };
+      }).filter((a: any) => (a.type || '').toUpperCase() !== 'PRESENTATION');
+
+      setAssignments(normalized);
     } catch (e: any) {
       setError(e.response?.data?.message || 'Failed to load assignments');
     } finally {
@@ -102,19 +91,77 @@ export const StudentAssignments: React.FC = () => {
     }
   };
 
-  const handleSubmit = async () => {
-    if (!selectedAssignment) return;
-    
-    // Mock submission (replace with actual API call)
-    setShowSubmitModal(false);
-    alert('Assignment submitted successfully!');
-    loadAssignments();
+  const openSubmitModal = async (assignment: any) => {
+    setSelectedAssignment(assignment);
+    setShowSubmitModal(true);
+    setViewOnly((assignment?.type || '') === 'PRESENTATION');
+    try {
+      const list = await studentService.listAssignmentAttachments(assignment.id);
+      setAttachments(list || []);
+    } catch {
+      setAttachments([]);
+    }
   };
 
+  const downloadAttachment = async (assignmentId: string, filename: string) => {
+    try {
+      const blob = await studentService.getAssignmentAttachmentBlob(assignmentId, filename);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error('Failed to download attachment', e);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!selectedAssignment || !user?.email) return;
+    try {
+      const student = await studentService.getStudentByEmail(user.email);
+      const studentId = (student as any).id;
+      const created = await apiService.post<any>(`/students/${studentId}/assignments/${selectedAssignment.id}/submit`, {
+        content: submissionText,
+        attachments: [] as string[],
+      });
+      // If a file is selected, upload it to the new submission attachments endpoint
+      const submissionId: string | undefined = (created as any)?.id;
+      if (submissionFile && submissionId) {
+        const form = new FormData();
+        form.append('file', submissionFile);
+        const axios = apiService.getAxiosInstance();
+        await axios.post(`/assignments/${selectedAssignment.id}/submissions/${submissionId}/attachments` as any, form, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+      }
+      setShowSubmitModal(false);
+      setSubmissionText('');
+      setSubmissionFile(null);
+      loadAssignments();
+    } catch (e: any) {
+      setError(e.response?.data?.message || 'Failed to submit assignment');
+    }
+  };
+
+  // Tabs filtering
   const filteredAssignments = assignments.filter(a => {
-    if (activeTab === 'pending') return a.status === 'pending';
-    if (activeTab === 'submitted') return a.status === 'submitted';
-    if (activeTab === 'graded') return a.status === 'graded';
+    const isQuiz = a.type === 'QUIZ' || a.type === 'EXAM';
+    if (activeTab === 'pending') {
+      // Do not show pending quizzes/tests here; they are handled in StudentQuizzes page
+      if (isQuiz) return false;
+      return a.status === 'pending';
+    }
+    if (activeTab === 'submitted') {
+      // Show both assignment submissions and quiz/test submissions
+      return a.status === 'submitted';
+    }
+    if (activeTab === 'graded') {
+      return a.status === 'graded';
+    }
     return true;
   });
 
@@ -196,18 +243,26 @@ export const StudentAssignments: React.FC = () => {
                             </td>
                             <td>{assignment.totalMarks}</td>
                             <td>{getStatusBadge(assignment.status)}</td>
-                            <td>
+                            <td className="d-flex gap-2">
                               <Button
                                 size="sm"
-                                variant="primary"
-                                onClick={() => {
-                                  setSelectedAssignment(assignment);
-                                  setShowSubmitModal(true);
-                                }}
+                                variant="outline-secondary"
+                                onClick={() => openSubmitModal(assignment)}
+                                title={(assignment?.type || '') === 'PRESENTATION' ? 'View study materials' : 'View attachments'}
                               >
-                                <i className="bi bi-upload me-1"></i>
-                                Submit
+                                <i className="bi bi-paperclip me-1"></i>
+                                {(assignment?.type || '') === 'PRESENTATION' ? 'View materials' : 'View attachments'}
                               </Button>
+                              {(assignment?.type || '') !== 'PRESENTATION' && (
+                                <Button
+                                  size="sm"
+                                  variant="primary"
+                                  onClick={() => openSubmitModal(assignment)}
+                                >
+                                  <i className="bi bi-upload me-1"></i>
+                                  Submit
+                                </Button>
+                              )}
                             </td>
                           </tr>
                         ))}
@@ -229,7 +284,7 @@ export const StudentAssignments: React.FC = () => {
                           <tr key={assignment.id}>
                             <td><strong>{assignment.title}</strong></td>
                             <td><Badge bg="secondary">{assignment.subject}</Badge></td>
-                            <td>{new Date(assignment.submittedDate).toLocaleDateString()}</td>
+                            <td>{assignment.submittedDate ? new Date(assignment.submittedDate).toLocaleDateString() : '-'}</td>
                             <td>{getStatusBadge(assignment.status)}</td>
                           </tr>
                         ))}
@@ -253,9 +308,9 @@ export const StudentAssignments: React.FC = () => {
                           <tr key={assignment.id}>
                             <td><strong>{assignment.title}</strong></td>
                             <td><Badge bg="secondary">{assignment.subject}</Badge></td>
-                            <td>{new Date(assignment.submittedDate).toLocaleDateString()}</td>
+                            <td>{assignment.submittedDate ? new Date(assignment.submittedDate).toLocaleDateString() : '-'}</td>
                             <td>
-                              <strong>{assignment.marksObtained}</strong> / {assignment.totalMarks}
+                              <strong>{assignment.marksObtained ?? '-'}</strong> / {assignment.totalMarks}
                             </td>
                             <td>
                               {assignment.grade ? (
@@ -266,7 +321,7 @@ export const StudentAssignments: React.FC = () => {
                                 <Badge bg="secondary">Not Graded</Badge>
                               )}
                             </td>
-                            <td>{assignment.feedback}</td>
+                            <td>{assignment.feedback || '-'}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -289,31 +344,53 @@ export const StudentAssignments: React.FC = () => {
             <>
               <h5>{selectedAssignment.title}</h5>
               <p className="text-muted">{selectedAssignment.description}</p>
+              {attachments.length > 0 && (
+                <div className="mb-3">
+                  <strong>{(selectedAssignment?.type || '') === 'PRESENTATION' ? 'Study materials:' : 'Attachments from teacher:'}</strong>
+                  <ul className="mt-2">
+                    {attachments.map((f) => (
+                      <li key={f}>
+                        <Button variant="link" className="p-0" onClick={() => downloadAttachment(selectedAssignment.id, f)}>
+                          <i className="bi bi-paperclip me-1"></i>{f}
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               <hr />
-              
-              <Form>
-                <Form.Group className="mb-3">
-                  <Form.Label>Submission Text</Form.Label>
-                  <Form.Control
-                    as="textarea"
-                    rows={5}
-                    value={submissionText}
-                    onChange={(e) => setSubmissionText(e.target.value)}
-                    placeholder="Type your submission here..."
-                  />
-                </Form.Group>
-                
-                <Form.Group className="mb-3">
-                  <Form.Label>Upload File (Optional)</Form.Label>
-                  <Form.Control
-                    type="file"
-                    onChange={(e: any) => setSubmissionFile(e.target.files[0])}
-                  />
-                  <Form.Text className="text-muted">
-                    Accepted formats: PDF, DOC, DOCX, ZIP (Max 10MB)
-                  </Form.Text>
-                </Form.Group>
-              </Form>
+              {viewOnly ? (
+                <Alert variant="info" className="mb-0">
+                  This is study material shared by your teacher. No submission is required.
+                </Alert>
+              ) : (
+                <Form>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Submission Text</Form.Label>
+                    <Form.Control
+                      as="textarea"
+                      rows={5}
+                      value={submissionText}
+                      onChange={(e) => setSubmissionText(e.target.value)}
+                      placeholder="Type your submission here..."
+                    />
+                  </Form.Group>
+
+                  <Form.Group className="mb-3">
+                    <Form.Label>Upload File (Optional)</Form.Label>
+                    <Form.Control
+                      type="file"
+                      onChange={(e: any) => setSubmissionFile(e.target.files?.[0] || null)}
+                    />
+                    {submissionFile && (
+                      <div className="small text-muted mt-1">Selected: {submissionFile.name}</div>
+                    )}
+                    <Form.Text className="text-muted">
+                      Accepted formats: PDF, DOC, DOCX, ZIP (Max 10MB)
+                    </Form.Text>
+                  </Form.Group>
+                </Form>
+              )}
             </>
           )}
         </Modal.Body>
@@ -321,10 +398,12 @@ export const StudentAssignments: React.FC = () => {
           <Button variant="secondary" onClick={() => setShowSubmitModal(false)}>
             Cancel
           </Button>
-          <Button variant="primary" onClick={handleSubmit}>
-            <i className="bi bi-check-lg me-2"></i>
-            Submit Assignment
-          </Button>
+          {!viewOnly && (
+            <Button variant="primary" onClick={handleSubmit}>
+              <i className="bi bi-check-lg me-2"></i>
+              Submit Assignment
+            </Button>
+          )}
         </Modal.Footer>
       </Modal>
     </Layout>

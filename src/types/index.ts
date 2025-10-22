@@ -63,6 +63,22 @@ export interface SchoolConfiguration {
   gradeSystem?: string;
   currency?: string;
   timezone?: string;
+  weekendDays?: string[]; // e.g., ["SUNDAY"]
+  workingStartTime?: string; // HH:mm
+  workingEndTime?: string;   // HH:mm
+  defaultBreakStartTime?: string; // HH:mm
+  defaultBreakEndTime?: string;   // HH:mm
+  holidays?: string[]; // ISO dates
+  teacherLeavePolicy?: {
+    privilegePerYear?: number;
+    sickPerYear?: number;
+  };
+  // GST configuration
+  gstin?: string;
+  gstRate?: number;
+  // Principal details for receipts
+  principalName?: string;
+  principalSignatureUrl?: string;
 }
 
 export interface School {
@@ -108,6 +124,12 @@ export interface Student {
   performanceRecords?: PerformanceRecord[];
   aadhaarNumber?: string;
   apaarId?: string;
+  birthCertificateNumber?: string;
+  // Attachment IDs stored on server; downloadable via dedicated endpoints
+  aadhaarAttachmentId?: string;
+  apaarAttachmentId?: string;
+  birthCertificateAttachmentId?: string;
+  customFields?: Record<string, any>;
 }
 
 export interface StudentAddress {
@@ -196,6 +218,8 @@ export interface StudentCreateRequest {
   isActive?: boolean;
   aadhaarNumber?: string;
   apaarId?: string;
+  birthCertificateNumber?: string;
+  customFields?: Record<string, any>;
 }
 
 export interface StudentUpdateRequest {
@@ -238,6 +262,7 @@ export interface StudentUpdateRequest {
   profilePicture?: string;
   aadhaarNumber?: string;
   apaarId?: string;
+  birthCertificateNumber?: string;
 }
 
 // Teacher types
@@ -261,6 +286,7 @@ export interface Teacher {
   classIds?: string[];
   profilePicture?: string;
   isActive: boolean;
+  isPrincipal?: boolean;
   joiningDate?: string;
   createdAt: string;
   updatedAt: string;
@@ -354,6 +380,10 @@ export interface SchoolClass {
   durationMonths?: number;
   startDate?: string;
   endDate?: string;
+  // Roll number configuration (optional)
+  rollNumberPrefix?: string;
+  rollNumberWidth?: number;
+  nextRollNumber?: number;
 }
 
 // Subject types
@@ -532,6 +562,18 @@ export interface TimetableEntry {
   teacherName?: string;
   room?: string;
   periodType: PeriodType;
+}
+
+// Classroom types
+export interface Classroom {
+  id: string;
+  schoolId: string;
+  name: string;
+  code?: string;
+  capacity?: number;
+  building?: string;
+  floor?: string;
+  isActive?: boolean;
 }
 
 // Dashboard stats

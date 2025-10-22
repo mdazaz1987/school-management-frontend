@@ -1,12 +1,18 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Row, Col, Card, Table, Badge, Form } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
+import { timetableService } from '../services/timetableService';
+import { teacherService } from '../services/teacherService';
+import { classService } from '../services/classService';
+import { schoolService } from '../services/schoolService';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
   { path: '/teacher/my-classes', label: 'My Classes', icon: 'bi-door-open' },
   { path: '/teacher/assignments', label: 'Assignments', icon: 'bi-file-text' },
+  { path: '/teacher/study-materials', label: 'Study Materials', icon: 'bi-book' },
+  { path: '/teacher/quiz-test', label: 'Quiz & Tests', icon: 'bi-clipboard-check' },
   { path: '/teacher/attendance', label: 'Attendance', icon: 'bi-calendar-check' },
   { path: '/teacher/grading', label: 'Grading', icon: 'bi-star' },
   { path: '/teacher/timetable', label: 'My Timetable', icon: 'bi-calendar3' },
@@ -15,27 +21,125 @@ const sidebarItems = [
 
 export const TeacherTimetable: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [schedule, setSchedule] = useState<any[]>([]);
+  const [isHoliday, setIsHoliday] = useState(false);
+  const [isOnLeave, setIsOnLeave] = useState(false);
 
-  const getPeriodStatus = (time: string, date: string) => {
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const stored = localStorage.getItem('user');
+        const me = stored ? JSON.parse(stored) : {};
+        const schoolId = me?.schoolId;
+
+        // Resolve current Teacher entity ID (not the User ID)
+        const myProfile = await teacherService.getMyProfile().catch(() => null as any);
+        const teacherId = myProfile?.id; // Teacher entity id
+        const userId = me?.id; // User id (legacy may be stored in timetable)
+
+        // Holiday banner from public config
+        try {
+          if (schoolId) {
+            const sch = await schoolService.getPublicBasic(schoolId);
+            const holidays: string[] = (sch as any)?.configuration?.holidays || [];
+            setIsHoliday(holidays.includes(selectedDate));
+          }
+        } catch {}
+
+        const all = await timetableService.list(schoolId ? { schoolId } : undefined);
+        const day = new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
+        
+        // Flatten all timetable entries
+        let entries = (all || [])
+          .flatMap((t: any) => (t.entries || []).map((e: any) => ({ ...e, classId: t.classId, className: t.className })))
+          .filter((e: any) => String(e.day).toUpperCase() === day)
+          .filter((e: any) => {
+            if (teacherId && e.teacherId === teacherId) return true;
+            if (userId && e.teacherId === userId) return true;
+            return false;
+          });
+        
+        // Build friendly class name map
+        const myClasses = await teacherService.getMyClasses().catch(() => [] as any[]);
+        const composeClass = (c: any) => (c?.name || `${c?.className || c?.grade || 'Class'}${c?.section ? ' - ' + c.section : ''}`);
+        const nameMap = new Map<string, string>((myClasses || []).map((c: any) => [c.id, composeClass(c)]));
+        const missingIds = Array.from(new Set(entries.map((e: any) => e.classId))).filter((id) => !nameMap.has(id));
+        if (missingIds.length > 0) {
+          const fetched = await Promise.all(missingIds.map(async (id) => {
+            try { const c = await classService.getClassById(id); return [id, composeClass(c)] as const; } catch { return [id, id] as const; }
+          }));
+          for (const [id, label] of fetched) nameMap.set(id, label);
+        }
+
+        const toHHMM = (s: string) => String(s || '').slice(0,5);
+        const diffMinutes = (start?: string, end?: string) => {
+          if (!start || !end) return '';
+          const [sh, sm] = toHHMM(start).split(':').map(Number);
+          const [eh, em] = toHHMM(end).split(':').map(Number);
+          const mins = (eh*60+em) - (sh*60+sm);
+          if (mins <= 0) return '';
+          const h = Math.floor(mins/60); const m = mins%60;
+          return h > 0 ? `${h}h${m?` ${m}m`:''}` : `${m}m`;
+        };
+
+        const mapped = entries
+          .map((e: any) => ({
+            start: toHHMM(e.startTime),
+            end: toHHMM(e.endTime),
+            time: toHHMM(e.startTime),
+            duration: diffMinutes(e.startTime, e.endTime),
+            class: nameMap.get(e.classId) || e.className || e.classId,
+            subject: e.subjectName || '—',
+            room: e.room || '—',
+          }))
+          .sort((a: any, b: any) => a.time.localeCompare(b.time));
+        setSchedule(mapped);
+
+        // On-leave banner for selected date (ADMIN_APPROVED)
+        try {
+          const leaves = await teacherService.myLeaveApplications();
+          const dt = new Date(selectedDate);
+          const onLeave = (leaves || []).some((l: any) => {
+            if ((l.status || '').toString() !== 'ADMIN_APPROVED') return false;
+            const s = new Date(l.startDate);
+            const e = new Date(l.endDate);
+            // compare by date-only
+            const ds = new Date(s.getFullYear(), s.getMonth(), s.getDate());
+            const de = new Date(e.getFullYear(), e.getMonth(), e.getDate());
+            const dd = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
+            return dd >= ds && dd <= de;
+          });
+          setIsOnLeave(onLeave);
+        } catch {}
+      } catch {
+        setSchedule([]);
+      }
+    };
+    load();
+  }, [selectedDate]);
+
+  const getPeriodStatus = (startTime: string, endTime: string, date: string) => {
     const now = new Date();
-    const selectedDateTime = new Date(date);
-    const [hours, minutes] = time.split(':').map(Number);
-    const periodTime = new Date(selectedDateTime);
-    periodTime.setHours(hours, minutes);
+    const selected = new Date(date + 'T00:00:00');
+    const today = new Date(now.toDateString());
+    if (selected < today) return 'completed';
+    if (selected > today) return 'upcoming';
 
-    if (selectedDateTime.toDateString() < now.toDateString()) {
-      return 'completed';
+    // Same day
+    const [sh, sm] = (startTime || '00:00').split(':').map(Number);
+    const start = new Date(selected);
+    start.setHours(sh, sm || 0, 0, 0);
+    let end: Date;
+    if (endTime) {
+      const [eh, em] = endTime.split(':').map(Number);
+      end = new Date(selected);
+      end.setHours(eh, em || 0, 0, 0);
+    } else {
+      end = new Date(start.getTime() + 45 * 60 * 1000);
     }
-    if (selectedDateTime.toDateString() > now.toDateString()) {
-      return 'upcoming';
-    }
-    if (periodTime < now) {
-      return 'missed';
-    }
-    if (periodTime.getTime() - now.getTime() < 3600000) {
-      return 'current';
-    }
-    return 'upcoming';
+    if (now < start) return 'upcoming';
+    if (now >= start && now <= end) return 'current';
+    return 'completed';
   };
 
   const getStatusBadge = (status: string) => {
@@ -48,21 +152,8 @@ export const TeacherTimetable: React.FC = () => {
     }
   };
 
-  const timetable = [
-    { day: 'Monday', time: '09:00', duration: '1h', class: 'Grade 10-A', subject: 'Mathematics', room: 'Room 101' },
-    { day: 'Monday', time: '10:30', duration: '1h', class: 'Grade 10-B', subject: 'Mathematics', room: 'Room 102' },
-    { day: 'Tuesday', time: '09:00', duration: '1h', class: 'Grade 11-A', subject: 'Physics', room: 'Lab 1' },
-    { day: 'Tuesday', time: '14:00', duration: '1h', class: 'Grade 10-A', subject: 'Mathematics', room: 'Room 101' },
-    { day: 'Wednesday', time: '09:00', duration: '1h', class: 'Grade 10-A', subject: 'Mathematics', room: 'Room 101' },
-    { day: 'Wednesday', time: '10:30', duration: '1h', class: 'Grade 10-B', subject: 'Mathematics', room: 'Room 102' },
-    { day: 'Thursday', time: '09:00', duration: '1h', class: 'Grade 11-A', subject: 'Physics', room: 'Lab 1' },
-    { day: 'Thursday', time: '14:00', duration: '1h', class: 'Grade 10-B', subject: 'Mathematics', room: 'Room 102' },
-    { day: 'Friday', time: '09:00', duration: '1h', class: 'Grade 10-A', subject: 'Mathematics', room: 'Room 101' },
-    { day: 'Friday', time: '10:30', duration: '1h', class: 'Grade 11-A', subject: 'Physics', room: 'Lab 1' },
-  ];
-
   const selectedDayOfWeek = new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long' });
-  const todaySchedule = timetable.filter(t => t.day === selectedDayOfWeek);
+  const todaySchedule = schedule;
 
   return (
     <Layout>
@@ -93,6 +184,16 @@ export const TeacherTimetable: React.FC = () => {
                   <Badge bg="info" className="ms-2">{todaySchedule.length} classes</Badge>
                 )}
               </div>
+              {(isHoliday || isOnLeave) && (
+                <div className="mt-3">
+                  {isHoliday && (
+                    <Badge bg="warning" className="me-2"><i className="bi bi-sun me-1"></i>Holiday</Badge>
+                  )}
+                  {isOnLeave && (
+                    <Badge bg="danger"><i className="bi bi-person-dash me-1"></i>On Leave</Badge>
+                  )}
+                </div>
+              )}
             </Card.Body>
           </Card>
 
@@ -115,7 +216,7 @@ export const TeacherTimetable: React.FC = () => {
                   </thead>
                   <tbody>
                     {todaySchedule.map((period, index) => {
-                      const status = getPeriodStatus(period.time, selectedDate);
+                      const status = getPeriodStatus(period.start, period.end, selectedDate);
                       return (
                         <tr key={index}>
                           <td><strong>{period.time}</strong></td>

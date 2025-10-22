@@ -13,10 +13,14 @@ export const StudentDetail: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [maskedAadhaar, setMaskedAadhaar] = useState<string | null>(null);
+  const apiBase = process.env.REACT_APP_API_URL || '';
 
   useEffect(() => {
     if (id) {
       loadStudent(id);
+      // Load masked Aadhaar separately (server never returns full value in main payload)
+      studentService.getMaskedAadhaar(id).then(setMaskedAadhaar).catch(() => setMaskedAadhaar(null));
     }
   }, [id]);
 
@@ -86,6 +90,12 @@ export const StudentDetail: React.FC = () => {
       </Layout>
     );
   }
+
+  // Resolve Govt ID fields with fallbacks (backend may use alt keys)
+  const aadhaarValue = (student as any).aadhaarNumber || (student as any).aadharNumber || (student as any).aadhaarId;
+  const aadhaarAttachmentId = (student as any).aadhaarAttachmentId || (student as any).aadharAttachmentId;
+  const birthCertValue = (student as any).birthCertificateNumber || (student as any).birthCertificateId;
+  const birthCertAttachmentId = (student as any).birthCertificateAttachmentId;
 
   return (
     <Layout>
@@ -239,7 +249,7 @@ export const StudentDetail: React.FC = () => {
         </Row>
 
         {/* Government IDs */}
-        {(student.aadhaarNumber || student.apaarId) && (
+        {(maskedAadhaar || aadhaarValue || student.apaarId || birthCertValue || aadhaarAttachmentId || (student as any).apaarAttachmentId || birthCertAttachmentId) && (
           <Row className="mb-4">
             <Col md={12}>
               <Card className="border-0 shadow-sm">
@@ -249,16 +259,58 @@ export const StudentDetail: React.FC = () => {
                 </Card.Header>
                 <Card.Body>
                   <Row>
-                    {student.aadhaarNumber && (
+                    {(maskedAadhaar || aadhaarValue) && (
                       <Col md={6}>
-                        <strong>Aadhaar Number:</strong>
-                        <p className="mb-0">{maskAadhaar(student.aadhaarNumber)}</p>
+                        <strong>Aadhaar ID:</strong>
+                        <p className="mb-0">{maskedAadhaar || maskAadhaar(aadhaarValue)}</p>
+                        {aadhaarAttachmentId && id && (
+                          <div className="mt-1">
+                            <a
+                              href={`${apiBase}/students/${id}/documents/aadhaar/${aadhaarAttachmentId}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn btn-sm btn-outline-primary"
+                            >
+                              View Aadhaar Attachment
+                            </a>
+                          </div>
+                        )}
                       </Col>
                     )}
                     {student.apaarId && (
                       <Col md={6}>
                         <strong>APAAR ID:</strong>
                         <p className="mb-0">{student.apaarId}</p>
+                        {(student as any).apaarAttachmentId && id && (
+                          <div className="mt-1">
+                            <a
+                              href={`${apiBase}/students/${id}/documents/apaar/${(student as any).apaarAttachmentId}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn btn-sm btn-outline-primary"
+                            >
+                              View APAAR Attachment
+                            </a>
+                          </div>
+                        )}
+                      </Col>
+                    )}
+                    {birthCertValue && (
+                      <Col md={6} className="mt-3">
+                        <strong>Birth Certificate ID:</strong>
+                        <p className="mb-0">{birthCertValue}</p>
+                        {birthCertAttachmentId && id && (
+                          <div className="mt-1">
+                            <a
+                              href={`${apiBase}/students/${id}/documents/birth-certificate/${birthCertAttachmentId}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn btn-sm btn-outline-primary"
+                            >
+                              View Birth Certificate
+                            </a>
+                          </div>
+                        )}
                       </Col>
                     )}
                   </Row>
