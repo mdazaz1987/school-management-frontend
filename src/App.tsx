@@ -61,6 +61,8 @@ import { TeacherStudents } from './pages/TeacherStudents';
 import { AdminFinanceTools } from './pages/AdminFinanceTools';
 import { AdminNotificationTools } from './pages/AdminNotificationTools';
 import { AdminReports } from './pages/AdminReports';
+import { AdminCalendar } from './pages/AdminCalendar';
+import { PrincipalApprovals } from './pages/PrincipalApprovals';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactElement }> = ({ children }) => {
@@ -379,6 +381,14 @@ function App() {
             }
           />
           <Route
+            path="/admin/calendar"
+            element={
+              <ProtectedRoute>
+                <AdminCalendar />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/timetable"
             element={
               <ProtectedRoute>
@@ -637,6 +647,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <TeacherStudents />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/principal/approvals"
+            element={
+              <ProtectedRoute>
+                <PrincipalApprovals />
               </ProtectedRoute>
             }
           />

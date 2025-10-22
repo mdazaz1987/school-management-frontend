@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Table, Button, Form, InputGroup, Badge, Pagination, Spinner, Alert, Modal } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
+import { Avatar } from '../components/Avatar';
 import { studentService } from '../services/studentService';
 import { Student, PageResponse } from '../types';
 import { useNavigate } from 'react-router-dom';
@@ -245,27 +246,11 @@ export const StudentList: React.FC = () => {
                         </td>
                         <td>
                           <div className="d-flex align-items-center">
-                            {student.profilePicture ? (
-                              <img 
-                                src={`${process.env.REACT_APP_API_URL}/profile/photo/${student.profilePicture}`}
-                                alt={getFullName(student)}
-                                className="rounded-circle me-2"
-                                style={{ width: '32px', height: '32px', objectFit: 'cover' }}
-                              />
-                            ) : (
-                              <div 
-                                className="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-2"
-                                style={{ width: '32px', height: '32px', fontWeight: 600 }}
-                                title={getFullName(student)}
-                              >
-                                {(() => {
-                                  const name = getFullName(student).trim();
-                                  const parts = name ? name.split(/\s+/) : [];
-                                  const initials = (parts[0]?.[0] || '') + (parts[1]?.[0] || '');
-                                  return initials.toUpperCase() || 'S';
-                                })()}
-                              </div>
-                            )}
+                            <Avatar
+                              src={student.profilePicture ? `${process.env.REACT_APP_API_URL}/profile/photo/${student.profilePicture}` : undefined}
+                              size={32}
+                              className="me-2"
+                            />
                             <div>
                               <strong>{getFullName(student)}</strong>
                               {student.rollNumber && (

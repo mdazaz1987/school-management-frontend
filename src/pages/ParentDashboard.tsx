@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { parentService } from '../services/parentService';
 import { useNavigate } from 'react-router-dom';
 import { useLang } from '../contexts/LangContext';
+import { CalendarWidget } from '../components/CalendarWidget';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -304,35 +305,7 @@ export const ParentDashboard: React.FC = () => {
 
             {/* Upcoming Events */}
             <Col md={4} className="mb-3">
-              <Card className="border-0 shadow-sm h-100">
-                <Card.Header className="bg-white">
-                  <h5 className="mb-0">{t('parent.dashboard.upcoming_events')}</h5>
-                </Card.Header>
-                <Card.Body className="p-0">
-                  {upcomingEvents.length === 0 ? (
-                    <div className="text-center text-muted py-4">{t('parent.dashboard.no_upcoming_events')}</div>
-                  ) : (
-                    <ListGroup variant="flush">
-                      {upcomingEvents.map((event, index) => (
-                        <ListGroup.Item key={index}>
-                          <div className="d-flex align-items-start">
-                            <div className="bg-primary bg-opacity-10 p-2 rounded me-3">
-                              <i className="bi bi-calendar-event text-primary"></i>
-                            </div>
-                            <div>
-                              <h6 className="mb-1">{event.title}</h6>
-                              <small className="text-muted">
-                                <i className="bi bi-clock me-1"></i>
-                                {event.date} • {event.time}
-                              </small>
-                            </div>
-                          </div>
-                        </ListGroup.Item>
-                      ))}
-                    </ListGroup>
-                  )}
-                </Card.Body>
-              </Card>
+              <CalendarWidget title={t('parent.dashboard.upcoming_events')} />
             </Col>
           </Row>
 

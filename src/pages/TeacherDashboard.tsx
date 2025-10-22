@@ -9,6 +9,7 @@ import { classService } from '../services/classService';
 import { timetableService } from '../services/timetableService';
 import { useLang } from '../contexts/LangContext';
 import { notificationService } from '../services/notificationService';
+import { CalendarWidget } from '../components/CalendarWidget';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -273,6 +274,12 @@ export const TeacherDashboard: React.FC = () => {
                   <small className="text-muted">{t('teacher.dashboard.attendance')}</small>
                 </Card.Body>
               </Card>
+            </Col>
+          </Row>
+
+          <Row className="mb-4">
+            <Col md={6} className="mb-3">
+              <CalendarWidget title="Upcoming Holidays & Events" />
             </Col>
           </Row>
 

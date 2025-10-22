@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Table, Button, Form, InputGroup, Badge, Pagination, Spinner, Alert, Modal } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
+import { Avatar } from '../components/Avatar';
 import { teacherService } from '../services/teacherService';
 import { Teacher, PageResponse } from '../types';
 import { useNavigate } from 'react-router-dom';
@@ -250,21 +251,7 @@ export const TeacherList: React.FC = () => {
                       </td>
                       <td>
                         <div className="d-flex align-items-center">
-                          {teacher.profilePicture ? (
-                            <img
-                              src={teacher.profilePicture}
-                              alt={`${teacher.firstName} ${teacher.lastName}`}
-                              className="rounded-circle me-2"
-                              style={{ width: '32px', height: '32px', objectFit: 'cover' }}
-                            />
-                          ) : (
-                            <div
-                              className="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-2"
-                              style={{ width: '32px', height: '32px', fontSize: '14px' }}
-                            >
-                              {teacher.firstName[0]}{teacher.lastName[0]}
-                            </div>
-                          )}
+                          <Avatar src={teacher.profilePicture} size={32} className="me-2" />
                           <span className="fw-semibold">
                             {teacher.firstName} {teacher.lastName}
                           </span>

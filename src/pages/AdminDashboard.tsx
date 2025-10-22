@@ -9,6 +9,7 @@ import { adminService } from '../services/adminService';
 import { subjectService } from '../services/subjectService';
 import { notificationService } from '../services/notificationService';
 import { Notification } from '../types';
+import { CalendarWidget } from '../components/CalendarWidget';
 
 const rawSidebarItems = [
   { path: '/dashboard', labelKey: 'nav.dashboard', icon: 'bi-speedometer2' },
@@ -179,6 +180,12 @@ export const AdminDashboard: React.FC = () => {
                   </div>
                 </Card.Body>
               </Card>
+            </Col>
+          </Row>
+
+          <Row className="mt-4">
+            <Col md={6} className="mb-3">
+              <CalendarWidget title="Upcoming Holidays & Events" />
             </Col>
           </Row>
 

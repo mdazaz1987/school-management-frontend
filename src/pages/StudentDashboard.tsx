@@ -9,6 +9,7 @@ import { attendanceService } from '../services/attendanceService';
 import apiService from '../services/api';
 import { useNavigate } from 'react-router-dom';
 import { useLang } from '../contexts/LangContext';
+import { CalendarWidget } from '../components/CalendarWidget';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -242,6 +243,12 @@ export const StudentDashboard: React.FC = () => {
                   </Row>
                 </Card.Body>
               </Card>
+            </Col>
+          </Row>
+
+          <Row className="mb-4">
+            <Col md={6} className="mb-3">
+              <CalendarWidget title="Upcoming Holidays & Events" />
             </Col>
           </Row>
 
