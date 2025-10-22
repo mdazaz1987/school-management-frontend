@@ -299,6 +299,10 @@ export const AdminDashboard: React.FC = () => {
                       <i className="bi bi-megaphone me-2"></i>
                       {t('admin.dashboard.send_notification')}
                     </Button>
+                    <Button variant="secondary" size="lg" onClick={() => navigate('/admin/calendar')}>
+                      <i className="bi bi-calendar-event me-2"></i>
+                      Manage School Calendar
+                    </Button>
                   </div>
                 </Card.Body>
               </Card>

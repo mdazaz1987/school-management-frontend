@@ -179,8 +179,8 @@ export const StudentNotifications: React.FC = () => {
                   <ListGroup.Item
                     key={notification.id}
                     className={`${!notification.read ? 'bg-light' : ''} border-start border-3 ${
-                      notification.priority === 'high' ? 'border-danger' : 
-                      notification.priority === 'medium' ? 'border-warning' : 'border-secondary'
+                      notification.priority === 'HIGH' ? 'border-danger' : 
+                      notification.priority === 'MEDIUM' ? 'border-warning' : 'border-secondary'
                     }`}
                     action
                     onClick={() => openModal(notification)}

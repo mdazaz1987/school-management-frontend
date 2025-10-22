@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Row, Col, Card, ListGroup, Badge, Button, Form, Spinner, Alert } from 'react-bootstrap';
+import { Row, Col, Card, ListGroup, Badge, Button, Form, Spinner, Alert, Modal, ButtonGroup } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { parentService } from '../services/parentService';
@@ -16,10 +16,14 @@ const sidebarItems = [
 
 export const ParentNotifications: React.FC = () => {
   const [filter, setFilter] = useState<'all' | string>('all');
+  const [filterType, setFilterType] = useState<string>('ALL');
+  const [showUnreadOnly, setShowUnreadOnly] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [children, setChildren] = useState<Array<{ id: string; name: string }>>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
+  const [showModal, setShowModal] = useState(false);
+  const [selected, setSelected] = useState<any>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -34,7 +38,8 @@ export const ParentNotifications: React.FC = () => {
           const list = await parentService.getChildNotifications(k.id).catch(() => []);
           return (list || []).map((n: any) => ({ ...n, childName: k.name }));
         }));
-        const flat = lists.flat().sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        const flat = lists.flat().sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+          .map((n: any) => ({ ...n, type: (n.type || 'GENERAL').toString().toUpperCase(), priority: (n.priority || 'MEDIUM').toString().toUpperCase() }));
         setNotifications(flat);
       } catch (e: any) {
         setError(e?.response?.data?.message || 'Failed to load notifications');
@@ -80,9 +85,12 @@ export const ParentNotifications: React.FC = () => {
   };
 
   const filteredNotifications = useMemo(() => {
-    if (filter === 'all') return notifications;
-    return notifications.filter(n => n.childName === filter);
-  }, [notifications, filter]);
+    let list = notifications;
+    if (filter !== 'all') list = list.filter(n => n.childName === filter);
+    if (filterType !== 'ALL') list = list.filter(n => n.type === filterType);
+    if (showUnreadOnly) list = list.filter(n => !(n.read || n.isRead));
+    return list;
+  }, [notifications, filter, filterType, showUnreadOnly]);
 
   const unreadCount = notifications.filter(n => !(n.read || n.isRead)).length;
 
@@ -118,6 +126,21 @@ export const ParentNotifications: React.FC = () => {
                   ))}
                 </Form.Select>
               </Form.Group>
+              <hr />
+              <div className="mb-2">
+                <div className="d-flex justify-content-between align-items-center mb-2">
+                  <Form.Label className="mb-0">Categories</Form.Label>
+                  <Button size="sm" variant="link" onClick={() => setFilterType('ALL')}>Reset</Button>
+                </div>
+                <ButtonGroup className="flex-wrap">
+                  {['ALL','ANNOUNCEMENT','EVENT','ASSIGNMENT','EXAM','FEE','ATTENDANCE','HOLIDAY','RESULT','EMERGENCY','GENERAL'].map((t) => (
+                    <Button key={t} size="sm" variant={filterType===t? 'primary':'outline-secondary'} className="me-2 mb-2" onClick={() => setFilterType(t)}>
+                      {t}
+                    </Button>
+                  ))}
+                </ButtonGroup>
+                <Form.Check className="mt-2" type="checkbox" label="Show unread only" checked={showUnreadOnly} onChange={(e) => setShowUnreadOnly(e.target.checked)} />
+              </div>
             </Card.Body>
           </Card>
 
@@ -141,7 +164,11 @@ export const ParentNotifications: React.FC = () => {
                     notification.priority === 'HIGH' ? 'border-warning' : 'border-secondary'
                   }`}
                   action
-                  onClick={() => markAsRead(notification.id)}
+                  onClick={() => {
+                    setSelected(notification);
+                    setShowModal(true);
+                    if (!(notification.read || notification.isRead)) markAsRead(notification.id);
+                  }}
                 >
                   <Row className="align-items-center">
                     <Col xs="auto">
@@ -187,6 +214,29 @@ export const ParentNotifications: React.FC = () => {
           </Card>
         </Col>
       </Row>
+    <Modal show={showModal} onHide={() => setShowModal(false)} size="lg">
+      <Modal.Header closeButton>
+        <Modal.Title>{selected?.title || 'Notification'}</Modal.Title>
+      </Modal.Header>
+      <Modal.Body>
+        {selected?.attachmentUrl && (
+          <div className="mb-3 text-center">
+            <img src={selected.attachmentUrl} alt="Attachment" style={{ maxWidth: '100%', borderRadius: 8 }} onError={(e) => ((e.target as HTMLImageElement).style.display='none')} />
+          </div>
+        )}
+        <p>{selected?.message}</p>
+        <div className="d-flex gap-2 align-items-center">
+          <Badge bg="primary">{selected?.type}</Badge>
+          <Badge bg={selected?.priority === 'URGENT' ? 'danger' : selected?.priority === 'HIGH' ? 'warning' : selected?.priority === 'MEDIUM' ? 'info' : 'secondary'}>
+            {selected?.priority}
+          </Badge>
+          <small className="text-muted ms-auto">{selected?.createdAt ? new Date(selected.createdAt).toLocaleString() : (selected?.timestamp ? new Date(selected.timestamp).toLocaleString() : '')}</small>
+        </div>
+      </Modal.Body>
+      <Modal.Footer>
+        <Button variant="secondary" onClick={() => setShowModal(false)}>Close</Button>
+      </Modal.Footer>
+    </Modal>
     </Layout>
   );
 };
