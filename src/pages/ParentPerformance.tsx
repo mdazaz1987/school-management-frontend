@@ -5,6 +5,7 @@ import { Sidebar } from '../components/Sidebar';
 import { parentService } from '../services/parentService';
 import { useLang } from '../contexts/LangContext';
 import { studentService } from '../services/studentService';
+import { studentQuizService } from '../services/studentQuizService';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -62,7 +63,7 @@ export const ParentPerformance: React.FC = () => {
         setOverallAverage(Math.round(summary.averageMarks || 0));
 
         const list = await parentService.getChildAssignments(selectedChild).catch(() => []);
-        const mapped = (list || []).map((it: any) => {
+        let mapped = (list || []).map((it: any) => {
           const a = it.assignment || it;
           const s = it.submission;
           const totalPoints = (a?.questions || []).reduce((acc: number, q: any) => acc + (q?.points ?? 1), 0);
@@ -74,6 +75,29 @@ export const ParentPerformance: React.FC = () => {
           const passed = s?.passed ?? (a?.quizConfig?.passingMarks != null && rawMarks != null ? rawMarks >= a.quizConfig.passingMarks : undefined);
           return { id: a?.id, title: a?.title || 'Assignment', subject: a?.subject || '-', status, marks, type: a?.type, percentage, passed } as any;
         });
+        // For quizzes/exams, compute best attempt (not sum of attempts)
+        const quizItems = mapped.filter((m: any) => ['QUIZ','EXAM'].includes(String(m.type || '').toUpperCase()) && m.id);
+        if (quizItems.length > 0) {
+          const results = await Promise.all(quizItems.map(async (q: any) => {
+            try {
+              const res = await studentQuizService.getResults(selectedChild, String(q.id));
+              if (Array.isArray(res) && res.length > 0) {
+                const best = res.reduce((max: any, cur: any) => (cur.score > (max?.score ?? -Infinity) ? cur : max), null);
+                return { id: q.id, bestScore: best?.score ?? null, totalPoints: best?.totalPoints ?? null };
+              }
+            } catch {}
+            return { id: q.id, bestScore: null, totalPoints: null };
+          }));
+          const byId = new Map(results.map(r => [String(r.id), r]));
+          mapped = mapped.map((m: any) => {
+            const r = byId.get(String(m.id));
+            if (r && r.bestScore != null && r.totalPoints) {
+              const pct = Math.round((r.bestScore * 10000) / r.totalPoints) / 100;
+              return { ...m, marks: `${r.bestScore}/${r.totalPoints}`, percentage: pct };
+            }
+            return m;
+          });
+        }
         const mats = mapped.filter((m: any) => (m.type || '').toString().toUpperCase() === 'PRESENTATION').map((m: any) => ({ id: m.id, title: m.title, subject: m.subject }));
         setStudyMaterials(mats);
         setAssignments(mapped.filter((m: any) => (m.type || '').toString().toUpperCase() !== 'PRESENTATION'));

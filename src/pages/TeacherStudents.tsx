@@ -3,6 +3,8 @@ import { Row, Col, Card, Table, Form, Badge, Button } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { teacherService } from '../services/teacherService';
+import { classService } from '../services/classService';
+import { useAuth } from '../contexts/AuthContext';
 import { useLocation } from 'react-router-dom';
 
 const sidebarItems = [
@@ -19,6 +21,7 @@ const sidebarItems = [
 
 export const TeacherStudents: React.FC = () => {
   const location = useLocation();
+  const { user } = useAuth();
   const [selectedClassId, setSelectedClassId] = useState('');
   const [selectedSection, setSelectedSection] = useState('');
   const [searchName, setSearchName] = useState('');
@@ -28,22 +31,19 @@ export const TeacherStudents: React.FC = () => {
   const [myClasses, setMyClasses] = useState<any[]>([]);
   const [students, setStudents] = useState<any[]>([]);
 
-  // Load teacher's classes on mount
+  // Load school's classes on mount to ensure completeness
   useEffect(() => {
     const loadClasses = async () => {
       try {
-        // Base set from teacher assignments
-        const classes = await teacherService.getMyClasses();
-        const base = Array.isArray(classes) ? classes : [];
-        // Union with classes derived from students taught by this teacher
-        const myStudents = await teacherService.getMyStudents().catch(() => [] as any[]);
-        const classIds = Array.from(new Set((myStudents || []).map((s: any) => s.classId).filter(Boolean)));
-        const existingIds = new Set(base.map((c: any) => c.id));
-        const missingIds = classIds.filter(id => !existingIds.has(id));
-        const fetched = await Promise.all(missingIds.map(async (id) => {
-          try { const { classService } = await import('../services/classService'); return await classService.getClassById(id); } catch { return null; }
-        }));
-        const merged = [...base, ...fetched.filter(Boolean) as any[]];
+        const schoolId = (user as any)?.schoolId;
+        const all = await classService.getAllClasses(schoolId ? { schoolId } : undefined).catch(() => [] as any[]);
+        // Sort by numeric class name when possible (LKG/UKG stay on top), then by section
+        const sortKey = (c: any) => {
+          const name = (c.className || c.name || '').toString();
+          const num = parseInt(name.replace(/[^0-9]/g, ''), 10);
+          return isNaN(num) ? 0 : num;
+        };
+        const merged = (all || []).slice().sort((a: any, b: any) => sortKey(a) - sortKey(b) || String(a.section||'').localeCompare(String(b.section||'')));
         setMyClasses(merged);
         const params = new URLSearchParams(location.search);
         const preSel = params.get('classId');
@@ -54,7 +54,7 @@ export const TeacherStudents: React.FC = () => {
       }
     };
     loadClasses();
-  }, [location.search]);
+  }, [location.search, user?.schoolId]);
 
   // Load students when class changes
   useEffect(() => {
@@ -97,8 +97,13 @@ export const TeacherStudents: React.FC = () => {
   const sections = useMemo(() => {
     const set = new Set<string>();
     (students || []).forEach((s: any) => { if (s.section) set.add(s.section); });
-    return Array.from(set);
-  }, [students]);
+    const arr = Array.from(set);
+    if (arr.length === 0 && selectedClassId) {
+      const cls = myClasses.find((c: any) => c.id === selectedClassId);
+      if (cls?.section) return [cls.section];
+    }
+    return arr;
+  }, [students, selectedClassId, myClasses]);
 
   // Ensure selectedSection is valid for current students list
   useEffect(() => {
@@ -166,7 +171,7 @@ export const TeacherStudents: React.FC = () => {
                     <Form.Select value={selectedClassId} onChange={(e) => setSelectedClassId(e.target.value)}>
                       <option value="">Select Class</option>
                       {myClasses.map((c) => (
-                        <option key={c.id} value={c.id}>{c.name || `${c.className} ${c.section || ''}`}</option>
+                        <option key={c.id} value={c.id}>{`${c.className || c.name || 'Class'}${c.section ? ` - ${c.section}` : ''}`}</option>
                       ))}
                     </Form.Select>
                   </Form.Group>

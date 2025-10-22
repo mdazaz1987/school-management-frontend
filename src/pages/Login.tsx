@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { useAuth } from '../contexts/AuthContext';
+import { schoolService } from '../services/schoolService';
 import { Link } from 'react-router-dom';
 
 export const Login: React.FC = () => {
@@ -9,6 +10,7 @@ export const Login: React.FC = () => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { login, isAuthenticated } = useAuth();
+  const [schoolInfo, setSchoolInfo] = useState<{ name?: string; logo?: string } | null>(null);
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -17,6 +19,21 @@ export const Login: React.FC = () => {
       window.location.href = '/dashboard';
     }
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    // Try to fetch school name/logo for display (if school id is known on client)
+    const loadSchool = async () => {
+      try {
+        const stored = localStorage.getItem('user');
+        const u = stored ? JSON.parse(stored) : null;
+        const schoolId = u?.schoolId;
+        if (!schoolId) return;
+        const basic = await schoolService.getPublicBasic(schoolId).catch(() => null as any);
+        if (basic) setSchoolInfo({ name: basic.name, logo: basic.logo });
+      } catch {}
+    };
+    loadSchool();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,8 +83,12 @@ export const Login: React.FC = () => {
             <Card className="shadow-lg border-0">
               <Card.Body className="p-5">
                 <div className="text-center mb-4">
-                  <i className="bi bi-mortarboard-fill text-primary" style={{ fontSize: '3rem' }}></i>
-                  <h2 className="mt-3 mb-2">School Management System</h2>
+                  {schoolInfo?.logo ? (
+                    <img src={schoolInfo.logo} alt="School Logo" style={{ height: 64, objectFit: 'contain' }} onError={(e) => ((e.target as HTMLImageElement).style.display='none')} />
+                  ) : (
+                    <i className="bi bi-mortarboard-fill text-primary" style={{ fontSize: '3rem' }}></i>
+                  )}
+                  <h2 className="mt-3 mb-2">{schoolInfo?.name || 'School Management System'}</h2>
                   <p className="text-muted">Sign in to your account</p>
                 </div>
 

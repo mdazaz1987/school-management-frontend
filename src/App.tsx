@@ -63,6 +63,7 @@ import { AdminNotificationTools } from './pages/AdminNotificationTools';
 import { AdminReports } from './pages/AdminReports';
 import { AdminCalendar } from './pages/AdminCalendar';
 import { PrincipalApprovals } from './pages/PrincipalApprovals';
+import { AdminLeaveApprovals } from './pages/AdminLeaveApprovals';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactElement }> = ({ children }) => {
@@ -369,6 +370,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <AdminNotificationTools />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/approvals"
+            element={
+              <ProtectedRoute>
+                <AdminLeaveApprovals />
               </ProtectedRoute>
             }
           />
