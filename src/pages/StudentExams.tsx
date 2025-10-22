@@ -9,6 +9,7 @@ import { studentService } from '../services/studentService';
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
   { path: '/student/assignments', label: 'Assignments', icon: 'bi-file-text' },
+  { path: '/student/study-materials', label: 'Study Materials', icon: 'bi-book' },
   { path: '/student/quizzes', label: 'Quizzes & Tests', icon: 'bi-clipboard-check' },
   { path: '/student/exams', label: 'Exams & Results', icon: 'bi-clipboard-check' },
   { path: '/student/attendance', label: 'My Attendance', icon: 'bi-calendar-check' },

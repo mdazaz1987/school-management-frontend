@@ -666,8 +666,8 @@ export const TimetableFormImproved: React.FC = () => {
                                     onChange={(e) => {
                                       const v = e.target.value;
                                       if (v === '__CUSTOM__') {
-                                        // keep current custom text (or empty) and show input
-                                        updateCell(day, slotIndex, 'room', cell.room || '');
+                                        // mark as custom to render input
+                                        updateCell(day, slotIndex, 'room', '__CUSTOM__');
                                       } else {
                                         updateCell(day, slotIndex, 'room', v);
                                       }
@@ -751,7 +751,7 @@ export const TimetableFormImproved: React.FC = () => {
                                           size="sm"
                                           type="text"
                                           placeholder="Enter room name"
-                                          value={cell.room}
+                                          value={cell.room === '__CUSTOM__' ? '' : cell.room}
                                           onChange={(e) => updateCell(day, slotIndex, 'room', e.target.value)}
                                         />
                                       );
