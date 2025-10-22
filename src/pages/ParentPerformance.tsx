@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, Table, Form, Badge, ProgressBar, Alert, Spinner, Tabs, Tab } from 'react-bootstrap';
+import { Row, Col, Card, Table, Form, Badge, ProgressBar, Alert, Spinner, Tabs, Tab, Button, Modal, ListGroup } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { parentService } from '../services/parentService';
 import { useLang } from '../contexts/LangContext';
+import { studentService } from '../services/studentService';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -24,6 +25,8 @@ export const ParentPerformance: React.FC = () => {
   const [subjectPerformance, setSubjectPerformance] = useState<Array<{ subject: string; percentage: number; obtained: number; totalMarks: number }>>([]);
   const [overallAverage, setOverallAverage] = useState<number>(0);
   const [assignments, setAssignments] = useState<Array<{ title: string; subject: string; status: string; marks?: string; type?: string; percentage?: number; passed?: boolean }>>([]);
+  const [studyMaterials, setStudyMaterials] = useState<Array<{ id?: string; title: string; subject: string; availableOn?: string }>>([]);
+  const [attachmentsModal, setAttachmentsModal] = useState<{ show: boolean; assignmentId?: string; title?: string; items: string[] }>({ show: false, items: [] });
 
   useEffect(() => {
     const loadChildren = async () => {
@@ -69,9 +72,11 @@ export const ParentPerformance: React.FC = () => {
           const percentage = rawMarks != null && max > 0 ? Math.round((rawMarks * 10000) / max) / 100 : undefined;
           const status = s ? s.status : 'PENDING';
           const passed = s?.passed ?? (a?.quizConfig?.passingMarks != null && rawMarks != null ? rawMarks >= a.quizConfig.passingMarks : undefined);
-          return { title: a?.title || 'Assignment', subject: a?.subject || '-', status, marks, type: a?.type, percentage, passed };
+          return { id: a?.id, title: a?.title || 'Assignment', subject: a?.subject || '-', status, marks, type: a?.type, percentage, passed } as any;
         });
-        setAssignments(mapped);
+        const mats = mapped.filter((m: any) => (m.type || '').toString().toUpperCase() === 'PRESENTATION').map((m: any) => ({ id: m.id, title: m.title, subject: m.subject }));
+        setStudyMaterials(mats);
+        setAssignments(mapped.filter((m: any) => (m.type || '').toString().toUpperCase() !== 'PRESENTATION'));
       } catch (e: any) {
         setError(e?.response?.data?.message || t('error.failed_to_load_performance'));
       } finally {
@@ -245,11 +250,69 @@ export const ParentPerformance: React.FC = () => {
                     </Table>
                   )}
                 </Tab>
+
+                <Tab eventKey="materials" title="Study Materials">
+                  {studyMaterials.length === 0 ? (
+                    <div className="text-center text-muted py-4">No study materials</div>
+                  ) : (
+                    <ListGroup>
+                      {studyMaterials.map((m, idx) => (
+                        <ListGroup.Item key={`${m.id || idx}`} className="d-flex justify-content-between align-items-center">
+                          <div>
+                            <div className="fw-semibold">{m.title}</div>
+                            <div className="text-muted small">{m.subject}</div>
+                          </div>
+                          <div>
+                            <Button size="sm" variant="outline-secondary" onClick={async () => {
+                              try {
+                                const files = await studentService.listAssignmentAttachments(String(m.id));
+                                setAttachmentsModal({ show: true, assignmentId: String(m.id), title: m.title, items: files || [] });
+                              } catch {
+                                setAttachmentsModal({ show: true, assignmentId: String(m.id), title: m.title, items: [] });
+                              }
+                            }}>View</Button>
+                          </div>
+                        </ListGroup.Item>
+                      ))}
+                    </ListGroup>
+                  )}
+                </Tab>
               </Tabs>
             </Card.Body>
           </Card>
         </Col>
       </Row>
+
+      <Modal show={attachmentsModal.show} onHide={() => setAttachmentsModal({ show: false, items: [] })}>
+      <Modal.Header closeButton>
+        <Modal.Title>Attachments {attachmentsModal.title ? `• ${attachmentsModal.title}` : ''}</Modal.Title>
+      </Modal.Header>
+      <Modal.Body>
+        {attachmentsModal.items.length === 0 ? (
+          <div className="text-muted small">No attachments available.</div>
+        ) : (
+          <ul className="mb-0">
+            {attachmentsModal.items.map((f) => (
+              <li key={f}>
+                <Button variant="link" className="p-0" onClick={async () => {
+                  try {
+                    const blob = await studentService.getAssignmentAttachmentBlob(String(attachmentsModal.assignmentId), f);
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url; a.download = f; document.body.appendChild(a); a.click(); a.remove(); window.URL.revokeObjectURL(url);
+                  } catch {}
+                }}>
+                  <i className="bi bi-paperclip me-1"></i>{f}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Modal.Body>
+      <Modal.Footer>
+        <Button variant="secondary" onClick={() => setAttachmentsModal({ show: false, items: [] })}>Close</Button>
+      </Modal.Footer>
+    </Modal>
     </Layout>
   );
 };

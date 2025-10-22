@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, ListGroup, Badge, Button, Spinner, Alert, Form } from 'react-bootstrap';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Container, Row, Col, Card, ListGroup, Badge, Button, Spinner, Alert, Form, Modal, ButtonGroup } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
+import { Sidebar } from '../components/Sidebar';
 import { notificationService } from '../services/notificationService';
 import { Notification } from '../types';
 import { FaBell, FaCheck, FaExclamationCircle, FaInfoCircle, FaFilter, FaPlus } from 'react-icons/fa';
@@ -17,6 +18,62 @@ export const Notifications: React.FC = () => {
   const [filterType, setFilterType] = useState<string>('ALL');
   const [filterPriority, setFilterPriority] = useState<string>('ALL');
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [selected, setSelected] = useState<Notification | null>(null);
+
+  const sidebarItems = useMemo(() => {
+    const roles = user?.roles || [];
+    if (roles.includes('ADMIN')) {
+      return [
+        { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
+        { path: '/students', label: 'Students', icon: 'bi-people' },
+        { path: '/teachers', label: 'Teachers', icon: 'bi-person-badge' },
+        { path: '/classes', label: 'Classes', icon: 'bi-door-open' },
+        { path: '/subjects', label: 'Subjects', icon: 'bi-book' },
+        { path: '/exams', label: 'Exams', icon: 'bi-clipboard-check' },
+        { path: '/fees', label: 'Fees', icon: 'bi-cash-coin' },
+        { path: '/timetable', label: 'Timetable', icon: 'bi-calendar3' },
+        { path: '/attendance', label: 'Attendance', icon: 'bi-calendar-check' },
+        { path: '/notifications', label: 'Notifications', icon: 'bi-bell' },
+      ];
+    }
+    if (roles.includes('TEACHER')) {
+      return [
+        { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
+        { path: '/teacher/my-classes', label: 'My Classes', icon: 'bi-door-open' },
+        { path: '/teacher/assignments', label: 'Assignments', icon: 'bi-file-text' },
+        { path: '/teacher/attendance', label: 'Attendance', icon: 'bi-calendar-check' },
+        { path: '/teacher/grading', label: 'Grading', icon: 'bi-star' },
+        { path: '/teacher/timetable', label: 'My Timetable', icon: 'bi-calendar3' },
+        { path: '/teacher/students', label: 'Students', icon: 'bi-people' },
+        { path: '/notifications', label: 'Notifications', icon: 'bi-bell' },
+      ];
+    }
+    if (roles.includes('STUDENT')) {
+      return [
+        { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
+        { path: '/student/assignments', label: 'Assignments', icon: 'bi-file-text' },
+        { path: '/student/study-materials', label: 'Study Materials', icon: 'bi-book' },
+        { path: '/student/quizzes', label: 'Quizzes & Tests', icon: 'bi-clipboard-check' },
+        { path: '/student/exams', label: 'Exams & Results', icon: 'bi-clipboard2-data' },
+        { path: '/student/attendance', label: 'My Attendance', icon: 'bi-calendar-check' },
+        { path: '/student/timetable', label: 'Timetable', icon: 'bi-calendar3' },
+        { path: '/student/fees', label: 'Fee Payment', icon: 'bi-cash-coin' },
+        { path: '/notifications', label: 'Notifications', icon: 'bi-bell' },
+      ];
+    }
+    if (roles.includes('PARENT')) {
+      return [
+        { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
+        { path: '/parent/children', label: 'My Children', icon: 'bi-people' },
+        { path: '/parent/attendance', label: 'Attendance', icon: 'bi-calendar-check' },
+        { path: '/parent/performance', label: 'Performance', icon: 'bi-star' },
+        { path: '/parent/fees', label: 'Fee Payments', icon: 'bi-cash-coin' },
+        { path: '/parent/notifications', label: 'Notifications', icon: 'bi-bell' },
+      ];
+    }
+    return [{ path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' }];
+  }, [user?.roles]);
 
   useEffect(() => {
     loadNotifications();
@@ -70,6 +127,14 @@ export const Notifications: React.FC = () => {
     }
   };
 
+  const openModal = async (n: Notification) => {
+    setSelected(n);
+    setShowModal(true);
+    if (!n.isRead) {
+      await handleMarkAsRead(n.id);
+    }
+  };
+
   const handleMarkAllAsRead = async () => {
     try {
       await notificationService.markAllAsRead();
@@ -118,9 +183,14 @@ export const Notifications: React.FC = () => {
 
   return (
     <Layout>
-      <Container fluid className="py-4">
-        <Row className="mb-4">
-          <Col>
+      <Row>
+        <Col md={2} className="px-0">
+          <Sidebar items={sidebarItems} />
+        </Col>
+        <Col md={10}>
+          <Container fluid className="py-4">
+            <Row className="mb-4">
+              <Col>
             <div className="d-flex justify-content-between align-items-center">
               <div>
                 <h2 className="mb-1">
@@ -146,8 +216,8 @@ export const Notifications: React.FC = () => {
                 )}
               </div>
             </div>
-          </Col>
-        </Row>
+              </Col>
+            </Row>
 
         {error && (
           <Alert variant="danger" dismissible onClose={() => setError('')}>
@@ -155,14 +225,27 @@ export const Notifications: React.FC = () => {
           </Alert>
         )}
 
-        <Row>
-          <Col lg={3}>
+            <Row>
+              <Col lg={3}>
             <Card className="mb-4">
               <Card.Header>
                 <FaFilter className="me-2" />
                 Filters
               </Card.Header>
               <Card.Body>
+                <div className="mb-3">
+                  <div className="d-flex justify-content-between align-items-center mb-2">
+                    <Form.Label className="mb-0">Categories</Form.Label>
+                    <Button size="sm" variant="link" onClick={() => setFilterType('ALL')}>Reset</Button>
+                  </div>
+                  <ButtonGroup className="flex-wrap">
+                    {['ALL','ANNOUNCEMENT','EVENT','ASSIGNMENT','EXAM','FEE','ATTENDANCE','HOLIDAY','RESULT','EMERGENCY','GENERAL'].map((t) => (
+                      <Button key={t} size="sm" variant={filterType===t? 'primary':'outline-secondary'} className="me-2 mb-2" onClick={() => setFilterType(t)}>
+                        {t}
+                      </Button>
+                    ))}
+                  </ButtonGroup>
+                </div>
                 <Form.Group className="mb-3">
                   <Form.Label>Type</Form.Label>
                   <Form.Select
@@ -202,9 +285,9 @@ export const Notifications: React.FC = () => {
                 />
               </Card.Body>
             </Card>
-          </Col>
+              </Col>
 
-          <Col lg={9}>
+              <Col lg={9}>
             <Card>
               <Card.Header>
                 All Notifications ({filteredNotifications.length})
@@ -226,6 +309,8 @@ export const Notifications: React.FC = () => {
                       <ListGroup.Item
                         key={notification.id}
                         className={`${!notification.isRead ? 'bg-light border-start border-primary border-3' : ''}`}
+                        action
+                        onClick={() => openModal(notification)}
                       >
                         <Row className="align-items-start">
                           <Col xs="auto">
@@ -239,17 +324,17 @@ export const Notifications: React.FC = () => {
                                   {getTypeBadge(notification.type)}
                                   {getPriorityBadge(notification.priority)}
                                 </div>
+                                {!notification.isRead && (
+                                  <Button
+                                    variant="outline-success"
+                                    size="sm"
+                                    onClick={(e) => { e.stopPropagation(); handleMarkAsRead(notification.id); }}
+                                  >
+                                    <FaCheck className="me-1" />
+                                    Mark Read
+                                  </Button>
+                                )}
                               </div>
-                              {!notification.isRead && (
-                                <Button
-                                  variant="outline-success"
-                                  size="sm"
-                                  onClick={() => handleMarkAsRead(notification.id)}
-                                >
-                                  <FaCheck className="me-1" />
-                                  Mark Read
-                                </Button>
-                              )}
                             </div>
                             <p className="mb-2">{notification.message}</p>
                             <small className="text-muted">
@@ -264,11 +349,40 @@ export const Notifications: React.FC = () => {
                     ))}
                   </ListGroup>
                 )}
-              </Card.Body>
-            </Card>
-          </Col>
-        </Row>
-      </Container>
-    </Layout>
-  );
-};
+                </Card.Body>
+              </Card>
+            </Col>
+          </Row>
+        </Container>
+      </Col>
+    </Row>
+
+    <Modal show={showModal} onHide={() => setShowModal(false)} size="lg">
+      <Modal.Header closeButton>
+        <Modal.Title>{selected?.title || 'Notification'}</Modal.Title>
+      </Modal.Header>
+      <Modal.Body>
+        {selected?.attachmentUrl && (
+          <div className="mb-3 text-center">
+            <img src={selected.attachmentUrl} alt="Attachment" style={{ maxWidth: '100%', borderRadius: 8 }} onError={(e) => ((e.target as HTMLImageElement).style.display='none')} />
+          </div>
+        )}
+        <p>{selected?.message}</p>
+        <div className="d-flex gap-2 align-items-center">
+          <Badge bg="primary">{selected?.type}</Badge>
+          <Badge bg={selected?.priority === 'URGENT' ? 'danger' : selected?.priority === 'HIGH' ? 'warning' : selected?.priority === 'MEDIUM' ? 'info' : 'secondary'}>
+            {selected?.priority}
+          </Badge>
+          <small className="text-muted ms-auto">{selected?.createdAt ? new Date(selected.createdAt).toLocaleString() : ''}</small>
+        </div>
+      </Modal.Body>
+      <Modal.Footer>
+        <Button variant="secondary" onClick={() => setShowModal(false)}>Close</Button>
+        {selected?.link && (
+          <Button variant="primary" onClick={() => { window.location.href = selected.link as any; }}>Open Link</Button>
+        )}
+      </Modal.Footer>
+    </Modal>
+  </Layout>
+);
+}

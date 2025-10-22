@@ -490,7 +490,6 @@ export interface NotificationCreateRequest {
   sendToAll?: boolean;
   link?: string;
   attachmentUrl?: string;
-  scheduledFor?: string;
 }
 
 // Attendance types

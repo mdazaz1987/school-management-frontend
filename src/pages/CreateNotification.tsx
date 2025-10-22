@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner, Badge } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
+import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { classService } from '../services/classService';
@@ -16,6 +17,7 @@ interface NotificationForm {
   selectedRoles: string[];
   selectedClasses: string[];
   link?: string;
+  attachmentUrl?: string;
 }
 
 export const CreateNotification: React.FC = () => {
@@ -37,7 +39,9 @@ export const CreateNotification: React.FC = () => {
     selectedRoles: [],
     selectedClasses: [],
     link: '',
+    attachmentUrl: '',
   });
+  const [imagePreview, setImagePreview] = useState<string>('');
 
   useEffect(() => {
     if (user?.schoolId) {
@@ -111,6 +115,7 @@ export const CreateNotification: React.FC = () => {
         senderId: user?.id,
         senderName: `${user?.firstName || ''} ${user?.lastName || ''}`.trim(),
         link: form.link?.trim() || undefined,
+        attachmentUrl: form.attachmentUrl || undefined,
       };
 
       if (form.recipientType === 'ALL') {
@@ -135,8 +140,44 @@ export const CreateNotification: React.FC = () => {
     }
   };
 
+  const sidebarItems = React.useMemo(() => {
+    const roles = user?.roles || [];
+    if (roles.includes('ADMIN')) {
+      return [
+        { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
+        { path: '/students', label: 'Students', icon: 'bi-people' },
+        { path: '/teachers', label: 'Teachers', icon: 'bi-person-badge' },
+        { path: '/classes', label: 'Classes', icon: 'bi-door-open' },
+        { path: '/subjects', label: 'Subjects', icon: 'bi-book' },
+        { path: '/exams', label: 'Exams', icon: 'bi-clipboard-check' },
+        { path: '/fees', label: 'Fees', icon: 'bi-cash-coin' },
+        { path: '/timetable', label: 'Timetable', icon: 'bi-calendar3' },
+        { path: '/attendance', label: 'Attendance', icon: 'bi-calendar-check' },
+        { path: '/notifications', label: 'Notifications', icon: 'bi-bell' },
+      ];
+    }
+    if (roles.includes('TEACHER')) {
+      return [
+        { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
+        { path: '/teacher/my-classes', label: 'My Classes', icon: 'bi-door-open' },
+        { path: '/teacher/assignments', label: 'Assignments', icon: 'bi-file-text' },
+        { path: '/teacher/attendance', label: 'Attendance', icon: 'bi-calendar-check' },
+        { path: '/teacher/grading', label: 'Grading', icon: 'bi-star' },
+        { path: '/teacher/timetable', label: 'My Timetable', icon: 'bi-calendar3' },
+        { path: '/teacher/students', label: 'Students', icon: 'bi-people' },
+        { path: '/notifications', label: 'Notifications', icon: 'bi-bell' },
+      ];
+    }
+    return [{ path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' }];
+  }, [user?.roles]);
+
   return (
     <Layout>
+      <Row>
+        <Col md={2} className="px-0">
+          <Sidebar items={sidebarItems} />
+        </Col>
+        <Col md={10}>
       <Container fluid className="py-4">
         <Row className="mb-4">
           <Col>
@@ -248,6 +289,36 @@ export const CreateNotification: React.FC = () => {
                     />
                     <Form.Text className="text-muted">
                       Add a link for users to view more details
+                    </Form.Text>
+                  </Form.Group>
+
+                  <Form.Group className="mb-3">
+                    <Form.Label>Attachment Image (Optional)</Form.Label>
+                    <Form.Control
+                      type="file"
+                      accept="image/*"
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        const file = e.target.files?.[0];
+                        if (!file) { setImagePreview(''); handleChange('attachmentUrl', ''); return; }
+                        if (file.size > 2 * 1024 * 1024) { // 2MB
+                          setError('Image is too large. Max 2MB.');
+                          return;
+                        }
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                          const dataUrl = reader.result as string;
+                          setImagePreview(dataUrl);
+                          handleChange('attachmentUrl', dataUrl);
+                        };
+                        reader.readAsDataURL(file);
+                      }}
+                    />
+                    {imagePreview && (
+                      <div className="mt-2">
+                        <img src={imagePreview} alt="Preview" style={{ maxWidth: '100%', borderRadius: 8 }} />
+                      </div>
+                    )}
+                    <Form.Text className="text-muted">Optional festive or event image.
                     </Form.Text>
                   </Form.Group>
                 </Card.Body>
@@ -382,6 +453,8 @@ export const CreateNotification: React.FC = () => {
           </Row>
         </Form>
       </Container>
+        </Col>
+      </Row>
     </Layout>
   );
 };

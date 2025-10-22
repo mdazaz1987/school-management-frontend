@@ -8,6 +8,7 @@ import { teacherService } from '../services/teacherService';
 import { classService } from '../services/classService';
 import { timetableService } from '../services/timetableService';
 import { useLang } from '../contexts/LangContext';
+import { notificationService } from '../services/notificationService';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -489,6 +490,12 @@ export const TeacherDashboard: React.FC = () => {
               }
               await teacherService.applyLeave({ startDate: leaveForm.startDate, endDate: leaveForm.endDate, reason: leaveForm.reason, leaveType: leaveForm.leaveType as any });
               setLeaveSuccess(t('teacher.dashboard.leave_submitted'));
+              // Notify Admins for approval
+              try {
+                const title = `Teacher Leave Request`;
+                const message = `${user?.firstName || 'Teacher'} ${user?.lastName || ''} requested leave from ${leaveForm.startDate} to ${leaveForm.endDate}.`;
+                await notificationService.sendToRole({ title, message, type: 'ANNOUNCEMENT' as any, priority: 'HIGH' as any, role: 'ADMIN', link: '/admin' });
+              } catch {}
               const b = await teacherService.getLeaveBalances().catch(() => null);
               if (b) setLeaveBalances(b);
               setTimeout(() => setLeaveSuccess(''), 2500);

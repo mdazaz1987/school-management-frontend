@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import { NotificationBell } from './NotificationBell';
+import { Avatar } from './Avatar';
 import { schoolService } from '../services/schoolService';
 import { useLang } from '../contexts/LangContext';
 
@@ -122,19 +123,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               <NavDropdown
                 title={
                   <span className="d-flex align-items-center gap-2">
-                    {user?.profilePhoto ? (
-                      <img
-                        src={user.profilePhoto}
-                        alt="Profile"
-                        className="rounded-circle"
-                        style={{ width: 32, height: 32, objectFit: 'cover' }}
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none';
-                          (e.target as HTMLImageElement).nextElementSibling?.classList.remove('d-none');
-                        }}
-                      />
-                    ) : null}
-                    <i className={`bi bi-person-circle ${user?.profilePhoto ? 'd-none' : ''}`}></i>
+                    <Avatar src={user?.profilePhoto} size={32} />
                     <span>{user?.firstName} {user?.lastName}</span>
                   </span>
                 }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, ListGroup, Badge, Button, Alert, Spinner } from 'react-bootstrap';
+import { Row, Col, Card, ListGroup, Badge, Button, Alert, Spinner, Form, Modal, ButtonGroup } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
@@ -19,8 +19,13 @@ const sidebarItems = [
 export const StudentNotifications: React.FC = () => {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<any[]>([]);
+  const [filtered, setFiltered] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [filterType, setFilterType] = useState<string>('ALL');
+  const [showUnreadOnly, setShowUnreadOnly] = useState<boolean>(false);
+  const [showModal, setShowModal] = useState(false);
+  const [selected, setSelected] = useState<any>(null);
 
   useEffect(() => {
     loadNotifications();
@@ -42,12 +47,13 @@ export const StudentNotifications: React.FC = () => {
       // Normalize for UI
       const normalized = (list || []).map((n: any) => ({
         id: n.id,
-        type: (n.type || 'system').toString().toLowerCase(),
+        type: (n.type || 'GENERAL').toString().toUpperCase(),
         title: n.title,
         message: n.message,
         timestamp: n.createdAt,
         read: !!n.read,
-        priority: 'medium',
+        priority: (n.priority || 'MEDIUM').toString().toUpperCase(),
+        attachmentUrl: n.attachmentUrl,
       }));
       setNotifications(normalized);
     } catch (e: any) {
@@ -56,6 +62,14 @@ export const StudentNotifications: React.FC = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    // Apply filters
+    let items = [...notifications];
+    if (filterType !== 'ALL') items = items.filter(n => n.type === filterType);
+    if (showUnreadOnly) items = items.filter(n => !n.read);
+    setFiltered(items);
+  }, [notifications, filterType, showUnreadOnly]);
 
   const markAsRead = async (id: string) => {
     try {
@@ -96,6 +110,12 @@ export const StudentNotifications: React.FC = () => {
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
+
+  const openModal = async (n: any) => {
+    setSelected(n);
+    setShowModal(true);
+    if (!n.read) await markAsRead(n.id);
+  };
 
   return (
     <Layout>
@@ -140,8 +160,22 @@ export const StudentNotifications: React.FC = () => {
             </div>
           ) : (
             <Card className="border-0 shadow-sm">
-              <ListGroup variant="flush">
-                {notifications.map((notification) => (
+              <Card.Body>
+                <div className="mb-3">
+                  <Form.Label>Categories</Form.Label>
+                  <div>
+                    <ButtonGroup className="flex-wrap">
+                      {['ALL','ANNOUNCEMENT','EVENT','ASSIGNMENT','EXAM','FEE','ATTENDANCE','HOLIDAY','RESULT','EMERGENCY','GENERAL'].map((t) => (
+                        <Button key={t} size="sm" variant={filterType===t? 'primary':'outline-secondary'} className="me-2 mb-2" onClick={() => setFilterType(t)}>
+                          {t}
+                        </Button>
+                      ))}
+                    </ButtonGroup>
+                  </div>
+                  <Form.Check type="checkbox" className="mt-2" label="Show unread only" checked={showUnreadOnly} onChange={(e) => setShowUnreadOnly(e.target.checked)} />
+                </div>
+                <ListGroup variant="flush">
+                {filtered.map((notification) => (
                   <ListGroup.Item
                     key={notification.id}
                     className={`${!notification.read ? 'bg-light' : ''} border-start border-3 ${
@@ -149,12 +183,12 @@ export const StudentNotifications: React.FC = () => {
                       notification.priority === 'medium' ? 'border-warning' : 'border-secondary'
                     }`}
                     action
-                    onClick={() => markAsRead(notification.id)}
+                    onClick={() => openModal(notification)}
                   >
                     <Row className="align-items-center">
                       <Col xs="auto">
                         <div className="bg-white rounded-circle p-3 shadow-sm">
-                          <i className={`bi ${getIcon(notification.type)} fs-4`}></i>
+                          <i className={`bi ${getIcon(notification.type.toLowerCase())} fs-4`}></i>
                         </div>
                       </Col>
                       <Col>
@@ -190,11 +224,33 @@ export const StudentNotifications: React.FC = () => {
                     </Row>
                   </ListGroup.Item>
                 ))}
-              </ListGroup>
+                </ListGroup>
+              </Card.Body>
             </Card>
           )}
         </Col>
       </Row>
+      <Modal show={showModal} onHide={() => setShowModal(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>{selected?.title || 'Notification'}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {selected?.attachmentUrl && (
+            <div className="mb-3 text-center">
+              <img src={selected.attachmentUrl} alt="Attachment" style={{ maxWidth: '100%', borderRadius: 8 }} onError={(e) => ((e.target as HTMLImageElement).style.display='none')} />
+            </div>
+          )}
+          <p>{selected?.message}</p>
+          <div className="d-flex gap-2 align-items-center">
+            <Badge bg="primary">{selected?.type}</Badge>
+            <small className="text-muted ms-auto">{selected?.timestamp ? new Date(selected.timestamp).toLocaleString() : ''}</small>
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowModal(false)}>Close</Button>
+        </Modal.Footer>
+      </Modal>
     </Layout>
   );
-};
+}
+;
