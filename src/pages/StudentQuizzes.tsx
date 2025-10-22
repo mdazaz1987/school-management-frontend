@@ -11,6 +11,7 @@ import { useLang } from '../contexts/LangContext';
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
   { path: '/student/assignments', label: 'Assignments', icon: 'bi-file-text' },
+  { path: '/student/study-materials', label: 'Study Materials', icon: 'bi-book' },
   { path: '/student/quizzes', label: 'Quizzes & Tests', icon: 'bi-clipboard-check' },
   { path: '/student/exams', label: 'Exams & Results', icon: 'bi-clipboard2-data' },
   { path: '/student/attendance', label: 'My Attendance', icon: 'bi-calendar-check' },
@@ -46,6 +47,93 @@ export const StudentQuizzes: React.FC = () => {
 
   const myStudentId = useMemo(() => (student?.id as string | undefined), [student]);
 
+  const printCertificate = async () => {
+    try {
+      const me = student || (user?.email ? await studentService.getStudentByEmail(user.email) : null);
+      const sch = resultsModal.school || (me?.schoolId ? await schoolService.getPublicBasic(me.schoolId) : null);
+      const rows = resultsModal.rows || [];
+      if (rows.length === 0) return;
+      // Pick best score attempt
+      const best = rows.reduce((b: any, r: any) => !b || (r.score ?? 0) > (b.score ?? 0) ? r : b, null as any);
+      const quiz = resultsModal.quiz || {};
+      const dateStr = best?.submittedAt ? new Date(best.submittedAt as any).toLocaleString() : new Date().toLocaleString();
+      const total = best?.totalPoints ?? resultsModal.stats?.totalPoints ?? 0;
+      const percentage = total ? Math.round(((best?.score ?? 0) * 100) / total) : 0;
+      const passed = best?.passed ?? (resultsModal.stats ? (resultsModal.stats.myPercentage ?? 0) >= (quiz?.quizConfig?.passingMarks ? (100 * quiz.quizConfig.passingMarks) / (resultsModal.stats.totalPoints || 1) : 0) : undefined);
+
+      const w = window.open('', '_blank');
+      if (!w) return;
+      const logo = sch?.logo || '';
+      const schoolName = sch?.name || 'Your School';
+      const studentName = `${me?.firstName || ''} ${me?.lastName || ''}`.trim();
+      const cls = (me as any)?.className || (me as any)?.classId || '';
+      const section = (me as any)?.section || '';
+      const title = quiz?.title || 'Quiz';
+      const subject = quiz?.subject || quiz?.subjectName || '';
+      const gradeText = passed === undefined ? '' : (passed ? 'PASSED' : 'FAILED');
+      const html = `<!doctype html>
+      <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>Certificate - ${title}</title>
+        <style>
+          body { font-family: 'Times New Roman', serif; background:#f7f7f7; }
+          .certificate { width: 900px; margin: 24px auto; background: #fff; padding: 32px 48px; border: 12px solid #5c6ac4; position: relative; }
+          .certificate:before { content: ''; position: absolute; inset: 12px; border: 2px dashed #5c6ac4; }
+          .header { text-align:center; margin-bottom: 16px; }
+          .header .logo { height: 64px; margin-bottom: 8px; }
+          .school { font-size: 22px; font-weight: bold; letter-spacing: 1px; }
+          .title { text-align:center; font-size: 32px; margin: 24px 0 8px; letter-spacing: 1px; }
+          .subtitle { text-align:center; color:#555; margin-bottom: 24px; }
+          .content { font-size: 18px; line-height: 1.6; color:#222; }
+          .highlight { font-weight: bold; color:#222; }
+          .score { font-size: 20px; margin: 12px 0; }
+          .footer { display:flex; justify-content: space-between; margin-top: 36px; }
+          .sig { text-align:center; min-width: 220px; }
+          .sig .line { border-top: 1px solid #666; margin-top: 48px; padding-top: 4px; }
+          .meta { color:#666; font-size: 12px; text-align:center; margin-top: 8px; }
+        </style>
+      </head>
+      <body>
+        <div class="certificate">
+          <div class="header">
+            ${logo ? `<img class="logo" src="${logo}" alt="School Logo" />` : ''}
+            <div class="school">${schoolName}</div>
+          </div>
+          <div class="title">Certificate of Achievement</div>
+          <div class="subtitle">This certificate is proudly presented to</div>
+          <div class="content" style="text-align:center;">
+            <div style="font-size:26px; font-weight:bold; margin-bottom: 6px;">${studentName || 'Student'}</div>
+            <div class="meta">Class: ${cls}${section ? ' • Section: ' + section : ''}</div>
+          </div>
+          <div class="content" style="margin-top:16px;">
+            For outstanding performance in <span class="highlight">${subject || 'Quiz'}</span><br/>
+            <span class="highlight">${title}</span> held on <span class="highlight">${dateStr}</span>.
+          </div>
+          <div class="score">
+            Score: <span class="highlight">${best?.score ?? 0}</span> / ${total} • Percentage: <span class="highlight">${percentage}%</span> ${gradeText ? `• Result: <span class="highlight">${gradeText}</span>` : ''}
+          </div>
+          <div class="footer">
+            <div class="sig">
+              <div class="line">Teacher</div>
+            </div>
+            <div class="sig">
+              <div class="line">Principal</div>
+            </div>
+          </div>
+          <div class="meta">This is a system-generated certificate.</div>
+        </div>
+        <script>window.print(); setTimeout(() => window.close(), 300);</script>
+      </body>
+      </html>`;
+      w.document.open();
+      w.document.write(html);
+      w.document.close();
+    } catch (e) {
+      console.error('Certificate printing failed', e);
+    }
+  };
+  
   useEffect(() => {
     const init = async () => {
       if (!user?.email) return;
@@ -386,7 +474,7 @@ export const StudentQuizzes: React.FC = () => {
         <Modal.Footer>
           <Button variant="secondary" onClick={() => setResultsModal({ show: false, rows: [] })}>{t('common.close')}</Button>
           {resultsModal.rows.length > 0 && (
-            <Button variant="outline-primary" onClick={() => window.print()}>
+            <Button variant="outline-primary" onClick={printCertificate}>
               <i className="bi bi-printer me-2"></i> {t('common.print_certificate')}
             </Button>
           )}

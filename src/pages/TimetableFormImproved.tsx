@@ -9,9 +9,10 @@ import { subjectService } from '../services/subjectService';
 import { teacherService } from '../services/teacherService';
 import { TimetableEntry, DayOfWeek, SchoolClass, Subject, Teacher, Classroom } from '../types';
 import { classroomService } from '../services/classroomService';
+import { schoolService } from '../services/schoolService';
 import { FaSave, FaTimes, FaClock, FaCalendarAlt } from 'react-icons/fa';
 
-const WORKING_DAYS: DayOfWeek[] = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+const ALL_DAYS: DayOfWeek[] = ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY','SUNDAY'];
 
 interface TimeSlot {
   period: string;
@@ -37,6 +38,7 @@ export const TimetableFormImproved: React.FC = () => {
   const [existingTimetables, setExistingTimetables] = useState<any[]>([]);
   const [allRooms, setAllRooms] = useState<Classroom[]>([]);
   const [availableRooms, setAvailableRooms] = useState<Record<string, Classroom[]>>({}); // key: `${day}-${slotIndex}`
+  const [workingDays, setWorkingDays] = useState<DayOfWeek[]>(['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY']);
 
   // Form state
   const [selectedClass, setSelectedClass] = useState('');
@@ -171,6 +173,14 @@ export const TimetableFormImproved: React.FC = () => {
       const year = new Date().getFullYear();
       setAcademicYear(`${year}-${year + 1}`);
 
+      // Load school configuration to compute working days
+      try {
+        const s = await schoolService.getById(user.schoolId);
+        const wk = (s?.configuration?.weekendDays || []).map((d: any) => String(d || '').toUpperCase());
+        const computed = ALL_DAYS.filter(d => !wk.includes(d)) as DayOfWeek[];
+        setWorkingDays(computed.length > 0 ? computed : ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY']);
+      } catch {}
+
       // Load existing timetable if editing
       if (id) {
         const existing = await timetableService.getById(id);
@@ -242,7 +252,7 @@ export const TimetableFormImproved: React.FC = () => {
       const entries: TimetableEntry[] = [];
       const classObjSubmit = classes.find(c => c.id === selectedClass);
       
-      WORKING_DAYS.forEach(day => {
+      workingDays.forEach(day => {
         timeSlots.forEach((slot, index) => {
           const cell = timetableGrid[day]?.[index];
           const subject = cell?.subjectId ? subjects.find(s => s.id === cell.subjectId) : null;
@@ -514,7 +524,7 @@ export const TimetableFormImproved: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {WORKING_DAYS.map(day => (
+                  {workingDays.map(day => (
                     <tr key={day}>
                       <td className="fw-bold">{day}</td>
                       {timeSlots.map((slot, slotIndex) => {
