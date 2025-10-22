@@ -39,6 +39,7 @@ export const TimetableFormImproved: React.FC = () => {
   const [allRooms, setAllRooms] = useState<Classroom[]>([]);
   const [availableRooms, setAvailableRooms] = useState<Record<string, Classroom[]>>({}); // key: `${day}-${slotIndex}`
   const [workingDays, setWorkingDays] = useState<DayOfWeek[]>(['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY']);
+  const PERSIST_KEY = 'timetable_form_draft_v2';
 
   // Form state
   const [selectedClass, setSelectedClass] = useState('');
@@ -68,6 +69,40 @@ export const TimetableFormImproved: React.FC = () => {
     const [h, m] = hhmm.split(':').map(Number);
     return (h * 60) + m;
   };
+
+  // Load draft from localStorage when creating new timetable
+  useEffect(() => {
+    if (isEdit) return;
+    try {
+      const raw = localStorage.getItem(PERSIST_KEY);
+      if (!raw) return;
+      const draft = JSON.parse(raw);
+      if (!draft || typeof draft !== 'object') return;
+      if (draft.selectedClass != null) setSelectedClass(String(draft.selectedClass));
+      if (draft.section != null) setSection(String(draft.section));
+      if (draft.academicYear != null) setAcademicYear(String(draft.academicYear));
+      if (draft.term != null) setTerm(String(draft.term));
+      if (Array.isArray(draft.timeSlots) && draft.timeSlots.length > 0) setTimeSlots(draft.timeSlots);
+      if (draft.timetableGrid && typeof draft.timetableGrid === 'object') setTimetableGrid(draft.timetableGrid);
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist draft on changes (only for new timetable)
+  useEffect(() => {
+    if (isEdit) return;
+    try {
+      const payload = {
+        selectedClass,
+        section,
+        academicYear,
+        term,
+        timeSlots,
+        timetableGrid,
+      };
+      localStorage.setItem(PERSIST_KEY, JSON.stringify(payload));
+    } catch {}
+  }, [isEdit, selectedClass, section, academicYear, term, timeSlots, timetableGrid]);
 
   // Fetch available rooms for a given cell (day, slot)
   const fetchAvailableRooms = async (day: DayOfWeek, slotIndex: number) => {
@@ -258,6 +293,8 @@ export const TimetableFormImproved: React.FC = () => {
           const subject = cell?.subjectId ? subjects.find(s => s.id === cell.subjectId) : null;
           const teacher = cell?.teacherId ? teachers.find(t => t.id === cell.teacherId) : null;
           
+          const defaultRoomStr = (classObjSubmit?.room || '').trim();
+          const defaultRoomFirst = defaultRoomStr ? defaultRoomStr.split(',').map(s => s.trim()).filter(Boolean)[0] || '' : '';
           entries.push({
             day,
             period: slot.period,
@@ -268,7 +305,7 @@ export const TimetableFormImproved: React.FC = () => {
             subjectName: subject?.name || '',
             teacherId: cell?.teacherId || '',
             teacherName: teacher ? `${teacher.firstName} ${teacher.lastName}`.trim() : '',
-            room: cell?.room || classObjSubmit?.room || '',
+            room: cell?.room || defaultRoomFirst || '',
           });
         });
       });
@@ -289,6 +326,8 @@ export const TimetableFormImproved: React.FC = () => {
         await timetableService.create(payload);
         setSuccess('Timetable created successfully!');
       }
+
+      try { localStorage.removeItem(PERSIST_KEY); } catch {}
 
       setTimeout(() => navigate('/timetable'), 1500);
     } catch (err: any) {
@@ -584,8 +623,20 @@ export const TimetableFormImproved: React.FC = () => {
                                   {(() => {
                                     const assigned = cell.teacherId;
                                     const assignedTeacher = assigned ? teachers.find(t => t.id === assigned) : undefined;
+                                    const subjId = cell.subjectId;
+                                    const subjectObj = subjId ? subjects.find(s => s.id === subjId) : undefined;
                                     const filtered = teachers
-                                      .filter(t => isTeacherFree(t.id, day, slotIndex));
+                                      .filter(t => isTeacherFree(t.id, day, slotIndex))
+                                      .filter(t => {
+                                        if (!subjId) return true;
+                                        const bySubjectList = Array.isArray(subjectObj?.teacherIds) && (subjectObj!.teacherIds as string[]).length > 0
+                                          ? (subjectObj!.teacherIds as string[]).includes(t.id)
+                                          : false;
+                                        const byTeacherList = Array.isArray(t.subjectIds) && t.subjectIds.length > 0
+                                          ? t.subjectIds.includes(subjId)
+                                          : false;
+                                        return bySubjectList || byTeacherList;
+                                      });
                                     const finalList = assignedTeacher && !filtered.some(t => t.id === assignedTeacher.id)
                                       ? [assignedTeacher, ...filtered]
                                       : filtered;
@@ -606,7 +657,7 @@ export const TimetableFormImproved: React.FC = () => {
                                       const defaultRoom = (classObj?.room || '').trim();
                                       const parts = defaultRoom ? defaultRoom.split(',').map(s => s.trim()).filter(Boolean) : [];
                                       const known = new Set([...(roomsForCell || []).map(r => r.name), ...parts]);
-                                      if (!cell.room) return '';
+                                      if (!cell.room) return parts.length > 0 ? parts[0] : '';
                                       return known.has(cell.room) ? cell.room : '__CUSTOM__';
                                     })()}
                                     onFocus={() => fetchAvailableRooms(day, slotIndex)}
