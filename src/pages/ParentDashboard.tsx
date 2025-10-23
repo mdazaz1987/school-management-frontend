@@ -15,6 +15,7 @@ const sidebarItems = [
   { path: '/parent/performance', label: 'Performance', icon: 'bi-star' },
   { path: '/parent/fees', label: 'Fee Payments', icon: 'bi-cash-coin' },
   { path: '/parent/notifications', label: 'Notifications', icon: 'bi-bell' },
+  { path: '/gallery', label: 'Photo Gallery', icon: 'bi-images' },
 ];
 
 export const ParentDashboard: React.FC = () => {
