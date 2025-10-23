@@ -13,30 +13,25 @@ export const AdminLeaveApprovals: React.FC = () => {
   const [studentLeaves, setStudentLeaves] = useState<any[]>([]);
   const [teacherLeaves, setTeacherLeaves] = useState<any[]>([]);
 
-  const sidebarItems = useMemo(() => [
-    { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
-    { path: '/students', label: 'Students', icon: 'bi-people' },
-    { path: '/teachers', label: 'Teachers', icon: 'bi-person-badge' },
-    { path: '/classes', label: 'Classes', icon: 'bi-door-open' },
-    { path: '/subjects', label: 'Subjects', icon: 'bi-book' },
-    { path: '/exams', label: 'Exams', icon: 'bi-clipboard-check' },
-    { path: '/fees', label: 'Fees', icon: 'bi-cash-coin' },
-    { path: '/timetable', label: 'Timetable', icon: 'bi-calendar3' },
-    { path: '/attendance', label: 'Attendance', icon: 'bi-calendar-check' },
-    { path: '/notifications', label: 'Notifications', icon: 'bi-bell' },
-    { path: '/admin/calendar', label: 'Admin Calendar', icon: 'bi-calendar-event' },
-    { path: '/admin/approvals', label: 'Approvals', icon: 'bi-check2-square' },
-  ], []);
+  const sidebarItems = useMemo(() => undefined, []);
 
   const load = async () => {
     try {
       setLoading(true); setError('');
-      const [sLeaves, tLeaves] = await Promise.all([
+      const schoolId = user?.schoolId;
+      const [sLeaves, pend, allList] = await Promise.all([
         adminService.getPendingLeaves().catch(() => [] as any[]),
-        teacherService.adminPending(user?.schoolId || '').catch(() => [] as any[]),
+        teacherService.adminPending(schoolId).catch(() => [] as any[]),
+        teacherService.adminListLeaves({ schoolId, status: 'PENDING' }).catch(() => [] as any[]),
       ]);
+      const mergedTeachers = [...(pend || []), ...(allList || [])];
+      const seen = new Set<string>();
+      const unique = mergedTeachers.filter((x: any) => {
+        const id = String(x.id || `${x.teacherId}-${x.startDate}-${x.endDate}`);
+        if (seen.has(id)) return false; seen.add(id); return true;
+      }).filter((x: any) => String(x?.status || '').toUpperCase().includes('PEND'));
       setStudentLeaves(Array.isArray(sLeaves) ? sLeaves : []);
-      setTeacherLeaves(Array.isArray(tLeaves) ? tLeaves : []);
+      setTeacherLeaves(unique);
     } catch (e: any) {
       setError(e?.response?.data?.message || 'Failed to load pending leaves');
     } finally {
@@ -70,12 +65,22 @@ export const AdminLeaveApprovals: React.FC = () => {
     <Layout>
       <Row>
         <Col md={2} className="px-0">
-          <Sidebar items={sidebarItems} />
+          <Sidebar items={sidebarItems as any} />
         </Col>
         <Col md={10}>
           <div className="mb-4">
-            <h2>Leave Approvals</h2>
-            <p className="text-muted">Approve or reject student and teacher leave applications</p>
+            <div className="d-flex justify-content-between align-items-center">
+              <div>
+                <h2>Leave Approvals</h2>
+                <p className="text-muted">Approve or reject student and teacher leave applications</p>
+              </div>
+              <div>
+                <Button variant="outline-primary" size="sm" onClick={load} disabled={loading}>
+                  <i className="bi bi-arrow-clockwise me-1"></i>
+                  Refresh
+                </Button>
+              </div>
+            </div>
           </div>
 
           {error && <Alert variant="danger" onClose={() => setError('')} dismissible>{error}</Alert>}

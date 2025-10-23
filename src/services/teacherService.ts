@@ -13,6 +13,22 @@ export const teacherService = {
   async getMyProfile(): Promise<any> {
     return apiService.get(`/teacher/profile`);
   },
+  async adminListLeaves(params?: { schoolId?: string; status?: string }): Promise<any[]> {
+    const query = params || {};
+    // Primary generic list
+    try {
+      return await apiService.get<any[]>(`/admin/teacher/leave`, query);
+    } catch {}
+    // Fallback: alternative pluralization
+    try {
+      return await apiService.get<any[]>(`/admin/teachers/leave`, query);
+    } catch {}
+    // Fallback: teacher-scoped admin
+    try {
+      return await apiService.get<any[]>(`/teachers/leave`, query);
+    } catch {}
+    return [];
+  },
 
   async getSubmissionAttachmentBlob(assignmentId: string, submissionId: string, filename: string): Promise<Blob> {
     const axios = apiService.getAxiosInstance();
@@ -432,13 +448,30 @@ export const teacherService = {
   },
 
   // Admin endpoints
-  async adminPending(schoolId: string): Promise<any[]> {
-    return apiService.get(`/admin/teacher/leave/pending`, { schoolId });
+  async adminPending(schoolId?: string): Promise<any[]> {
+    // Primary endpoint
+    try {
+      return await apiService.get(`/admin/teacher/leave/pending`, schoolId ? { schoolId } : undefined);
+    } catch {}
+    // Fallback: generic list with status filter
+    try {
+      const list = await apiService.get<any[]>(`/admin/teacher/leave`, schoolId ? { schoolId, status: 'PENDING' } : { status: 'PENDING' });
+      return (list || []).filter((x: any) => String(x?.status || '').toUpperCase().includes('PEND'));
+    } catch {}
+    // Fallback: alternative path
+    try {
+      return await apiService.get<any[]>(`/teachers/leave/pending`, schoolId ? { schoolId } : undefined);
+    } catch {}
+    return [];
   },
   async adminApprove(leaveId: string, comments?: string): Promise<any> {
-    return apiService.put(`/admin/teacher/leave/${leaveId}/approve`, { comments });
+    try { return await apiService.put(`/admin/teacher/leave/${leaveId}/approve`, { comments }); } catch {}
+    try { return await apiService.put(`/teachers/leave/${leaveId}/approve`, { comments, scope: 'ADMIN' }); } catch {}
+    return Promise.reject(new Error('Failed to approve leave'));
   },
   async adminReject(leaveId: string, reason: string): Promise<any> {
-    return apiService.put(`/admin/teacher/leave/${leaveId}/reject`, { reason });
+    try { return await apiService.put(`/admin/teacher/leave/${leaveId}/reject`, { reason }); } catch {}
+    try { return await apiService.put(`/teachers/leave/${leaveId}/reject`, { reason, scope: 'ADMIN' }); } catch {}
+    return Promise.reject(new Error('Failed to reject leave'));
   },
 };

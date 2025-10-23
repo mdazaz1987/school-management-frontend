@@ -66,6 +66,8 @@ import { PrincipalApprovals } from './pages/PrincipalApprovals';
 import { AdminLeaveApprovals } from './pages/AdminLeaveApprovals';
 import { AdminGallery } from './pages/AdminGallery';
 import { Gallery } from './pages/Gallery';
+import { Holidays } from './pages/Holidays';
+import { GalleryEvent } from './pages/GalleryEvent';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactElement }> = ({ children }) => {
@@ -608,6 +610,22 @@ function App() {
             element={
               <ProtectedRoute>
                 <Gallery />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/gallery/event/:slug"
+            element={
+              <ProtectedRoute>
+                <GalleryEvent />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/holidays"
+            element={
+              <ProtectedRoute>
+                <Holidays />
               </ProtectedRoute>
             }
           />
