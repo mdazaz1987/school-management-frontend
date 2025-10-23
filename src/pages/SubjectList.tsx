@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Button, Card, Container, Row, Col, Table, Badge, Alert, Spinner, Form } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/Layout';
+import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
 import { Subject } from '../types';
 import { subjectService } from '../services/subjectService';
@@ -60,6 +61,11 @@ export const SubjectList: React.FC = () => {
 
   return (
     <Layout>
+      <Row>
+        <Col md={2} className="px-0">
+          <Sidebar />
+        </Col>
+        <Col md={10}>
       <Container className="py-4">
         <Row className="mb-4">
           <Col>
@@ -167,6 +173,8 @@ export const SubjectList: React.FC = () => {
           </Card.Body>
         </Card>
       </Container>
+        </Col>
+      </Row>
     </Layout>
   );
 };

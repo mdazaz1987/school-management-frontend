@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Container, Row, Col, Card, Table, Button, Badge, Alert, Spinner, Form } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
+import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { classService } from '../services/classService';
@@ -84,6 +85,11 @@ export const ClassList: React.FC = () => {
 
   return (
     <Layout>
+      <Row>
+        <Col md={2} className="px-0">
+          <Sidebar />
+        </Col>
+        <Col md={10}>
       <Container fluid className="py-4">
         {/* Header */}
         <Row className="mb-4">
@@ -279,6 +285,8 @@ export const ClassList: React.FC = () => {
           </Row>
         )}
       </Container>
+        </Col>
+      </Row>
     </Layout>
   );
 };

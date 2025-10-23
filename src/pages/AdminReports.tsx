@@ -7,6 +7,7 @@ import { useLang } from '../contexts/LangContext';
 import { classService } from '../services/classService';
 import { schoolService } from '../services/schoolService';
 import { School, SchoolClass } from '../types';
+import { teacherService } from '../services/teacherService';
 
 const sidebarItems = [
   { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
@@ -32,6 +33,7 @@ export const AdminReports: React.FC = () => {
 
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [schools, setSchools] = useState<School[]>([]);
+  const [teachers, setTeachers] = useState<any[]>([]);
 
   const onChange = (set: any) => (e: React.ChangeEvent<HTMLInputElement>) => {
     set((prev: any) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -47,6 +49,13 @@ export const AdminReports: React.FC = () => {
         setClasses(cls || []);
         setSchools(sch || []);
       } catch {}
+      try {
+        // Load teachers for dropdown (fetch first 1000 entries)
+        const page = await teacherService.getAllTeachers({ page: 0, size: 1000, sort: 'firstName,asc' });
+        setTeachers((page?.content as any[]) || []);
+      } catch {
+        setTeachers([]);
+      }
     };
     init();
   }, []);
@@ -155,7 +164,18 @@ export const AdminReports: React.FC = () => {
                 <Card.Body>
                   <Row className="g-3">
                     <Col md={3}>
-                      <Form.Control name="teacherId" placeholder={t('admin.reports.teacher_id_placeholder')} value={teacherParams.teacherId} onChange={onChange(setTeacherParams)} />
+                      <Form.Select
+                        name="teacherId"
+                        value={teacherParams.teacherId}
+                        onChange={(e) => setTeacherParams(prev => ({ ...prev, teacherId: e.target.value }))}
+                      >
+                        <option value="">{t('admin.reports.select_teacher') || 'Select Teacher'}</option>
+                        {(teachers || [])
+                          .filter((tch: any) => !teacherParams.schoolId || tch.schoolId === teacherParams.schoolId)
+                          .map((tch: any) => (
+                            <option key={tch.id} value={tch.id}>{`${tch.firstName || ''} ${tch.lastName || ''}`.trim() || tch.email || tch.id}</option>
+                          ))}
+                      </Form.Select>
                     </Col>
                     <Col md={3}>
                       <Form.Select name="schoolId" value={teacherParams.schoolId || ''} onChange={(e) => setTeacherParams(prev => ({ ...prev, schoolId: e.target.value }))}>

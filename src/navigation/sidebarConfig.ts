@@ -23,8 +23,6 @@ export function getDefaultSidebar(role: string): SidebarItem[] {
     { path: '/timetable', label: 'Timetable', icon: 'bi-calendar3' },
     { path: '/attendance', label: 'Attendance', icon: 'bi-calendar-check' },
     { path: '/notifications', label: 'Notifications', icon: 'bi-bell' },
-    { path: '/admin/tools/finance', label: 'Finance Tools', icon: 'bi-cash-coin' },
-    { path: '/admin/tools/notifications', label: 'Notification Tools', icon: 'bi-bell' },
     { path: '/settings', label: 'Settings', icon: 'bi-gear' },
     { path: '/admin/reports', label: 'Admin Reports', icon: 'bi-file-earmark-bar-graph' },
     { path: '/admin/calendar', label: 'Admin Calendar', icon: 'bi-calendar-event' },

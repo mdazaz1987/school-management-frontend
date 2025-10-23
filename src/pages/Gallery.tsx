@@ -6,11 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { galleryService, GalleryImage } from '../services/galleryService';
 import { useNavigate } from 'react-router-dom';
 
-const sidebarItems = [
-  { path: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
-  { path: '/notifications', label: 'Notifications', icon: 'bi-bell' },
-  { path: '/gallery', label: 'Photo Gallery', icon: 'bi-images' },
-];
+// Use default role-based sidebar
 
 export const Gallery: React.FC = () => {
   const { user } = useAuth();
@@ -50,7 +46,7 @@ export const Gallery: React.FC = () => {
     <Layout>
       <Row>
         <Col md={2} className="px-0">
-          <Sidebar items={sidebarItems} />
+          <Sidebar />
         </Col>
         <Col md={10}>
           <div className="mb-4 d-flex justify-content-between align-items-center">

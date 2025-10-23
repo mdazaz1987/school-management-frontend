@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Layout } from '../components/Layout';
+import { Sidebar } from '../components/Sidebar';
 import { Container, Row, Col, Card, Table, Button, Badge, Alert, Spinner, Form } from 'react-bootstrap';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -118,6 +119,11 @@ export const FeeList: React.FC = () => {
 
   return (
     <Layout>
+      <Row>
+        <Col md={2} className="px-0">
+          <Sidebar />
+        </Col>
+        <Col md={10}>
       <Container className="py-4">
         <Row className="mb-4">
           <Col>
@@ -274,6 +280,8 @@ export const FeeList: React.FC = () => {
           </Card.Body>
         </Card>
       </Container>
+        </Col>
+      </Row>
     </Layout>
   );
 };

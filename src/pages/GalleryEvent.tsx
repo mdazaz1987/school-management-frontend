@@ -97,7 +97,7 @@ export const GalleryEvent: React.FC = () => {
         </Col>
       </Row>
 
-      <Modal show={activeIndex !== null} onHide={() => setActiveIndex(null)} size="lg" centered>
+      <Modal show={activeIndex !== null} onHide={() => setActiveIndex(null)} centered fullscreen>
         <Modal.Header closeButton>
           <Modal.Title>{eventName}</Modal.Title>
         </Modal.Header>
@@ -107,7 +107,7 @@ export const GalleryEvent: React.FC = () => {
               <img
                 src={eventImages[activeIndex].url}
                 alt={eventImages[activeIndex].title || ''}
-                style={{ maxHeight: '70vh', maxWidth: '100%', objectFit: 'contain' }}
+                style={{ maxHeight: '90vh', width: '100%', objectFit: 'contain' }}
               />
               <div className="d-flex justify-content-between align-items-center mt-3">
                 <Button variant="outline-secondary" onClick={showPrev}>

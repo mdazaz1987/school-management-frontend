@@ -1,4 +1,5 @@
 import React from 'react';
+import { resolveUrl } from '../services/api';
 
 interface AvatarProps {
   src?: string | null;
@@ -14,7 +15,7 @@ export const Avatar: React.FC<AvatarProps> = ({ src, alt = 'Avatar', size = 24, 
     <span className={`d-inline-flex align-items-center ${className || ''}`}>
       {showImg ? (
         <img
-          src={src as string}
+          src={resolveUrl(String(src || ''))}
           alt={alt}
           className="rounded-circle"
           style={{ width: size, height: size, objectFit: 'cover' }}

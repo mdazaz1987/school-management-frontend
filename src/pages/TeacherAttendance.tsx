@@ -3,6 +3,7 @@ import { Row, Col, Card, Table, Button, Form, Badge, Alert, Spinner } from 'reac
 import { Layout } from '../components/Layout';
 import { Sidebar } from '../components/Sidebar';
 import { teacherService } from '../services/teacherService';
+import { calendarService } from '../services/calendarService';
 import apiService from '../services/api';
 import { timetableService } from '../services/timetableService';
 import { useLocation } from 'react-router-dom';
@@ -37,6 +38,7 @@ export const TeacherAttendance: React.FC = () => {
   const schoolId: string = (user as any)?.schoolId || JSON.parse(localStorage.getItem('userInfo') || '{}').schoolId || JSON.parse(localStorage.getItem('user') || '{}').schoolId || '';
   const [canMark, setCanMark] = useState<boolean>(false);
   const [authInfo, setAuthInfo] = useState<any>(null);
+  const [isHoliday, setIsHoliday] = useState<boolean>(false);
 
   // Period options derived from timetable for selected class/date
   const [periodOptions, setPeriodOptions] = useState<Array<{ period: string; startTime?: string; endTime?: string; subjectName?: string; room?: string }>>([]);
@@ -114,7 +116,8 @@ export const TeacherAttendance: React.FC = () => {
       if (!selectedClass || !selectedDate) { setCanMark(false); setAuthInfo(null); return; }
       try {
         const resp = await teacherService.checkAttendanceAuthorization(selectedClass, selectedDate);
-        setCanMark(!!resp?.allowed);
+        const allowed = !!resp?.allowed && !isHoliday;
+        setCanMark(allowed);
         setAuthInfo(resp?.firstPeriod || null);
       } catch {
         setCanMark(false);
@@ -122,7 +125,30 @@ export const TeacherAttendance: React.FC = () => {
       }
     };
     check();
-  }, [selectedClass, selectedDate]);
+  }, [selectedClass, selectedDate, isHoliday]);
+
+  useEffect(() => {
+    const checkHoliday = async () => {
+      try {
+        if (!selectedDate) { setIsHoliday(false); return; }
+        const list = await calendarService.list(schoolId);
+        const d = new Date(selectedDate);
+        const dd = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        const found = (list || []).some((e: any) => {
+          if (String(e?.type).toUpperCase() !== 'HOLIDAY') return false;
+          const sd = new Date(e.startDate);
+          const ed = e.endDate ? new Date(e.endDate) : sd;
+          const sdx = new Date(sd.getFullYear(), sd.getMonth(), sd.getDate());
+          const edx = new Date(ed.getFullYear(), ed.getMonth(), ed.getDate());
+          return dd >= sdx && dd <= edx;
+        });
+        setIsHoliday(found);
+      } catch {
+        setIsHoliday(false);
+      }
+    };
+    checkHoliday();
+  }, [selectedDate, schoolId]);
 
   // Load period options from timetable for the selected class + date (day-of-week)
   useEffect(() => {
@@ -232,6 +258,13 @@ export const TeacherAttendance: React.FC = () => {
             <h2>Mark Attendance</h2>
             <p className="text-muted">Take attendance for your classes</p>
           </div>
+
+          {isHoliday && (
+            <Alert variant="warning">
+              <i className="bi bi-sun me-2"></i>
+              Selected date is a declared holiday. Attendance marking is disabled.
+            </Alert>
+          )}
 
           {success && <Alert variant="success" dismissible onClose={() => setSuccess('')}>{success}</Alert>}
           {error && <Alert variant="danger" dismissible onClose={() => setError('')}>{error}</Alert>}

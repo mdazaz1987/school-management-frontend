@@ -5,6 +5,7 @@ import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
 import { adminService } from '../services/adminService';
 import { teacherService } from '../services/teacherService';
+import { attendanceService } from '../services/attendanceService';
 
 export const AdminLeaveApprovals: React.FC = () => {
   const { user } = useAuth();
@@ -41,9 +42,22 @@ export const AdminLeaveApprovals: React.FC = () => {
 
   useEffect(() => { load(); }, [user?.schoolId]);
 
-  const approveStudent = async (id: string) => {
-    await adminService.approveLeave(id, 'Approved by Admin');
-    setStudentLeaves((prev) => prev.filter((x) => x.id !== id));
+  const approveStudent = async (leave: any) => {
+    await adminService.approveLeave(leave.id, 'Approved by Admin');
+    setStudentLeaves((prev) => prev.filter((x) => x.id !== leave.id));
+    // Attempt to update attendance to EXCUSED for approved leave dates
+    try {
+      if (leave?.studentId && leave?.startDate) {
+        const s = String(leave.startDate).slice(0,10);
+        const e = String(leave.endDate || leave.startDate).slice(0,10);
+        const recs = await attendanceService.getByStudent(leave.studentId, { startDate: s, endDate: e }).catch(() => [] as any[]);
+        for (const r of (recs || [])) {
+          if (r?.id) {
+            try { await attendanceService.updateByAdmin(r.id, { status: 'EXCUSED' as any, remarks: 'Approved Leave' }); } catch {}
+          }
+        }
+      }
+    } catch {}
   };
   const rejectStudent = async (id: string) => {
     const reason = window.prompt('Reason for rejection?') || 'Rejected by Admin';
@@ -153,7 +167,7 @@ export const AdminLeaveApprovals: React.FC = () => {
                             <td><Badge bg="warning">{String(l.status)}</Badge></td>
                             <td className="text-end">
                               <div className="d-inline-flex gap-2">
-                                <Button size="sm" variant="outline-success" onClick={() => approveStudent(l.id)}>Approve</Button>
+                                <Button size="sm" variant="outline-success" onClick={() => approveStudent(l)}>Approve</Button>
                                 <Button size="sm" variant="outline-danger" onClick={() => rejectStudent(l.id)}>Reject</Button>
                               </div>
                             </td>

@@ -450,14 +450,6 @@ function App() {
             }
           />
           <Route
-            path="/notifications"
-            element={
-              <ProtectedRoute>
-                <ComingSoon />
-              </ProtectedRoute>
-            }
-          />
-          <Route
             path="/grades"
             element={
               <ProtectedRoute>

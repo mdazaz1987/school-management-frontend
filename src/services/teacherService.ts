@@ -458,6 +458,10 @@ export const teacherService = {
       const list = await apiService.get<any[]>(`/admin/teacher/leave`, schoolId ? { schoolId, status: 'PENDING' } : { status: 'PENDING' });
       return (list || []).filter((x: any) => String(x?.status || '').toUpperCase().includes('PEND'));
     } catch {}
+    // Fallback: alternative pluralized path for pending
+    try {
+      return await apiService.get<any[]>(`/admin/teachers/leave/pending`, schoolId ? { schoolId } : undefined);
+    } catch {}
     // Fallback: alternative path
     try {
       return await apiService.get<any[]>(`/teachers/leave/pending`, schoolId ? { schoolId } : undefined);

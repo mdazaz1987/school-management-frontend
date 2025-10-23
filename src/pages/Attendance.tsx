@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Container, Row, Col, Card, Form, Button, Table, Spinner, Alert, Badge, InputGroup, Nav, Modal } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
+import { Sidebar } from '../components/Sidebar';
 import { attendanceService } from '../services/attendanceService';
 import { Attendance, Student, SchoolClass } from '../types';
 import { classService } from '../services/classService';
@@ -135,6 +136,11 @@ export const AttendancePage: React.FC = () => {
 
   return (
     <Layout>
+      <Row>
+        <Col md={2} className="px-0">
+          <Sidebar />
+        </Col>
+        <Col md={10}>
       <Container fluid className="py-4">
         <Row className="mb-4">
           <Col>
@@ -470,6 +476,8 @@ export const AttendancePage: React.FC = () => {
           </Modal.Footer>
         </Modal>
       </Container>
+        </Col>
+      </Row>
     </Layout>
   );
 };

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert, ListGroup, Spinner } from 'react-bootstrap';
 import { Layout } from '../components/Layout';
+import { Sidebar } from '../components/Sidebar';
 import { profileService } from '../services/profileService';
 import { useAuth } from '../contexts/AuthContext';
 import { School } from '../types';
@@ -187,6 +188,11 @@ export const Settings: React.FC = () => {
 
   return (
     <Layout>
+      <Row>
+        <Col md={2} className="px-0">
+          <Sidebar />
+        </Col>
+        <Col md={10}>
       <Container className="py-4">
         <Row className="mb-4">
           <Col>
@@ -1192,6 +1198,8 @@ export const Settings: React.FC = () => {
           </Col>
         </Row>
       </Container>
+        </Col>
+      </Row>
     </Layout>
   );
 };
