@@ -2,21 +2,18 @@ import axios, { AxiosInstance, AxiosError } from 'axios';
 
 // Infer API base URL at runtime. This prevents accidental localhost calls in production.
 function inferApiBaseUrl(): string {
-  // 1) Respect explicit env if provided at build time
   if (process.env.REACT_APP_API_URL && process.env.REACT_APP_API_URL.trim() !== '') {
     return process.env.REACT_APP_API_URL;
   }
 
-  // 2) If running in browser, infer from current hostname
   if (typeof window !== 'undefined' && window.location) {
-    const { protocol, hostname } = window.location;
-    // Common setup: frontend served on :4001, backend on :9090
-    // Fallback to same host with backend port 9090
-    return `${protocol}//${hostname}:9090/api`;
+    const { hostname, port, origin } = window.location;
+    const isLocal = hostname === 'localhost' || hostname === '127.0.0.1' || port === '3000' || port === '4001';
+    if (isLocal) return 'http://localhost:9090/api';
+    return `${origin}/api`;
   }
 
-  // 3) Dev fallback
-  return 'http://localhost:8080/api';
+  return 'http://localhost:9090/api';
 }
 
 const API_BASE_URL = inferApiBaseUrl();
